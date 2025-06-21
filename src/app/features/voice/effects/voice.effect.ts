@@ -7,7 +7,6 @@ import { from, Observable, of } from "rxjs";
 import { NgbModal, NgbModalRef } from "@ng-bootstrap/ng-bootstrap";
 import { VoiceState } from "../store/voice.store";
 import { VoiceService } from "@resgrid/ngx-resgridlib";
-import { OpenViduService } from "src/app/providers/openvidu";
 import { HomeState } from "../../home/store/home.store";
 import { selectAuthState } from "src/app/store";
 import { AuthState } from "../../auth/store/auth.store";
@@ -60,7 +59,7 @@ export class VoiceEffects {
         ofType<voiceAction.SetNoChannel>(voiceAction.VoiceActionTypes.SET_NOCHANNEL),
         tap((data) => {
           //this.voiceProvider.disconnect();
-          this.openViduService.leaveSession();
+          //this.openViduService.leaveSession();
         })
       ),
     { dispatch: false }
@@ -75,10 +74,10 @@ export class VoiceEffects {
           concatMap((data) => {
             if (data && data.channel) {
               if (data.channel.Id === "") {
-                this.openViduService.leaveSession();
+                //this.openViduService.leaveSession();
                 return of(data);
               } else {
-                return this.openViduService.joinChannel(data.channel, authState.user.fullName + "(Dispatch)");
+                //return this.openViduService.joinChannel(data.channel, authState.user.fullName + "(Dispatch)");
               }
             }
           }),
@@ -96,7 +95,7 @@ export class VoiceEffects {
         ofType<voiceAction.StartTransmitting>(voiceAction.VoiceActionTypes.START_TRANSMITTING),
         tap((data) => {
           //this.voiceProvider.unmute();
-          this.openViduService.unmute();
+          //this.openViduService.unmute();
         })
       ),
     { dispatch: false }
@@ -108,7 +107,7 @@ export class VoiceEffects {
         ofType<voiceAction.StopTransmitting>(voiceAction.VoiceActionTypes.STOP_TRANSMITTING),
         tap((data) => {
           //this.voiceProvider.mute();
-          this.openViduService.mute();
+          //this.openViduService.mute();
         })
       ),
     { dispatch: false }
@@ -139,7 +138,6 @@ export class VoiceEffects {
     private store: Store<VoiceState>,
     //private voiceProvider: KazooVoiceService,
     private voiceService: VoiceService,
-    private openViduService: OpenViduService,
     private homeStore: Store<HomeState>,
     private authStore: Store<AuthState>
   ) {}
