@@ -1,7 +1,6 @@
 import { AfterViewInit, Component, OnInit } from "@angular/core";
 import { Router } from "@angular/router";
 import { IDevice } from "src/app/core/models/deviceType";
-import { OpenViduDevicesService } from "src/app/providers/openviduDevices";
 
 @Component({
   selector: "app-profile-edit-profile",
@@ -13,7 +12,7 @@ export class EditProfilePage implements OnInit, AfterViewInit {
   public microphones: IDevice[] = [];
   public selectedMicrophone: IDevice;
 
-  constructor(private deviceService: OpenViduDevicesService, private router: Router) {
+  constructor(private router: Router) {
 
   }
 
@@ -25,14 +24,14 @@ export class EditProfilePage implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.deviceService.initDevices().then(() => {
-      this.microphones = this.deviceService.getMicrophones();
-      this.selectedMicrophone = this.deviceService.getMicSelected();
-    });
+    //this.deviceService.initDevices().then(() => {
+    //  this.microphones = this.deviceService.getMicrophones();
+    //  this.selectedMicrophone = this.deviceService.getMicSelected();
+    //});
   }
 
   public save() {
-    this.deviceService.setMicSelected(this.selectedMicrophone?.device);
+    //this.deviceService.setMicSelected(this.selectedMicrophone?.device);
     this.router.navigate(['/home']);
   }
 }

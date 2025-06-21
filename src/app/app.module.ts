@@ -51,7 +51,8 @@ let getBaseUrl = (): string => {
       realtimeGeolocationHubName: environment.realtimeGeolocationHubName,
       logLevel: environment.logLevel,
       isMobileApp: true,
-      cacheProvider: null
+      cacheProvider: null,
+      storageProvider: null
   }),
     BrowserAnimationsModule,
     LeafletModule,

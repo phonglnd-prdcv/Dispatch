@@ -64,3 +64,7 @@
 @import "custom/pages/coming-soon";
 @import "custom/pages/timeline";
 @import "custom/pages/extras-pages";
+
+ngb-modal-backdrop {
+    z-index: 1040 !important;
+}
