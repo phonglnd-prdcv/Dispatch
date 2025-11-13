@@ -1,5 +1,5 @@
 ### STAGE 1: Build ###
-FROM node:18.19-alpine3.19 AS build
+FROM node:18.16.0-alpine AS build
 WORKDIR /usr/src/app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -9,7 +9,7 @@ RUN npm run build -- --configuration=production
 ### STAGE 2: Run ###
 FROM nginx:1.21.6-alpine
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=build /usr/src/app/dist/dispatch /usr/share/nginx/html
+COPY --from=build /usr/src/app/www /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80
