@@ -332,6 +332,8 @@
     "submitting": "Submitting...",
     "tryAgainLater": "Please try again later",
     "unknown": "Unknown",
+    "unknown_department": "Unknown Department",
+    "unknown_user": "Unknown User",
     "upload": "Upload",
     "uploading": "Uploading..."
   },
@@ -659,11 +661,15 @@
   },
   "tabs": {
     "calls": "Calls",
+    "calendar": "Calendar",
     "contacts": "Contacts",
+    "home": "Home",
     "map": "Map",
+    "messages": "Messages",
     "notes": "Notes",
     "protocols": "Protocols",
-    "settings": "Settings"
+    "settings": "Settings",
+    "shifts": "Shifts"
   },
   "welcome": "Welcome to obytes app site"
 }

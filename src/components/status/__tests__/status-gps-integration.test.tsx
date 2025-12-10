@@ -6,19 +6,12 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import { SaveUnitStatusInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
-import { offlineEventManager } from '@/services/offline-event-manager.service';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useStatusesStore } from '@/stores/status/store';
 
 // Mock the dependencies
 jest.mock('@/api/units/unitStatuses', () => ({
   saveUnitStatus: jest.fn(),
-}));
-
-jest.mock('@/services/offline-event-manager.service', () => ({
-  offlineEventManager: {
-    queueUnitStatusEvent: jest.fn(),
-  },
 }));
 
 jest.mock('@/stores/app/core-store', () => ({
@@ -29,7 +22,6 @@ jest.mock('@/stores/app/location-store', () => ({
   useLocationStore: jest.fn(),
 }));
 
-const mockOfflineEventManager = offlineEventManager as jest.Mocked<typeof offlineEventManager>;
 const mockUseLocationStore = useLocationStore as jest.MockedFunction<any>;
 const mockUseCoreStore = require('@/stores/app/core-store').useCoreStore as jest.MockedFunction<any>;
 const mockSaveUnitStatus = require('@/api/units/unitStatuses').saveUnitStatus as jest.MockedFunction<any>;
@@ -64,13 +56,12 @@ describe('Status GPS Integration', () => {
     (mockUseLocationStore as any).getState = jest.fn().mockReturnValue(mockLocationStore);
 
     mockUseCoreStore.mockReturnValue(mockCoreStore);
+    mockUseCoreStore.mockReturnValue(mockCoreStore);
     // Also mock getState for the status store logic
     (mockUseCoreStore as any).getState = jest.fn().mockReturnValue(mockCoreStore);
-    mockOfflineEventManager.queueUnitStatusEvent.mockReturnValue('queued-event-id');
   });
 
-  describe('GPS Coordinate Integration', () => {
-    it('should include GPS coordinates when available during successful submission', async () => {
+  describe('GPS Coordinate Integration', () => {lable during successful submission', async () => {
       const { result } = renderHook(() => useStatusesStore());
 
       // Set up location data
@@ -164,69 +155,6 @@ describe('Status GPS Integration', () => {
           Speed: '',
           Heading: '',
         })
-      );
-    });
-
-    it('should include GPS coordinates in offline queue when submission fails', async () => {
-      const { result } = renderHook(() => useStatusesStore());
-
-      // Set up location data
-      mockLocationStore.latitude = 40.7128;
-      mockLocationStore.longitude = -74.0060;
-      mockLocationStore.accuracy = 15;
-      mockLocationStore.altitude = 100;
-      mockLocationStore.speed = 25;
-      mockLocationStore.heading = 90;
-
-      mockSaveUnitStatus.mockRejectedValue(new Error('Network error'));
-
-      const input = new SaveUnitStatusInput();
-      input.Id = 'unit1';
-      input.Type = '2';
-      input.Note = 'Offline GPS status';
-
-      await act(async () => {
-        await result.current.saveUnitStatus(input);
-      });
-
-      expect(mockOfflineEventManager.queueUnitStatusEvent).toHaveBeenCalledWith(
-        'unit1',
-        '2',
-        'Offline GPS status',
-        '',
-        [],
-        {
-          latitude: '40.7128',
-          longitude: '-74.006',
-          accuracy: '15',
-          altitude: '100',
-          altitudeAccuracy: '',
-          speed: '25',
-          heading: '90',
-        }
-      );
-    });
-
-    it('should not include GPS data in offline queue when location is unavailable', async () => {
-      const { result } = renderHook(() => useStatusesStore());
-
-      mockSaveUnitStatus.mockRejectedValue(new Error('Network error'));
-
-      const input = new SaveUnitStatusInput();
-      input.Id = 'unit1';
-      input.Type = '3';
-
-      await act(async () => {
-        await result.current.saveUnitStatus(input);
-      });
-
-      expect(mockOfflineEventManager.queueUnitStatusEvent).toHaveBeenCalledWith(
-        'unit1',
-        '3',
-        '',
-        '',
-        [],
-        undefined
       );
     });
 
@@ -423,25 +351,5 @@ describe('Status GPS Integration', () => {
       }];
 
       await act(async () => {
-        await result.current.saveUnitStatus(input);
-      });
-
-      expect(mockOfflineEventManager.queueUnitStatusEvent).toHaveBeenCalledWith(
-        'unit1',
-        '5',
-        'Complex status with GPS',
-        'call123',
-        [{ roleId: 'role1', userId: 'user1' }],
-        {
-          latitude: '51.5074',
-          longitude: '-0.1278',
-          accuracy: '8',
-          altitude: '',
-          altitudeAccuracy: '',
-          speed: '30',
-          heading: '',
-        }
-      );
-    });
   });
 });

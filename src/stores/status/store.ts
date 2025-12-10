@@ -9,7 +9,6 @@ import { type CustomStatusResultData } from '@/models/v4/customStatuses/customSt
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { type SaveUnitStatusInput, type SaveUnitStatusRoleInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
-import { offlineEventManager } from '@/services/offline-event-manager.service';
 
 import { useCoreStore } from '../app/core-store';
 import { useLocationStore } from '../app/location-store';
@@ -148,83 +147,30 @@ export const useStatusesStore = create<StatusesState>((set) => ({
         }
       }
 
-      try {
-        // Try to save directly first
-        await saveUnitStatus(input);
+      // Try to save directly
+      await saveUnitStatus(input);
 
-        // Set loading to false immediately after successful save
-        set({ isLoading: false });
+      // Set loading to false immediately after successful save
+      set({ isLoading: false });
 
-        logger.info({
-          message: 'Unit status saved successfully',
-          context: { unitId: input.Id, statusType: input.Type },
-        });
+      logger.info({
+        message: 'Unit status saved successfully',
+        context: { unitId: input.Id, statusType: input.Type },
+      });
 
-        // Refresh the active unit status in the background (don't await)
-        // This allows the UI to be responsive while the data refreshes
-        const activeUnit = useCoreStore.getState().activeUnit;
-        if (activeUnit) {
-          const refreshPromise = useCoreStore.getState().setActiveUnitWithFetch(activeUnit.UnitId);
-          if (refreshPromise && typeof refreshPromise.catch === 'function') {
-            refreshPromise.catch((error) => {
-              logger.error({
-                message: 'Failed to refresh unit data after status save',
-                context: { unitId: activeUnit.UnitId, error },
-              });
+      // Refresh the active unit status in the background (don't await)
+      // This allows the UI to be responsive while the data refreshes
+      const activeUnit = useCoreStore.getState().activeUnit;
+      if (activeUnit) {
+        const refreshPromise = useCoreStore.getState().setActiveUnitWithFetch(activeUnit.UnitId);
+        if (refreshPromise && typeof refreshPromise.catch === 'function') {
+          refreshPromise.catch((error) => {
+            logger.error({
+              message: 'Failed to refresh unit data after status save',
+              context: { unitId: activeUnit.UnitId, error },
             });
-          }
+          });
         }
-      } catch (error) {
-        // If direct save fails, queue for offline processing
-        logger.warn({
-          message: 'Direct unit status save failed, queuing for offline processing',
-          context: { unitId: input.Id, statusType: input.Type, error },
-        });
-
-        // Extract role data for queuing
-        const roles = input.Roles?.map((role) => ({
-          roleId: role.RoleId,
-          userId: role.UserId,
-        }));
-
-        // Extract GPS data for queuing - use location store if input doesn't have GPS data
-        let gpsData = undefined;
-
-        if (input.Latitude && input.Longitude) {
-          gpsData = {
-            latitude: input.Latitude,
-            longitude: input.Longitude,
-            accuracy: input.Accuracy,
-            altitude: input.Altitude,
-            altitudeAccuracy: input.AltitudeAccuracy,
-            speed: input.Speed,
-            heading: input.Heading,
-          };
-        } else {
-          // Try to get GPS data from location store
-          const locationState = useLocationStore.getState();
-          if (locationState.latitude !== null && locationState.longitude !== null) {
-            gpsData = {
-              latitude: locationState.latitude.toString(),
-              longitude: locationState.longitude.toString(),
-              accuracy: locationState.accuracy?.toString(),
-              altitude: locationState.altitude?.toString(),
-              altitudeAccuracy: undefined, // Not available in location store
-              speed: locationState.speed?.toString(),
-              heading: locationState.heading?.toString(),
-            };
-          }
-        }
-
-        // Queue the event
-        const eventId = offlineEventManager.queueUnitStatusEvent(input.Id, input.Type, input.Note, input.RespondingTo, roles, gpsData);
-
-        logger.info({
-          message: 'Unit status queued for offline processing',
-          context: { unitId: input.Id, statusType: input.Type, eventId },
-        });
-
-        set({ isLoading: false });
       }
     } catch (error) {
       logger.error({

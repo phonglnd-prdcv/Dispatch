@@ -18,7 +18,6 @@ import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
-import { locationService } from '@/services/location';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useToastStore } from '@/stores/toast/store';
@@ -105,32 +104,6 @@ export default function Map() {
       }
     }, [isMapReady, location.latitude, location.longitude, location.isMapLocked, location.heading])
   );
-
-  useEffect(() => {
-    const startLocationTracking = async () => {
-      try {
-        await locationService.startLocationUpdates();
-        logger.info({
-          message: 'Location tracking started successfully',
-        });
-      } catch (error) {
-        logger.error({
-          message: 'MapPage: Failed to start location tracking. ' + JSON.stringify(error),
-          context: {
-            error,
-          },
-        });
-
-        useToastStore.getState().showToast('error', 'Failed to start location tracking');
-      }
-    };
-
-    startLocationTracking();
-
-    return () => {
-      locationService.stopLocationUpdates();
-    };
-  }, []);
 
   useEffect(() => {
     if (isMapReady && location.latitude && location.longitude) {

@@ -6,9 +6,6 @@ import { ScrollView, TouchableOpacity } from 'react-native';
 
 import { invertColor } from '@/lib/utils';
 import { type CustomStatusResultData } from '@/models/v4/customStatuses/customStatusResultData';
-import { SaveUnitStatusInput, SaveUnitStatusRoleInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
-import { offlineEventManager } from '@/services/offline-event-manager.service';
-import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useRolesStore } from '@/stores/roles/store';
 import { useStatusBottomSheetStore, useStatusesStore } from '@/stores/status/store';
@@ -31,10 +28,6 @@ export const StatusBottomSheet = () => {
   const hasPreselectedRef = React.useRef(false);
   const { showToast } = useToastStore();
 
-  // Initialize offline event manager on mount
-  React.useEffect(() => {
-    offlineEventManager.initialize();
-  }, []);
   const {
     isOpen,
     currentStep,

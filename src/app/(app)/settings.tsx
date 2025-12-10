@@ -4,8 +4,6 @@ import { useColorScheme } from 'nativewind';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { BackgroundGeolocationItem } from '@/components/settings/background-geolocation-item';
-import { BluetoothDeviceItem } from '@/components/settings/bluetooth-device-item';
 import { Item } from '@/components/settings/item';
 import { KeepAliveItem } from '@/components/settings/keep-alive-item';
 import { LanguageItem } from '@/components/settings/language-item';
@@ -13,7 +11,6 @@ import { LoginInfoBottomSheet } from '@/components/settings/login-info-bottom-sh
 import { ServerUrlBottomSheet } from '@/components/settings/server-url-bottom-sheet';
 import { ThemeItem } from '@/components/settings/theme-item';
 import { ToggleItem } from '@/components/settings/toggle-item';
-import { UnitSelectionBottomSheet } from '@/components/settings/unit-selection-bottom-sheet';
 import { FocusAwareStatusBar, ScrollView } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { Card } from '@/components/ui/card';
@@ -100,8 +97,6 @@ export default function Settings() {
               <ThemeItem />
               <LanguageItem />
               <KeepAliveItem />
-              <BackgroundGeolocationItem />
-              <BluetoothDeviceItem />
             </VStack>
           </Card>
 
@@ -121,7 +116,6 @@ export default function Settings() {
 
       <LoginInfoBottomSheet isOpen={showLoginInfo} onClose={() => setShowLoginInfo(false)} onSubmit={handleLoginInfoSubmit} />
       <ServerUrlBottomSheet isOpen={showServerUrl} onClose={() => setShowServerUrl(false)} />
-      <UnitSelectionBottomSheet isOpen={showUnitSelection} onClose={() => setShowUnitSelection(false)} />
     </Box>
   );
 }

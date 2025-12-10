@@ -2,14 +2,6 @@ import { Platform } from 'react-native';
 
 import { logger } from '../lib/logging';
 
-// Platform-specific imports
-let callKeepService: any;
-if (Platform.OS === 'ios') {
-  callKeepService = require('./callkeep.service.ios').callKeepService;
-} else {
-  callKeepService = require('./callkeep.service.web').callKeepService;
-}
-
 /**
  * Global app initialization service that handles one-time setup operations
  * This service should be called during app startup to ensure all critical
@@ -97,13 +89,7 @@ class AppInitializationService {
     }
 
     try {
-      await callKeepService.setup({
-        appName: 'Resgrid Unit',
-        maximumCallGroups: 1,
-        maximumCallsPerCallGroup: 1,
-        includesCallsInRecents: false,
-        supportsVideo: false,
-      });
+
 
       logger.info({
         message: 'CallKeep initialized successfully',
@@ -141,9 +127,6 @@ class AppInitializationService {
    */
   async cleanup(): Promise<void> {
     try {
-      // Cleanup CallKeep
-      await callKeepService.cleanup();
-
       this.isInitialized = false;
       this.initializationPromise = null;
 

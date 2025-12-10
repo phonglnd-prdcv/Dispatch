@@ -4,6 +4,7 @@ import '../lib/i18n';
 
 import { Env } from '@env';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { FloatingDevTools } from "@react-buoy/core";
 import { createNavigationContainerRef, DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
@@ -19,16 +20,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { APIProvider } from '@/api';
 import { CountlyProvider } from '@/components/common/countly-provider';
-import { LiveKitBottomSheet } from '@/components/livekit';
 import { PushNotificationModal } from '@/components/push-notification/push-notification-modal';
 import { ToastContainer } from '@/components/toast/toast-container';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { loadKeepAliveState } from '@/lib/hooks/use-keep-alive';
 import { loadSelectedTheme } from '@/lib/hooks/use-selected-theme';
-import { initializeLiveKitForPlatform } from '@/lib/livekit-platform-init';
 import { logger } from '@/lib/logging';
 import { getDeviceUuid, setDeviceUuid } from '@/lib/storage/app';
-import { loadBackgroundGeolocationState } from '@/lib/storage/background-geolocation';
 import { uuidv4 } from '@/lib/utils';
 import { appInitializationService } from '@/services/app-initialization.service';
 
@@ -153,20 +151,6 @@ function RootLayout() {
         });
       });
 
-    // Load background geolocation state on app startup (native only)
-    loadBackgroundGeolocationState()
-      .then(() => {
-        logger.info({
-          message: 'Background geolocation state loaded on startup',
-        });
-      })
-      .catch((error) => {
-        logger.error({
-          message: 'Failed to load background geolocation state on startup',
-          context: { error },
-        });
-      });
-
     // Initialize global app services (native only)
     appInitializationService
       .initialize()
@@ -205,7 +189,6 @@ function Providers({ children }: { children: React.ReactNode }) {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <BottomSheetModalProvider>
             {children}
-            <LiveKitBottomSheet />
             <PushNotificationModal />
             <FlashMessage position="top" />
             <ToastContainer />

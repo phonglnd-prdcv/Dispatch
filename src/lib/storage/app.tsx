@@ -18,28 +18,6 @@ export const getBaseApiUrl = () => {
   return baseUrl;
 };
 
-export const removeActiveUnitId = () => removeItem(ACTIVE_UNIT_ID);
-export const setActiveUnitId = (value: string) => setItem<string>(ACTIVE_UNIT_ID, value);
-
-export const getActiveUnitId = () => {
-  const activeUnitId = getItem<string>(ACTIVE_UNIT_ID);
-  if (!activeUnitId) {
-    return activeUnitId;
-  }
-  return '';
-};
-
-export const removeActiveCallId = () => removeItem(ACTIVE_CALL_ID);
-export const setActiveCallId = (value: string) => setItem<string>(ACTIVE_CALL_ID, value);
-
-export const getActiveCallId = () => {
-  const activeCallId = getItem<string>(ACTIVE_CALL_ID);
-  if (!activeCallId) {
-    return activeCallId;
-  }
-  return '';
-};
-
 export const removeDeviceUuid = () => removeItem(DEVICE_UUID);
 export const setDeviceUuid = (value: string) => setItem<string>(DEVICE_UUID, value);
 

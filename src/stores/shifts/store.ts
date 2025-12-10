@@ -1,9 +1,7 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { getAllShifts, getShift, getShiftDay, getTodaysShifts, signupForShiftDay } from '@/api/shifts/shifts';
 import { logger } from '@/lib/logging';
-import { zustandStorage } from '@/lib/storage';
 import { type ShiftDaysResultData } from '@/models/v4/shifts/shiftDayResultData';
 import { type ShiftResultData } from '@/models/v4/shifts/shiftResultData';
 import type { ApiResponse } from '@/types/api';

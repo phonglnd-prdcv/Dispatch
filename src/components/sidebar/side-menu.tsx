@@ -14,11 +14,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAuthStore } from '@/lib/auth';
 import { getAvatarUrl } from '@/lib/utils';
-import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
-import { useLiveKitStore } from '@/stores/app/livekit-store';
-import { securityStore, useSecurityStore } from '@/stores/security/store';
-
-import { AudioStreamBottomSheet } from '../audio-stream/audio-stream-bottom-sheet';
+import { useSecurityStore } from '@/stores/security/store';
 
 interface MenuItem {
   id: string;
@@ -37,10 +33,16 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const { colorScheme } = useColorScheme();
   const router = useRouter();
   const { profile, logout } = useAuthStore();
-  const { isConnected, setIsBottomSheetVisible } = useLiveKitStore();
-  const { currentStream, isPlaying, setIsBottomSheetVisible: setAudioStreamBottomSheetVisible } = useAudioStreamStore();
-  const { departmentCode } = useSecurityStore();
-  const securityStoreState = securityStore();
+  const securityStoreState = useSecurityStore();
+
+  // Add safety check for store state
+  if (!securityStoreState) {
+    return (
+      <Box className="flex-1 items-center justify-center bg-white dark:bg-gray-900" testID="side-menu-loading">
+        <Text className="text-gray-600 dark:text-gray-400">{t('common.loading', 'Loading...')}</Text>
+      </Box>
+    );
+  }
 
   const menuItems: MenuItem[] = [
     {
@@ -110,16 +112,9 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
 
   const handleNavigation = useCallback(
     (route: string) => {
-      // Use requestAnimationFrame to ensure navigation happens smoothly
-      requestAnimationFrame(() => {
-        router.push(route as any);
-        // Add a small delay before closing to allow navigation to start
-        setTimeout(() => {
-          onNavigate?.();
-        }, 50);
-      });
+      router.push(route as any);
     },
-    [router, onNavigate]
+    [router]
   );
 
   const handleLogout = useCallback(async () => {
@@ -141,25 +136,6 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
 
   const isDark = colorScheme === 'dark';
-
-  // Memoize audio handlers to prevent re-renders
-  const handlePTTPress = useCallback(() => {
-    if (isConnected) {
-      // If connected, either toggle microphone or re-open bottom sheet
-      // For better UX, let's re-open the bottom sheet to show connection status
-      setIsBottomSheetVisible(true);
-    } else {
-      // Open LiveKit bottom sheet if not connected
-      setIsBottomSheetVisible(true);
-    }
-  }, [isConnected, setIsBottomSheetVisible]);
-
-  const handleAudioStreamPress = useCallback(() => {
-    // Always open the audio stream bottom sheet
-    // If currently playing, it will show the current stream and allow control
-    // If not playing, it will show available streams
-    setAudioStreamBottomSheetVisible(true);
-  }, [setAudioStreamBottomSheetVisible]);
 
   return (
     <Box className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`} testID="side-menu-container">
@@ -186,59 +162,6 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
 
           <Divider className={isDark ? 'bg-gray-700' : 'bg-gray-200'} />
 
-          {/* Audio Controls */}
-          <HStack space="md" className="px-2">
-            {/* PTT Button */}
-            <Pressable
-              onPress={handlePTTPress}
-              className={`flex-1 rounded-lg border px-3 py-2 ${
-                isConnected
-                  ? isDark
-                    ? 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
-                    : 'border-green-600 bg-green-600 hover:bg-green-700 active:bg-green-800'
-                  : isDark
-                    ? 'border-green-600 bg-transparent hover:bg-green-900/20 active:bg-green-900/30'
-                    : 'border-green-600 bg-transparent hover:bg-green-50 active:bg-green-100'
-              }`}
-              testID="side-menu-ptt-button"
-              style={({ pressed }) => [
-                {
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <HStack space="sm" className="items-center justify-center">
-                <Mic size={18} color={isConnected ? '#fff' : isDark ? '#22c55e' : '#16a34a'} />
-                <Text className={`text-sm font-medium ${isConnected ? 'text-white' : isDark ? 'text-green-400' : 'text-green-700'}`}>{t('sidebar.ptt')}</Text>
-              </HStack>
-            </Pressable>
-
-            {/* Audio Stream Button */}
-            <Pressable
-              onPress={handleAudioStreamPress}
-              className={`flex-1 rounded-lg border px-3 py-2 ${
-                currentStream && isPlaying
-                  ? isDark
-                    ? 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-                    : 'border-blue-600 bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
-                  : isDark
-                    ? 'border-blue-600 bg-transparent hover:bg-blue-900/20 active:bg-blue-900/30'
-                    : 'border-blue-600 bg-transparent hover:bg-blue-50 active:bg-blue-100'
-              }`}
-              testID="side-menu-audio-button"
-              style={({ pressed }) => [
-                {
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
-            >
-              <HStack space="sm" className="items-center justify-center">
-                <Headphones size={18} color={currentStream && isPlaying ? '#fff' : isDark ? '#3b82f6' : '#2563eb'} />
-                <Text className={`text-sm font-medium ${currentStream && isPlaying ? 'text-white' : isDark ? 'text-blue-400' : 'text-blue-700'}`}>{t('sidebar.audio')}</Text>
-              </HStack>
-            </Pressable>
-          </HStack>
-
           {/* Navigation Menu */}
           <VStack space="xs" className="flex-1">
             {menuItems.map((item) => {
@@ -246,30 +169,33 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
               return (
                 <Pressable
                   key={item.id}
-                  onPress={() => handleNavigation(item.route)}
-                  className={`rounded-lg p-3 ${isDark ? 'hover:bg-gray-800 active:bg-gray-700' : 'hover:bg-gray-50 active:bg-gray-100'}`}
+                  onPress={() => {
+                    handleNavigation(item.route);
+                    onNavigate?.();
+                  }}
                   testID={item.testID}
-                  style={({ pressed }) => [
-                    {
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}
+                  className={`flex-row items-center rounded-lg p-3 ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
                 >
-                  <HStack space="md" className="items-center">
-                    <Box className={`rounded-lg p-2 ${isDark ? 'bg-primary-900' : 'bg-primary-50'}`}>
-                      <IconComponent size={20} color={isDark ? '#60a5fa' : '#3b82f6'} />
-                    </Box>
-                    <Text className={`flex-1 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{item.title}</Text>
-                  </HStack>
+                  <IconComponent size={20} color={isDark ? '#9CA3AF' : '#4B5563'} />
+                  <Text className={`ml-3 text-base ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.title}</Text>
                 </Pressable>
               );
             })}
           </VStack>
+
+          <Divider className={`my-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />
+
+          {/* Logout Button */}
+          <Pressable
+            onPress={handleLogout}
+            testID="side-menu-logout"
+            className={`flex-row items-center rounded-lg p-3 ${isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'}`}
+          >
+            <LogOut size={20} color={isDark ? '#9CA3AF' : '#4B5563'} />
+            <Text className={`ml-3 text-base ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{t('settings.logout')}</Text>
+          </Pressable>
         </VStack>
       </ScrollView>
-
-      {/* Audio Stream Bottom Sheet */}
-      <AudioStreamBottomSheet />
     </Box>
   );
 });

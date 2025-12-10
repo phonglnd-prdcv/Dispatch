@@ -182,15 +182,6 @@ jest.mock('@/stores/status/store', () => ({
 }));
 
 // Mock additional stores and services
-jest.mock('@/services/offline-event-manager.service', () => ({
-  offlineEventManager: {
-    initialize: jest.fn(),
-    addEvent: jest.fn(),
-    processEvents: jest.fn(),
-    clearEvents: jest.fn(),
-  },
-}));
-
 jest.mock('@/stores/app/core-store', () => {
   const mockStore = jest.fn();
   (mockStore as any).getState = jest.fn();

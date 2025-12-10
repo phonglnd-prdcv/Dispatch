@@ -1,8 +1,5 @@
 import type * as Location from 'expo-location';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
-
-import { zustandStorage } from '@/lib/storage';
 
 export interface LocationState {
   latitude: number | null;
@@ -19,9 +16,7 @@ export interface LocationState {
   setMapLocked: (locked: boolean) => void;
 }
 
-export const useLocationStore = create<LocationState>()(
-  persist(
-    (set) => ({
+export const useLocationStore = create<LocationState>()((set) => ({
       latitude: null,
       longitude: null,
       heading: null,
@@ -43,10 +38,4 @@ export const useLocationStore = create<LocationState>()(
         }),
       setBackgroundEnabled: (enabled) => set({ isBackgroundEnabled: enabled }),
       setMapLocked: (locked) => set({ isMapLocked: locked }),
-    }),
-    {
-      name: 'location-storage',
-      storage: createJSONStorage(() => zustandStorage),
-    }
-  )
-);
+    }));

@@ -1,12 +1,9 @@
 import { Platform } from 'react-native';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { getCurrentUsersRights } from '@/api/security/security';
 import { logger } from '@/lib/logging';
 import { type DepartmentRightsResultData } from '@/models/v4/security/departmentRightsResultData';
-
-import { zustandStorage } from '../../lib/storage';
 
 export interface SecurityState {
   error: string | null;
@@ -14,9 +11,7 @@ export interface SecurityState {
   rights: DepartmentRightsResultData | null;
 }
 
-export const securityStore = create<SecurityState>()(
-  persist(
-    (set, _get) => ({
+export const securityStore = create<SecurityState>()((set, _get) => ({
       error: null,
       rights: null,
       getRights: async () => {
@@ -43,13 +38,7 @@ export const securityStore = create<SecurityState>()(
           // If refresh fails, log the error but don't throw
         }
       },
-    }),
-    {
-      name: 'security-storage',
-      storage: createJSONStorage(() => zustandStorage),
-    }
-  )
-);
+    }));
 
 export const useSecurityStore = () => {
   const store = securityStore();
@@ -62,5 +51,6 @@ export const useSecurityStore = () => {
     canUserCreateMessages: store.rights?.CanCreateMessage,
     canUserViewPII: store.rights?.CanViewPII,
     departmentCode: store.rights?.DepartmentCode,
+    rights: store.rights,
   };
 };

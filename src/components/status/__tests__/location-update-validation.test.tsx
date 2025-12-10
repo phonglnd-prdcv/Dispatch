@@ -14,12 +14,6 @@ jest.mock('@/api/units/unitStatuses', () => ({
   saveUnitStatus: jest.fn(),
 }));
 
-jest.mock('@/services/offline-event-manager.service', () => ({
-  offlineEventManager: {
-    queueUnitStatusEvent: jest.fn(),
-  },
-}));
-
 jest.mock('@/stores/app/core-store', () => ({
   useCoreStore: jest.fn(),
 }));

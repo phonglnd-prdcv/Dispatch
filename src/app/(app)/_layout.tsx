@@ -26,9 +26,6 @@ import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { useIsFirstTime } from '@/lib/storage';
 import { type GetConfigResultData } from '@/models/v4/configs/getConfigResultData';
-import { audioService } from '@/services/audio.service';
-import { bluetoothAudioService } from '@/services/bluetooth-audio.service';
-import { locationService } from '@/services/location';
 import { usePushNotifications } from '@/services/push-notification';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -43,34 +40,6 @@ export default function TabLayout() {
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
-
-  // Log at component initialization - THIS SHOULD ALWAYS FIRE
-  logger.info({
-    message: 'TabLayout component rendering - START',
-    context: {
-      status,
-      timestamp: new Date().toISOString(),
-    },
-  });
-
-  // Track render count to detect infinite loops
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-
-  if (renderCount.current > 100) {
-    logger.error({
-      message: 'INFINITE RENDER LOOP DETECTED - More than 100 renders!',
-      context: { renderCount: renderCount.current },
-    });
-    throw new Error('Infinite render loop detected');
-  }
-
-  if (renderCount.current % 10 === 0) {
-    logger.warn({
-      message: 'High render count detected',
-      context: { renderCount: renderCount.current },
-    });
-  }
 
   // Get store states first (hooks must be at top level)
   const config = useCoreStore((state) => state.config);
@@ -99,7 +68,7 @@ export default function TabLayout() {
   const parentRef = useRef(null);
 
   // Initialize push notifications
-  usePushNotifications();
+  //usePushNotifications();
 
   // Initialize Mapbox - only on native platforms
   // On web, Mapbox GL JS is loaded separately and doesn't use this initialization
@@ -161,13 +130,6 @@ export default function TabLayout() {
 
         hasInitialized.current = true;
 
-        // Skip native-only initialization on web
-        if (Platform.OS !== 'web' && !isRunningInExpoGo()) {
-          // Initialize Bluetooth service
-          await bluetoothAudioService.initialize();
-          await audioService.initialize();
-        }
-
         logger.info({
           message: 'App initialization completed successfully',
           context: { platform: Platform.OS },
@@ -223,7 +185,8 @@ export default function TabLayout() {
   // WEB PLATFORM WORKAROUND: Call initialization directly during render
   // useEffect doesn't reliably fire on web platform due to React Native Web issues
   if (Platform.OS === 'web') {
-    const shouldInitialize = status === 'signedIn' && !hasInitialized.current && !isInitializing.current;
+    // CRITICAL: Also check coreIsInitializing from the store to prevent re-initialization during state updates
+    const shouldInitialize = status === 'signedIn' && !hasInitialized.current && !isInitializing.current && !coreIsInitializing;
 
     if (shouldInitialize) {
       logger.info({
@@ -232,6 +195,7 @@ export default function TabLayout() {
           status,
           hasInitialized: hasInitialized.current,
           isInitializing: isInitializing.current,
+          coreIsInitializing,
         },
       });
       // Trigger initialization in next tick to avoid setState during render
@@ -281,22 +245,6 @@ export default function TabLayout() {
       logger.info({
         message: 'User signed out, stopping location tracking',
       });
-
-      (async () => {
-        try {
-          await locationService.stopLocationUpdates();
-          logger.info({
-            message: 'Location tracking stopped successfully',
-            context: { reason: 'user_signed_out' },
-          });
-          hasInitialized.current = false;
-        } catch (error) {
-          logger.error({
-            message: 'Failed to stop location tracking on sign out',
-            context: { error },
-          });
-        }
-      })();
     }
 
     // Update last known status
@@ -394,21 +342,20 @@ export default function TabLayout() {
         <View className="flex-1 items-center">
           <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
         </View>
-        <CreateNotificationButton config={config} setIsNotificationsOpen={setIsNotificationsOpen} userId={userId} departmentCode={rights?.DepartmentCode} />
-      </View>
+       </View>
 
       <View className="flex-1 flex-row" ref={parentRef}>
         {/* Drawer - conditionally rendered as permanent in landscape */}
         {isLandscape ? (
           <View className="w-1/4 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-            <SideMenu />
+            {coreIsInitialized && rights ? <SideMenu /> : null}
           </View>
         ) : (
           <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
             <DrawerBackdrop onPress={() => setIsOpen(false)} />
             <DrawerContent className="w-4/5 bg-white p-1 dark:bg-gray-900">
               <DrawerBody>
-                <SideMenu onNavigate={handleNavigate} />
+                {coreIsInitialized && rights ? <SideMenu onNavigate={handleNavigate} /> : null}
               </DrawerBody>
               <DrawerFooter>
                 <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
@@ -487,11 +434,7 @@ const CreateNotificationButton = ({
     return null;
   }
 
-  return (
-    <NovuProvider subscriberId={`${departmentCode}_Dispatch_${userId}`} applicationIdentifier={config.NovuApplicationId} backendUrl={config.NovuBackendApiUrl} socketUrl={config.NovuSocketUrl}>
-      <NotificationButton onPress={() => setIsNotificationsOpen(true)} />
-    </NovuProvider>
-  );
+  return <NotificationButton onPress={() => setIsNotificationsOpen(true)} />;
 };
 
 const styles = StyleSheet.create({

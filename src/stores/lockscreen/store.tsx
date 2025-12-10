@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { logger } from '@/lib/logging';
-import { zustandStorage } from '@/lib/storage';
 
 export interface LockscreenState {
   isLocked: boolean;
@@ -16,9 +14,7 @@ export interface LockscreenState {
   shouldLock: () => boolean;
 }
 
-const useLockscreenStore = create<LockscreenState>()(
-  persist(
-    (set, get) => ({
+const useLockscreenStore = create<LockscreenState>()((set, get) => ({
       isLocked: false,
       lockTimeout: 5, // Default 5 minutes
       lastActivityTime: Date.now(),
@@ -71,12 +67,6 @@ const useLockscreenStore = create<LockscreenState>()(
 
         return inactiveTimeMs >= timeoutMs;
       },
-    }),
-    {
-      name: 'lockscreen-storage',
-      storage: createJSONStorage(() => zustandStorage),
-    }
-  )
-);
+    }));
 
 export default useLockscreenStore;

@@ -1,7 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { logger } from '@/lib/logging';
 
@@ -9,11 +8,9 @@ import { loginRequest, refreshTokenRequest } from '../../lib/auth/api';
 import type { AuthResponse, AuthState, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
 import { getAuth } from '../../lib/auth/utils';
-import { setItem, zustandStorage } from '../../lib/storage';
+import { setItem } from '../../lib/storage';
 
-const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+const useAuthStore = create<AuthState>()((set, get) => ({
       accessToken: null,
       refreshToken: null,
       refreshTokenExpiresOn: null,
@@ -213,52 +210,6 @@ const useAuthStore = create<AuthState>()(
       //    // If refresh fails, log out the user
       //  }
       //},
-    }),
-    {
-      name: 'auth-storage',
-      storage: createJSONStorage(() => zustandStorage),
-      // Only persist essential auth data, not transient UI state
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        refreshTokenExpiresOn: state.refreshTokenExpiresOn,
-        profile: state.profile,
-        userId: state.userId,
-        // Exclude: status, error, isFirstTime (these should be recomputed on hydration)
-      }),
-      // Add error handling for storage operations
-      onRehydrateStorage: () => (state, error) => {
-        if (error) {
-          logger.error({
-            message: 'Failed to rehydrate auth storage',
-            context: { error: error instanceof Error ? error.message : String(error) },
-          });
-        } else if (state) {
-          logger.info({
-            message: 'Auth storage rehydrated successfully',
-            context: { hasToken: !!state.accessToken },
-          });
-
-          // CRITICAL: Set the correct status after rehydration
-          // Status is not persisted, so we need to recompute it
-          if (state.accessToken && state.refreshToken) {
-            // User has valid tokens, set status to signedIn
-            state.status = 'signedIn';
-            logger.info({
-              message: 'Auth status set to signedIn after rehydration',
-              context: { userId: state.userId },
-            });
-          } else {
-            // No valid tokens, user is signed out
-            state.status = 'signedOut';
-            logger.info({
-              message: 'Auth status set to signedOut after rehydration (no tokens)',
-            });
-          }
-        }
-      },
-    }
-  )
-);
+    }));
 
 export default useAuthStore;

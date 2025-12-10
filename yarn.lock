@@ -2981,6 +2981,40 @@
     "@react-types/shared" "^3.32.0"
     "@swc/helpers" "^0.5.0"
 
+"@react-buoy/core@^1.5.23":
+  version "1.5.23"
+  resolved "https://registry.yarnpkg.com/@react-buoy/core/-/core-1.5.23.tgz#96397fcc6a52db2c7d85d762bf92f8cfc36c168c"
+  integrity sha512-9fGiZv8em04x1flnwTQ4cWA9a6aLJvE+vOWpEN0VtXkAjRyEhBtkqRWelgcRdBvlrTXVdUCCpQ0mIO1CbidQcQ==
+  dependencies:
+    "@react-buoy/shared-ui" "1.5.23"
+
+"@react-buoy/env@^1.5.23":
+  version "1.5.23"
+  resolved "https://registry.yarnpkg.com/@react-buoy/env/-/env-1.5.23.tgz#30099453819342bdfafcc829b234c0e028541b5f"
+  integrity sha512-nu1HUNTbg64oAdTAk2z1epPtwE+Jpq2OkJkS3QNHd9LLXp5UGUJE5CGuVSFNOJ3OrdWZ8gIU07BL/QorYDTfLA==
+  dependencies:
+    "@react-buoy/shared-ui" "1.5.23"
+
+"@react-buoy/network@^1.5.23":
+  version "1.5.23"
+  resolved "https://registry.yarnpkg.com/@react-buoy/network/-/network-1.5.23.tgz#db56bb21719e70e66805adf15ad2d395017958f8"
+  integrity sha512-utqXlSnf6tV4iB3MGzMLDOGXuD3j2FbFFq0rvd3WPpl3NB8snxjmXkN6OCSiN+6NTuexkzyJyHHH6uKQ0lzY0Q==
+  dependencies:
+    "@react-buoy/react-query" "1.5.23"
+    "@react-buoy/shared-ui" "1.5.23"
+
+"@react-buoy/react-query@1.5.23":
+  version "1.5.23"
+  resolved "https://registry.yarnpkg.com/@react-buoy/react-query/-/react-query-1.5.23.tgz#1d5749f0e77c96af3e002129aeceb39f8e5803e1"
+  integrity sha512-OhIVShAzTj8zX3ojxnTXH3d6xAeUovWs+Jgkhd87gicLjY/2+4fLF5XCxuR1YoLUp+cZL2518ROhXYZHrOveHA==
+  dependencies:
+    "@react-buoy/shared-ui" "1.5.23"
+
+"@react-buoy/shared-ui@1.5.23":
+  version "1.5.23"
+  resolved "https://registry.yarnpkg.com/@react-buoy/shared-ui/-/shared-ui-1.5.23.tgz#de216fb14e06d07cf13672d076eace00f4eefdf2"
+  integrity sha512-C2UAdUkCTXQrfjiv6vAxIRU8GMKWGviuttlLVbhAQmr0ZcfoY8bKrrpONJ2lgK6sAcSidaDZsidP2mamboelPQ==
+
 "@react-native-aria/accordion@^0.0.2":
   version "0.0.2"
   resolved "https://registry.yarnpkg.com/@react-native-aria/accordion/-/accordion-0.0.2.tgz#28e57f5c3690b2b33f36acd6aff7d91a75fbf384"

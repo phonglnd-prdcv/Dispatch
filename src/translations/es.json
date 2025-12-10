@@ -332,6 +332,8 @@
     "submitting": "Enviando...",
     "tryAgainLater": "Por favor, inténtelo de nuevo más tarde",
     "unknown": "Desconocido",
+    "unknown_department": "Departamento Desconocido",
+    "unknown_user": "Usuario Desconocido",
     "upload": "Subir",
     "uploading": "Subiendo..."
   },
@@ -633,11 +635,15 @@
   },
   "tabs": {
     "calls": "Llamadas",
+    "calendar": "Calendario",
     "contacts": "Contactos",
+    "home": "Inicio",
     "map": "Mapa",
+    "messages": "Mensajes",
     "notes": "Notas",
     "protocols": "Protocolos",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "shifts": "Turnos"
   },
   "welcome": "Bienvenido al sitio de la aplicación obytes"
 }

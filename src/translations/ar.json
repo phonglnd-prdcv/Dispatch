@@ -332,6 +332,8 @@
     "submitting": "جاري الإرسال...",
     "tryAgainLater": "يرجى المحاولة مرة أخرى لاحقًا",
     "unknown": "غير معروف",
+    "unknown_department": "قسم غير معروف",
+    "unknown_user": "مستخدم غير معروف",
     "upload": "رفع",
     "uploading": "جاري الرفع..."
   },
@@ -659,11 +661,15 @@
   },
   "tabs": {
     "calls": "المكالمات",
+    "calendar": "التقويم",
     "contacts": "جهات الاتصال",
+    "home": "الرئيسية",
     "map": "الخريطة",
+    "messages": "الرسائل",
     "notes": "الملاحظات",
     "protocols": "البروتوكولات",
-    "settings": "الإعدادات"
+    "settings": "الإعدادات",
+    "shifts": "المناوبات"
   },
   "welcome": "مرحبًا بك في موقع تطبيق obytes"
 }
