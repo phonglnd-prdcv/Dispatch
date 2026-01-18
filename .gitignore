@@ -30,6 +30,8 @@ Gemfile
 *.ipa
 *.apk
 *.keystore
+.env*
+.env.*
 
 # Docker
 .env.docker
