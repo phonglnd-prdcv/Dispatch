@@ -43,39 +43,63 @@ const navigationIntegration = Sentry.reactNavigationIntegration({
   enableTimeToInitialDisplay: false,
 });
 
-Sentry.init({
-  dsn: Env.SENTRY_DSN,
-  debug: __DEV__, // Only debug in development, not production
-  tracesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
-  profilesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
-  sendDefaultPii: false,
-  integrations: [
-    // Pass integration
-    navigationIntegration,
-    // Disable HTTP instrumentation on web platform due to hanging issues
+// Only initialize Sentry if a DSN is provided
+if (Env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: Env.SENTRY_DSN,
+    debug: __DEV__, // Only debug in development, not production
+    tracesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
+    profilesSampleRate: __DEV__ ? 1.0 : 0.2, // 100% in dev, 20% in production to reduce performance impact
+    sendDefaultPii: false,
+    // Add release and environment information
+    release: Env.VERSION,
+    environment: Env.APP_ENV || (__DEV__ ? 'development' : 'production'),
+    // Add platform as a tag
+    initialScope: {
+      tags: {
+        platform: Platform.OS,
+      },
+    },
+    integrations: [
+      // Pass integration
+      navigationIntegration,
+      // Disable HTTP instrumentation on web platform due to hanging issues
+      ...(Platform.OS === 'web'
+        ? []
+        : [
+            // Add other integrations here for native platforms if needed
+          ]),
+    ],
+    enableNativeFramesTracking: Platform.OS !== 'web', // Only enable native frames tracking on native platforms
+    // Disable auto-instrumentation on web to prevent fetch/xhr blocking
     ...(Platform.OS === 'web'
-      ? []
-      : [
-          // Add other integrations here for native platforms if needed
-        ]),
-  ],
-  enableNativeFramesTracking: true, //!isRunningInExpoGo(), // Tracks slow and frozen frames in the application
-  // Disable auto-instrumentation on web to prevent fetch/xhr blocking
-  ...(Platform.OS === 'web'
-    ? {
-        enableAutoPerformanceTracing: false,
-        enableAutoSessionTracking: false,
+      ? {
+          enableAutoPerformanceTracing: false,
+          enableAutoSessionTracking: false,
+        }
+      : {}),
+    // Add additional options to prevent timing issues
+    beforeSendTransaction(event: any) {
+      // Filter out problematic navigation transactions that might cause timestamp errors
+      if (event.contexts?.trace?.op === 'navigation' && !event.contexts?.trace?.data?.route) {
+        return null;
       }
-    : {}),
-  // Add additional options to prevent timing issues
-  beforeSendTransaction(event: any) {
-    // Filter out problematic navigation transactions that might cause timestamp errors
-    if (event.contexts?.trace?.op === 'navigation' && !event.contexts?.trace?.data?.route) {
-      return null;
-    }
-    return event;
-  },
-});
+      return event;
+    },
+    beforeSend(event, hint) {
+      // Add additional context for web platform
+      if (Platform.OS === 'web') {
+        event.tags = {
+          ...event.tags,
+          'user_agent': typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        };
+      }
+      return event;
+    },
+  });
+} else if (__DEV__) {
+  console.log('Sentry DSN not configured - error tracking disabled');
+}
 
 // Initialize LiveKit for the current platform
 //initializeLiveKitForPlatform();

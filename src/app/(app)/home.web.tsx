@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { type Href, router } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -21,7 +21,7 @@ import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-stor
 import { useHomeStore } from '@/stores/home/home-store';
 import { useNotesStore } from '@/stores/notes/store';
 import { usePersonnelStore } from '@/stores/personnel/store';
-import { useSignalRStore } from '@/stores/signalr/signalr-store';
+import { type SignalREventType, useSignalRStore } from '@/stores/signalr/signalr-store';
 import { useUnitsStore } from '@/stores/units/store';
 
 export default function DispatchConsoleWeb() {
@@ -38,7 +38,15 @@ export default function DispatchConsoleWeb() {
   const { units, isLoading: unitsLoading, fetchUnits } = useUnitsStore();
   const { personnel, isLoading: personnelLoading, fetchPersonnel } = usePersonnelStore();
   const { notes, isLoading: notesLoading, fetchNotes } = useNotesStore();
-  const { lastUpdateTimestamp } = useSignalRStore();
+
+  // SignalR store - subscribe to specific event timestamps
+  const {
+    lastEventType,
+    lastPersonnelUpdateTimestamp,
+    lastUnitsUpdateTimestamp,
+    lastCallsUpdateTimestamp,
+    isUpdateHubConnected,
+  } = useSignalRStore();
 
   // Dispatch console store
   const {
@@ -70,6 +78,11 @@ export default function DispatchConsoleWeb() {
   // Local state
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
   const [isAddingNote, setIsAddingNote] = useState(false);
+
+  // Track previous timestamps to detect changes
+  const prevPersonnelTimestamp = useRef(0);
+  const prevUnitsTimestamp = useRef(0);
+  const prevCallsTimestamp = useRef(0);
 
   // Update time every second
   useEffect(() => {
@@ -123,21 +136,107 @@ export default function DispatchConsoleWeb() {
     }, [trackEvent, isLandscape, isTablet])
   );
 
-  // Listen for SignalR updates and refresh data
+  // Helper function to get event description for activity log
+  const getEventDescription = (eventType: SignalREventType | null): string => {
+    switch (eventType) {
+      case 'personnelStatusUpdated':
+        return t('dispatch.personnel_status_updated');
+      case 'personnelStaffingUpdated':
+        return t('dispatch.personnel_staffing_updated');
+      case 'unitStatusUpdated':
+        return t('dispatch.unit_status_updated');
+      case 'callsUpdated':
+        return t('dispatch.calls_updated');
+      case 'callAdded':
+        return t('dispatch.call_added');
+      case 'callClosed':
+        return t('dispatch.call_closed');
+      default:
+        return t('dispatch.data_refreshed');
+    }
+  };
+
+  // Listen for SignalR personnel updates
   useEffect(() => {
-    if (lastUpdateTimestamp > 0) {
-      addActivityLogEntry({
-        type: 'system',
-        action: t('dispatch.system_update'),
-        description: t('dispatch.data_refreshed'),
+    if (lastPersonnelUpdateTimestamp > 0 && lastPersonnelUpdateTimestamp !== prevPersonnelTimestamp.current) {
+      prevPersonnelTimestamp.current = lastPersonnelUpdateTimestamp;
+
+      logger.info({
+        message: 'SignalR: Personnel update received, refreshing personnel data',
+        context: { eventType: lastEventType, timestamp: lastPersonnelUpdateTimestamp },
       });
 
-      fetchCalls();
-      fetchUnits();
+      addActivityLogEntry({
+        type: 'personnel',
+        action: t('dispatch.signalr_update'),
+        description: getEventDescription(lastEventType),
+      });
+
       fetchPersonnel();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastUpdateTimestamp]);
+  }, [lastPersonnelUpdateTimestamp]);
+
+  // Listen for SignalR units updates
+  useEffect(() => {
+    if (lastUnitsUpdateTimestamp > 0 && lastUnitsUpdateTimestamp !== prevUnitsTimestamp.current) {
+      prevUnitsTimestamp.current = lastUnitsUpdateTimestamp;
+
+      logger.info({
+        message: 'SignalR: Units update received, refreshing units data',
+        context: { eventType: lastEventType, timestamp: lastUnitsUpdateTimestamp },
+      });
+
+      addActivityLogEntry({
+        type: 'unit',
+        action: t('dispatch.signalr_update'),
+        description: getEventDescription(lastEventType),
+      });
+
+      fetchUnits();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastUnitsUpdateTimestamp]);
+
+  // Listen for SignalR calls updates
+  useEffect(() => {
+    if (lastCallsUpdateTimestamp > 0 && lastCallsUpdateTimestamp !== prevCallsTimestamp.current) {
+      prevCallsTimestamp.current = lastCallsUpdateTimestamp;
+
+      logger.info({
+        message: 'SignalR: Calls update received, refreshing calls data',
+        context: { eventType: lastEventType, timestamp: lastCallsUpdateTimestamp },
+      });
+
+      addActivityLogEntry({
+        type: 'call',
+        action: t('dispatch.signalr_update'),
+        description: getEventDescription(lastEventType),
+      });
+
+      fetchCalls();
+      // Also refresh notes if we have a selected call (call data may have changed)
+      if (selectedCallId) {
+        fetchNotes();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastCallsUpdateTimestamp]);
+
+  // Log when SignalR hub connection status changes
+  useEffect(() => {
+    if (isUpdateHubConnected) {
+      logger.info({
+        message: 'SignalR Update Hub connected - dispatch console ready for real-time updates',
+      });
+      addActivityLogEntry({
+        type: 'system',
+        action: t('dispatch.signalr_connected'),
+        description: t('dispatch.realtime_updates_active'),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isUpdateHubConnected]);
 
   // Fetch call extra data and notes when filter is active
   useEffect(() => {

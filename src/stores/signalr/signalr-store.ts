@@ -8,14 +8,34 @@ import { signalRService } from '@/services/signalr.service';
 import { useCoreStore } from '../app/core-store';
 import { securityStore, useSecurityStore } from '../security/store';
 
+// Event types that can be received from SignalR
+export type SignalREventType =
+  | 'personnelStatusUpdated'
+  | 'personnelStaffingUpdated'
+  | 'unitStatusUpdated'
+  | 'callsUpdated'
+  | 'callAdded'
+  | 'callClosed'
+  | 'personnelLocationUpdated'
+  | 'unitLocationUpdated'
+  | 'connected';
+
 interface SignalRState {
   isUpdateHubConnected: boolean;
   lastUpdateMessage: unknown;
   lastUpdateTimestamp: number;
+  lastEventType: SignalREventType | null;
   isGeolocationHubConnected: boolean;
   lastGeolocationMessage: unknown;
   lastGeolocationTimestamp: number;
+  lastGeolocationEventType: SignalREventType | null;
   error: Error | null;
+
+  // Event timestamps for specific data types
+  lastPersonnelUpdateTimestamp: number;
+  lastUnitsUpdateTimestamp: number;
+  lastCallsUpdateTimestamp: number;
+
   connectUpdateHub: () => Promise<void>;
   disconnectUpdateHub: () => Promise<void>;
   connectGeolocationHub: () => Promise<void>;
@@ -26,10 +46,18 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
   isUpdateHubConnected: false,
   lastUpdateMessage: null,
   lastUpdateTimestamp: 0,
+  lastEventType: null,
   isGeolocationHubConnected: false,
   lastGeolocationMessage: null,
   lastGeolocationTimestamp: 0,
+  lastGeolocationEventType: null,
   error: null,
+
+  // Event timestamps for specific data types
+  lastPersonnelUpdateTimestamp: 0,
+  lastUnitsUpdateTimestamp: 0,
+  lastCallsUpdateTimestamp: 0,
+
   connectUpdateHub: async () => {
     try {
       if (get().isUpdateHubConnected) {
@@ -62,27 +90,45 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
       await signalRService.invoke(Env.CHANNEL_HUB_NAME, 'connect', parseInt(securityStore.getState().rights?.DepartmentId ?? '0'));
 
       signalRService.on('personnelStatusUpdated', (message) => {
+        const now = Date.now();
         logger.info({
           message: 'personnelStatusUpdated',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({
+          lastUpdateMessage: JSON.stringify(message),
+          lastUpdateTimestamp: now,
+          lastEventType: 'personnelStatusUpdated',
+          lastPersonnelUpdateTimestamp: now,
+        });
       });
 
       signalRService.on('personnelStaffingUpdated', (message) => {
+        const now = Date.now();
         logger.info({
           message: 'personnelStaffingUpdated',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({
+          lastUpdateMessage: JSON.stringify(message),
+          lastUpdateTimestamp: now,
+          lastEventType: 'personnelStaffingUpdated',
+          lastPersonnelUpdateTimestamp: now,
+        });
       });
 
       signalRService.on('unitStatusUpdated', (message) => {
+        const now = Date.now();
         logger.info({
           message: 'unitStatusUpdated',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({
+          lastUpdateMessage: JSON.stringify(message),
+          lastUpdateTimestamp: now,
+          lastEventType: 'unitStatusUpdated',
+          lastUnitsUpdateTimestamp: now,
+        });
       });
 
       signalRService.on('callsUpdated', (message) => {
@@ -92,30 +138,47 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'callsUpdated',
           context: { message, now },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: now });
+        set({
+          lastUpdateMessage: JSON.stringify(message),
+          lastUpdateTimestamp: now,
+          lastEventType: 'callsUpdated',
+          lastCallsUpdateTimestamp: now,
+        });
       });
 
       signalRService.on('callAdded', (message) => {
+        const now = Date.now();
         logger.info({
           message: 'callAdded',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({
+          lastUpdateMessage: JSON.stringify(message),
+          lastUpdateTimestamp: now,
+          lastEventType: 'callAdded',
+          lastCallsUpdateTimestamp: now,
+        });
       });
 
       signalRService.on('callClosed', (message) => {
+        const now = Date.now();
         logger.info({
           message: 'callClosed',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({
+          lastUpdateMessage: JSON.stringify(message),
+          lastUpdateTimestamp: now,
+          lastEventType: 'callClosed',
+          lastCallsUpdateTimestamp: now,
+        });
       });
 
       signalRService.on('onConnected', () => {
         logger.info({
           message: 'Connected to update SignalR hub',
         });
-        set({ isUpdateHubConnected: true, error: null });
+        set({ isUpdateHubConnected: true, lastEventType: 'connected', error: null });
       });
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Unknown error occurred');
@@ -170,18 +233,26 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
 
       // Set up message handler
       signalRService.on('onPersonnelLocationUpdated', (message) => {
-        set({ lastGeolocationMessage: JSON.stringify(message), lastGeolocationTimestamp: Date.now() });
+        set({
+          lastGeolocationMessage: JSON.stringify(message),
+          lastGeolocationTimestamp: Date.now(),
+          lastGeolocationEventType: 'personnelLocationUpdated',
+        });
       });
 
       signalRService.on('onUnitLocationUpdated', (message) => {
-        set({ lastGeolocationMessage: JSON.stringify(message), lastGeolocationTimestamp: Date.now() });
+        set({
+          lastGeolocationMessage: JSON.stringify(message),
+          lastGeolocationTimestamp: Date.now(),
+          lastGeolocationEventType: 'unitLocationUpdated',
+        });
       });
 
       signalRService.on('onGeolocationConnect', () => {
         logger.info({
           message: 'Connected to geolocation SignalR hub',
         });
-        set({ isGeolocationHubConnected: true, error: null });
+        set({ isGeolocationHubConnected: true, lastGeolocationEventType: 'connected', error: null });
       });
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Unknown error occurred');

@@ -32,6 +32,7 @@ import { useCallsStore } from '@/stores/calls/store';
 import useLockscreenStore from '@/stores/lockscreen/store';
 import { useRolesStore } from '@/stores/roles/store';
 import { securityStore } from '@/stores/security/store';
+import { useSignalRStore } from '@/stores/signalr/signalr-store';
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -110,13 +111,23 @@ export default function TabLayout() {
       const initTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Initialization timeout after 30 seconds')), 30000));
 
       const initPromise = (async () => {
+        // Step 1: Initialize core store (fetches config)
         await useCoreStore.getState().init();
 
         logger.info({
-          message: 'Core store initialized, initializing calls store',
+          message: 'Core store initialized, fetching full config for SignalR',
           context: { platform: Platform.OS },
         });
 
+        // Step 2: Fetch the full config (needed for SignalR EventingUrl)
+        await useCoreStore.getState().fetchConfig();
+
+        logger.info({
+          message: 'Config fetched, initializing calls store',
+          context: { platform: Platform.OS },
+        });
+
+        // Step 3: Initialize calls store
         await useCallsStore.getState().init();
 
         logger.info({
@@ -124,7 +135,32 @@ export default function TabLayout() {
           context: { platform: Platform.OS },
         });
 
+        // Step 4: Get security rights (needed for department ID)
         await securityStore.getState().getRights();
+
+        logger.info({
+          message: 'Security rights loaded, connecting SignalR hubs',
+          context: { platform: Platform.OS },
+        });
+
+        // Step 5: Connect SignalR hubs after all core data is loaded
+        const signalRStore = useSignalRStore.getState();
+        try {
+          await Promise.all([
+            signalRStore.connectUpdateHub(),
+            signalRStore.connectGeolocationHub(),
+          ]);
+          logger.info({
+            message: 'SignalR hubs connected successfully',
+            context: { platform: Platform.OS },
+          });
+        } catch (signalRError) {
+          // Log SignalR connection errors but don't fail initialization
+          logger.error({
+            message: 'Failed to connect SignalR hubs during initialization',
+            context: { error: signalRError, platform: Platform.OS },
+          });
+        }
 
         hasInitialized.current = true;
 

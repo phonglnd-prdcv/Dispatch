@@ -8,7 +8,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacit
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
-import { MAP_ICONS } from '@/constants/map-icons';
+import { getMapIconWebUrl, MAP_ICONS } from '@/constants/map-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { Env } from '@/lib/env';
@@ -196,18 +196,18 @@ export default function MapWeb() {
       const iconKey = (pin.ImagePath?.toLowerCase() || 'call') as MapIconKey;
       const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
 
-      if (iconData) {
-        const img = document.createElement('img');
-        // For web, we need to handle the require() differently
-        // The iconData.uri is a require() result, which in web context is a module
-        const imgSrc = typeof iconData.uri === 'object' && 'default' in iconData.uri ? (iconData.uri as { default: string }).default : typeof iconData.uri === 'string' ? iconData.uri : `/mapping/${iconData.imgName}.png`;
-        img.src = imgSrc;
-        img.style.width = '32px';
-        img.style.height = '32px';
-        img.style.objectFit = 'contain';
-        img.alt = pin.Title;
-        iconContainer.appendChild(img);
-      }
+      const img = document.createElement('img');
+      const imgSrc = getMapIconWebUrl(iconData);
+      img.src = imgSrc;
+      img.style.width = '32px';
+      img.style.height = '32px';
+      img.style.objectFit = 'contain';
+      img.alt = pin.Title;
+      img.onerror = () => {
+        // Fallback to call icon if image fails to load
+        img.src = getMapIconWebUrl(MAP_ICONS['call']);
+      };
+      iconContainer.appendChild(img);
 
       el.appendChild(iconContainer);
 

@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
-import { MAP_ICONS } from '@/constants/map-icons';
+import { getMapIconWebUrl, MAP_ICONS } from '@/constants/map-icons';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
@@ -239,16 +239,18 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
       const iconKey = (pin.ImagePath?.toLowerCase() || 'call') as MapIconKey;
       const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
 
-      if (iconData) {
-        const img = document.createElement('img');
-        const imgSrc = typeof iconData.uri === 'object' && 'default' in iconData.uri ? (iconData.uri as { default: string }).default : typeof iconData.uri === 'string' ? iconData.uri : `/mapping/${iconData.imgName}.png`;
-        img.src = imgSrc;
-        img.style.width = '32px';
-        img.style.height = '32px';
-        img.style.objectFit = 'contain';
-        img.alt = pin.Title;
-        iconContainer.appendChild(img);
-      }
+      const img = document.createElement('img');
+      const imgSrc = getMapIconWebUrl(iconData);
+      img.src = imgSrc;
+      img.style.width = '32px';
+      img.style.height = '32px';
+      img.style.objectFit = 'contain';
+      img.alt = pin.Title;
+      img.onerror = () => {
+        // Fallback to call icon if image fails to load
+        img.src = getMapIconWebUrl(MAP_ICONS['call']);
+      };
+      iconContainer.appendChild(img);
 
       el.appendChild(iconContainer);
 

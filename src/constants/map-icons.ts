@@ -1,4 +1,56 @@
-export const MAP_ICONS = {
+import { type ImageSourcePropType, Platform } from 'react-native';
+
+type MapIconEntry = {
+  imgName: string;
+  uri: ImageSourcePropType;
+};
+
+/**
+ * Resolves the image source to a web-compatible URL string.
+ * On web, require() might return:
+ * - A string (the bundled URL)
+ * - An object with { default: string } (ES module default export)
+ * - An object with { uri: string } (React Native image format)
+ * - A number (Metro bundler asset ID on native)
+ */
+export function getMapIconWebUrl(iconEntry: MapIconEntry | undefined): string {
+  if (!iconEntry) {
+    return '/assets/mapping/call.png';
+  }
+
+  const source = iconEntry.uri;
+
+  // Handle different possible return types from require()
+  if (typeof source === 'string') {
+    return source;
+  }
+
+  if (typeof source === 'number') {
+    // Metro bundler asset ID on native - use fallback path for web
+    return `/assets/mapping/${iconEntry.imgName}.png`;
+  }
+
+  if (source && typeof source === 'object') {
+    // Check for ES module default export
+    if ('default' in source && typeof (source as { default: string }).default === 'string') {
+      return (source as { default: string }).default;
+    }
+    // Check for uri property
+    if ('uri' in source && typeof (source as { uri: string }).uri === 'string') {
+      return (source as { uri: string }).uri;
+    }
+  }
+
+  // Fallback to constructed path
+  return `/assets/mapping/${iconEntry.imgName}.png`;
+}
+
+/**
+ * Check if running on web platform
+ */
+export const isWebPlatform = Platform.OS === 'web';
+
+export const MAP_ICONS: Record<string, MapIconEntry> = {
   aircraft: {
     imgName: 'aircraft',
     uri: require('../../assets/mapping/aircraft.png'),
