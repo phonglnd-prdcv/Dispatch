@@ -1,18 +1,54 @@
 ### STAGE 1: Build ###
-FROM node:18.16.0-alpine AS build
-WORKDIR /usr/src/app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
-RUN npm run build -- --configuration=production
+FROM node:20-alpine AS build
 
-### STAGE 2: Run ###
-FROM nginx:1.21.6-alpine
+# Set working directory
+WORKDIR /app
+
+# Install dependencies needed for build
+RUN apk add --no-cache python3 make g++
+
+# Copy package files
+COPY package.json yarn.lock ./
+
+# Install dependencies
+RUN yarn install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Set environment for production web build
+ENV APP_ENV=production
+ENV NODE_ENV=production
+ENV EXPO_PUBLIC_PLATFORM=web
+
+# Build the web application
+RUN yarn expo export --platform web
+
+### STAGE 2: Serve ###
+FROM nginx:1.25-alpine
+
+# Install envsubst (part of gettext)
+RUN apk add --no-cache gettext
+
+# Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY --from=build /usr/src/app/www /usr/share/nginx/html
+
+# Copy built web app from build stage
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copy the docker entrypoint script
+COPY scripts/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Expose port 80
 EXPOSE 80
 
-# When the container starts, replace the env.js with values from environment variables
-CMD ["/bin/sh",  "-c",  "envsubst < /usr/share/nginx/html/assets/env.prod.js > /usr/share/nginx/html/assets/env.js && exec nginx -g 'daemon off;'"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+
+# Set the entrypoint
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

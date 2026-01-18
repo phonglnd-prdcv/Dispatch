@@ -32,7 +32,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const router = useRouter();
-  const { profile, logout } = useAuthStore();
+  //const { profile, logout } = useAuthStore();
   const securityStoreState = useSecurityStore();
 
   // Add safety check for store state
@@ -132,8 +132,8 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   }, []);
 
   // Get user display name and department name from security store
-  const displayName = securityStoreState.rights?.FullName || profile?.name || t('common.unknown_user');
-  const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
+  //const displayName = securityStoreState.rights?.FullName || profile?.name || t('common.unknown_user');
+  //const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
 
   const isDark = colorScheme === 'dark';
 
@@ -146,15 +146,15 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
             <HStack space="md" className="items-center">
               <Avatar size="lg" className="border-2 border-primary-500">
                 <AvatarFallbackText className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{getInitials(displayName)}</AvatarFallbackText>
-                {profile?.sub && <AvatarImage source={{ uri: getAvatarUrl(profile.sub) }} alt={`${displayName} avatar`} />}
+                {/*{profile?.sub && <AvatarImage source={{ uri: getAvatarUrl(profile.sub) }} alt={`${displayName} avatar`} />}*/}
               </Avatar>
 
               <VStack space="xs" className="flex-1">
                 <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`} testID="side-menu-profile-name" numberOfLines={1}>
-                  {displayName}
+                  {/*{displayName}*/}
                 </Text>
                 <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`} testID="side-menu-profile-department">
-                  {departmentName}
+                  {/*{departmentName}*/}
                 </Text>
               </VStack>
             </HStack>

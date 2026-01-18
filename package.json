@@ -43,7 +43,13 @@
     "test:ci": "yarn run test --coverage",
     "test:watch": "yarn run test --watch",
     "install-maestro": "curl -Ls 'https://get.maestro.mobile.dev' | bash",
-    "e2e-test": "maestro test .maestro/ -e APP_ID=com.obytes.development"
+    "e2e-test": "maestro test .maestro/ -e APP_ID=com.obytes.development",
+    "web:build": "cross-env APP_ENV=production expo export --platform web",
+    "docker:build": "docker build -t resgrid-dispatch-web .",
+    "docker:run": "docker run -p 3000:80 --env-file .env.docker resgrid-dispatch-web",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
   },
   "dependencies": {
     "@config-plugins/react-native-callkeep": "^11.0.0",

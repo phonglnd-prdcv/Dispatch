@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Resgrid Unit"
+    "title": "Resgrid Dispatch"
   },
   "audio_streams": {
     "buffering": "Almacenando en búfer",
@@ -469,7 +469,8 @@
     "pin_color": "Color del pin",
     "recenter_map": "Recentrar mapa",
     "set_as_current_call": "Establecer como llamada actual",
-    "view_call_details": "Ver detalles de la llamada"
+    "view_call_details": "Ver detalles de la llamada",
+    "dispatched_resources": "Despachados"
   },
   "notes": {
     "actions": {

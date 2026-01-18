@@ -23,7 +23,7 @@ type OnboardingItemProps = {
 
 const onboardingData: OnboardingItemProps[] = [
   {
-    title: 'Resgrid Unit',
+    title: 'Resgrid Dispatch',
     description: "Track your unit's location and status in real-time with our advanced mapping and AVL system",
     icon: <MapPin size={80} color="#FF7B1A" />,
   },

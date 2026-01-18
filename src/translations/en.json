@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Resgrid Unit"
+    "title": "Resgrid Dispatch"
   },
   "audio_streams": {
     "buffering": "Buffering",
@@ -491,10 +491,14 @@
     "call_set_as_current": "Call set as current call",
     "failed_to_open_maps": "Failed to open maps application",
     "failed_to_set_current_call": "Failed to set call as current call",
+    "layers": "Map Layers",
+    "no_layers": "No layers available",
     "no_location_for_routing": "No location data available for routing",
     "pin_color": "Pin Color",
     "recenter_map": "Recenter Map",
     "set_as_current_call": "Set as Current Call",
+    "show_all": "Show All",
+    "hide_all": "Hide All",
     "view_call_details": "View Call Details"
   },
   "notes": {
@@ -659,6 +663,61 @@
     "stations_tab": "Stations",
     "status_saved_successfully": "Status saved successfully!"
   },
+  "dispatch": {
+    "active_calls": "Active Calls",
+    "pending_calls": "Pending",
+    "units_available": "Available",
+    "units_on_scene": "On Scene",
+    "personnel_on_duty": "On Duty",
+    "units": "Units",
+    "personnel": "Personnel",
+    "map": "Map",
+    "notes": "Notes",
+    "activity_log": "Activity Log",
+    "communications": "Communications",
+    "no_active_calls": "No active calls",
+    "no_units": "No units available",
+    "no_personnel": "No personnel available",
+    "no_notes": "No notes available",
+    "no_activity": "No recent activity",
+    "current_channel": "Current Channel",
+    "audio_stream": "Audio Stream",
+    "no_stream": "No stream active",
+    "ptt": "PTT",
+    "ptt_start": "PTT Start",
+    "ptt_end": "PTT End",
+    "transmitting_on": "Transmitting on {{channel}}",
+    "transmission_ended": "Transmission ended",
+    "system_update": "System Update",
+    "data_refreshed": "Data refreshed from server",
+    "call_selected": "Call Selected",
+    "unit_selected": "Unit Selected",
+    "personnel_selected": "Personnel Selected",
+    "loading_map": "Loading map...",
+    "map_not_available_web": "Map not available on web platform",
+    "filtering_by_call": "Filtering by call",
+    "clear_filter": "Clear Filter",
+    "call_filter_active": "Call Filter Active",
+    "call_filter_cleared": "Call Filter Cleared",
+    "showing_all_data": "Showing all data",
+    "call_notes": "Call Notes",
+    "no_call_notes": "No call notes",
+    "add_call_note_placeholder": "Add a note...",
+    "note_added": "Note Added",
+    "units_on_call": "Units on Call",
+    "no_units_on_call": "No units on call",
+    "personnel_on_call": "Personnel on Call",
+    "no_personnel_on_call": "No personnel on call",
+    "call_activity": "Call Activity",
+    "no_call_activity": "No call activity",
+    "on_call": "On Call",
+    "filtered": "Filtered",
+    "active_filter": "Active Filter",
+    "unit_status_change": "Unit Status Change",
+    "personnel_status_change": "Personnel Status Change",
+    "view_call_details": "View Call Details",
+    "dispatched_resources": "Dispatched"
+  },
   "tabs": {
     "calls": "Calls",
     "calendar": "Calendar",
@@ -669,7 +728,11 @@
     "notes": "Notes",
     "protocols": "Protocols",
     "settings": "Settings",
-    "shifts": "Shifts"
+    "shifts": "Shifts",
+    "personnel": "Personnel"
+  },
+  "units": {
+    "title": "Units"
   },
   "welcome": "Welcome to obytes app site"
 }

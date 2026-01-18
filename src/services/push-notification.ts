@@ -246,7 +246,7 @@ class PushNotificationService {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Test Notification',
-          body: 'This is a test notification from Resgrid Unit',
+          body: 'This is a test notification from Resgrid Dispatch',
           data: { type: 'test', timestamp: new Date().toISOString() },
         },
         trigger: null, // Send immediately

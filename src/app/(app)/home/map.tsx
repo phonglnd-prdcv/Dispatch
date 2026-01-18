@@ -1,10 +1,11 @@
-import Mapbox from '@rnmapbox/maps';
+import Mapbox, { type LineLayerStyle, type FillLayerStyle, type CircleLayerStyle } from '@rnmapbox/maps';
 import { Stack, useFocusEffect } from 'expo-router';
-import { NavigationIcon } from 'lucide-react-native';
+import { type Feature, type GeoJsonProperties, type Geometry, type FeatureCollection } from 'geojson';
+import { LayersIcon, NavigationIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
@@ -13,11 +14,13 @@ import PinDetailModal from '@/components/maps/pin-detail-modal';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
+import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { onSortOptions } from '@/lib/utils';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
+import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useToastStore } from '@/stores/toast/store';
@@ -36,6 +39,7 @@ export default function Map() {
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
   const [selectedPin, setSelectedPin] = useState<MapMakerInfoData | null>(null);
   const [isPinDetailModalOpen, setIsPinDetailModalOpen] = useState(false);
+  const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
   const { isActive } = useAppLifecycle();
   const location = useLocationStore((state) => ({
     latitude: state.latitude,
@@ -43,6 +47,9 @@ export default function Map() {
     heading: state.heading,
     isMapLocked: state.isMapLocked,
   }));
+
+  // Map layers hook
+  const { layers, visibleLayers, isLoading: isLayersLoading, fetchLayers, toggleLayer, showAllLayers, hideAllLayers, getVisibleLayerData } = useMapLayers({ initialLayerType: MapLayerType.ALL, autoFetch: true });
 
   const _mapOptions = Object.keys(Mapbox.StyleURL)
     .map((key) => {
@@ -75,6 +82,9 @@ export default function Map() {
       // Reset hasUserMovedMap when navigating back to map
       setHasUserMovedMap(false);
 
+      // Refresh layers when map is focused
+      fetchLayers();
+
       // Reset camera to current location when navigating back to map
       if (isMapReady && location.latitude && location.longitude) {
         const cameraConfig: any = {
@@ -102,7 +112,7 @@ export default function Map() {
           },
         });
       }
-    }, [isMapReady, location.latitude, location.longitude, location.isMapLocked, location.heading])
+    }, [isMapReady, location.latitude, location.longitude, location.isMapLocked, location.heading, fetchLayers])
   );
 
   useEffect(() => {
@@ -222,8 +232,10 @@ export default function Map() {
       mapPinsCount: mapPins.length,
       isMapLocked: location.isMapLocked,
       theme: colorScheme || 'light',
+      layersCount: layers.length,
+      visibleLayersCount: visibleLayers.size,
     });
-  }, [trackEvent, mapPins.length, location.isMapLocked, colorScheme]);
+  }, [trackEvent, mapPins.length, location.isMapLocked, colorScheme, layers.length, visibleLayers.size]);
 
   const onCameraChanged = (event: any) => {
     // Only register user interaction if map is not locked
@@ -331,10 +343,146 @@ export default function Map() {
         shadowOpacity: isDark ? 0.1 : 0.25,
         shadowRadius: 3.84,
       },
+      layersButton: {
+        position: 'absolute' as const,
+        bottom: 20 + insets.bottom,
+        left: 20,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: isDark ? '#374151' : '#ffffff',
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
+        elevation: 5,
+        shadowColor: isDark ? '#ffffff' : '#000000',
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+        shadowOpacity: isDark ? 0.1 : 0.25,
+        shadowRadius: 3.84,
+      },
     };
   }, [colorScheme, insets.bottom]);
 
   const themedStyles = getThemedStyles();
+
+  // Helper function to get layer style based on type
+  const getLayerStyle = (layer: GetMapLayersData): FillLayerStyle | LineLayerStyle | CircleLayerStyle => {
+    const color = layer.Color || '#3b82f6';
+    const type = layer.Data?.Type?.toLowerCase() || 'polygon';
+
+    if (type === 'linestring' || type === 'multilinestring') {
+      return {
+        lineColor: color,
+        lineWidth: 3,
+        lineOpacity: 0.8,
+      } as LineLayerStyle;
+    } else if (type === 'point' || type === 'multipoint') {
+      return {
+        circleColor: color,
+        circleRadius: 8,
+        circleOpacity: 0.8,
+        circleStrokeColor: '#ffffff',
+        circleStrokeWidth: 2,
+      } as CircleLayerStyle;
+    } else {
+      // Default to polygon/fill style
+      return {
+        fillColor: color,
+        fillOpacity: 0.3,
+        fillOutlineColor: color,
+      } as FillLayerStyle;
+    }
+  };
+
+  // Render map layers
+  const renderMapLayers = () => {
+    const visibleLayerData = getVisibleLayerData();
+
+    return visibleLayerData.map((layer) => {
+      if (!layer.Data?.Features || layer.Data.Features.length === 0) {
+        return null;
+      }
+
+      // Build a proper GeoJSON FeatureCollection from the layer data
+      const featureCollection: FeatureCollection = {
+        type: 'FeatureCollection',
+        features: layer.Data.Features.flatMap((fc) => fc.features || []) as Feature<Geometry, GeoJsonProperties>[],
+      };
+
+      if (featureCollection.features.length === 0) {
+        return null;
+      }
+
+      const layerStyle = getLayerStyle(layer);
+      const type = layer.Data.Type?.toLowerCase() || 'polygon';
+
+      return (
+        <Mapbox.ShapeSource key={`layer-source-${layer.Id}`} id={`layer-source-${layer.Id}`} shape={featureCollection}>
+          {type === 'linestring' || type === 'multilinestring' ? (
+            <Mapbox.LineLayer id={`layer-line-${layer.Id}`} style={layerStyle as LineLayerStyle} />
+          ) : type === 'point' || type === 'multipoint' ? (
+            <Mapbox.CircleLayer id={`layer-circle-${layer.Id}`} style={layerStyle as CircleLayerStyle} />
+          ) : (
+            <Mapbox.FillLayer id={`layer-fill-${layer.Id}`} style={layerStyle as FillLayerStyle} />
+          )}
+        </Mapbox.ShapeSource>
+      );
+    });
+  };
+
+  // Render layers panel modal
+  const renderLayersPanel = () => {
+    const isDark = colorScheme === 'dark';
+
+    return (
+      <Modal visible={isLayersPanelOpen} transparent animationType="slide" onRequestClose={() => setIsLayersPanelOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.layersPanelContainer, { backgroundColor: isDark ? '#1f2937' : '#ffffff' }]}>
+            <View style={styles.layersPanelHeader}>
+              <Text style={[styles.layersPanelTitle, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.layers')}</Text>
+              <TouchableOpacity onPress={() => setIsLayersPanelOpen(false)} style={styles.closeButton}>
+                <Text style={[styles.closeButtonText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.layersPanelActions}>
+              <TouchableOpacity onPress={showAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={hideAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.layersList}>
+              {layers.length === 0 ? (
+                <Text style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</Text>
+              ) : (
+                layers.map((layer) => (
+                  <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => toggleLayer(layer.Id)}>
+                    <View style={styles.layerInfo}>
+                      <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
+                      <Text style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
+                        {layer.Name}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={visibleLayers.has(layer.Id)}
+                      onValueChange={() => toggleLayer(layer.Id)}
+                      trackColor={{ false: isDark ? '#4b5563' : '#d1d5db', true: '#3b82f6' }}
+                      thumbColor={visibleLayers.has(layer.Id) ? '#ffffff' : '#f4f3f4'}
+                    />
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   return (
     <>
@@ -368,7 +516,10 @@ export default function Map() {
             followPitch={location.isMapLocked ? 45 : undefined}
           />
 
-          {location.latitude && location.longitude && (
+          {/* Render custom layers */}
+          {renderMapLayers()}
+
+          {location.latitude && location.longitude ? (
             <Mapbox.PointAnnotation id="userLocation" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 0.5 }}>
               <Animated.View
                 style={[
@@ -381,7 +532,7 @@ export default function Map() {
                 <View style={styles.markerOuterRing} />
                 <View style={[styles.markerInnerContainer, themedStyles.markerInnerContainer]}>
                   <View style={styles.markerDot} />
-                  {location.heading !== null && location.heading !== undefined && (
+                  {location.heading !== null && location.heading !== undefined ? (
                     <View
                       style={[
                         styles.directionIndicator,
@@ -390,21 +541,29 @@ export default function Map() {
                         },
                       ]}
                     />
-                  )}
+                  ) : null}
                 </View>
               </Animated.View>
             </Mapbox.PointAnnotation>
-          )}
+          ) : null}
           <MapPins pins={mapPins} onPinPress={handlePinPress} />
         </Mapbox.MapView>
 
+        {/* Layers Button */}
+        <TouchableOpacity style={[styles.layersButton, themedStyles.layersButton]} onPress={() => setIsLayersPanelOpen(true)} testID="layers-button">
+          <LayersIcon size={20} color={colorScheme === 'dark' ? '#ffffff' : '#374151'} />
+        </TouchableOpacity>
+
         {/* Recenter Button - only show when map is not locked and user has moved the map */}
-        {showRecenterButton && (
+        {showRecenterButton ? (
           <TouchableOpacity style={[styles.recenterButton, themedStyles.recenterButton]} onPress={handleRecenterMap} testID="recenter-button">
             <NavigationIcon size={20} color="#ffffff" />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
+
+      {/* Layers Panel Modal */}
+      {renderLayersPanel()}
 
       {/* Pin Detail Modal */}
       <PinDetailModal pin={selectedPin} isOpen={isPinDetailModalOpen} onClose={handleClosePinDetail} onSetAsCurrentCall={handleSetAsCurrentCall} />
@@ -443,7 +602,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
     borderRadius: 12,
     borderWidth: 3,
-    // borderColor and shadow properties are handled by themedStyles
   },
   markerDot: {
     width: 8,
@@ -475,6 +633,92 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center',
-    // elevation and shadow properties are handled by themedStyles
+  },
+  layersButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  layersPanelContainer: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '60%',
+    paddingBottom: 20,
+  },
+  layersPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  layersPanelTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  layersPanelActions: {
+    flexDirection: 'row',
+    padding: 12,
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  layersList: {
+    paddingHorizontal: 16,
+  },
+  layerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  layerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  layerColorIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  layerName: {
+    fontSize: 14,
+    flex: 1,
+  },
+  noLayersText: {
+    textAlign: 'center',
+    paddingVertical: 20,
+    fontSize: 14,
   },
 });

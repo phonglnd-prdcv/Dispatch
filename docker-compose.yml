@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  dispatch-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resgrid-dispatch-web
+    ports:
+      - "3000:80"
+    environment:
+      # API Configuration
+      - DISPATCH_BASE_API_URL=https://api.resgrid.com
+      - DISPATCH_API_VERSION=v4
+      - DISPATCH_RESGRID_API_URL=/api/v4
+      
+      # SignalR Hub Configuration
+      - DISPATCH_CHANNEL_HUB_NAME=eventingHub
+      - DISPATCH_REALTIME_GEO_HUB_NAME=geolocationHub
+      
+      # Logging and Analytics
+      - DISPATCH_LOGGING_KEY=
+      - DISPATCH_APP_KEY=
+      - DISPATCH_SENTRY_DSN=
+      - DISPATCH_COUNTLY_APP_KEY=
+      - DISPATCH_COUNTLY_SERVER_URL=
+      
+      # Mapbox Configuration
+      - DISPATCH_MAPBOX_PUBKEY=
+      
+      # Feature Flags
+      - DISPATCH_MAINTENANCE_MODE=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# Example usage with custom environment file:
+# docker-compose --env-file .env.docker up -d

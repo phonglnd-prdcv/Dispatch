@@ -7,7 +7,7 @@ import { Redirect, Slot } from 'expo-router';
 import { Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Platform, StyleSheet, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationButton } from '@/components/notifications/NotificationButton';
@@ -55,8 +55,6 @@ export default function TabLayout() {
   const handleNavigate = useCallback(() => {
     setIsOpen(false);
   }, []);
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
   const { isActive, appState } = useAppLifecycle();
   const insets = useSafeAreaInsets();
 
@@ -263,12 +261,7 @@ export default function TabLayout() {
     }
   }, [isActive, appState, refreshDataFromBackground]);
 
-  // Force drawer open in landscape
-  useEffect(() => {
-    if (isLandscape) {
-      setIsOpen(true);
-    }
-  }, [isLandscape]);
+  // Drawer is closed by default - user opens via hamburger menu
 
   // Check for maintenance mode
   if (Env.MAINTENANCE_MODE) {
@@ -338,36 +331,28 @@ export default function TabLayout() {
     <View style={styles.container}>
       {/* Top Navigation Bar */}
       <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
-        <CreateDrawerMenuButton setIsOpen={setIsOpen} isLandscape={isLandscape} />
+        <CreateDrawerMenuButton setIsOpen={setIsOpen} />
         <View className="flex-1 items-center">
           <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
         </View>
-       </View>
+      </View>
 
-      <View className="flex-1 flex-row" ref={parentRef}>
-        {/* Drawer - conditionally rendered as permanent in landscape */}
-        {isLandscape ? (
-          <View className="w-1/4 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-            {coreIsInitialized && rights ? <SideMenu /> : null}
-          </View>
-        ) : (
-          <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
-            <DrawerBackdrop onPress={() => setIsOpen(false)} />
-            <DrawerContent className="w-4/5 bg-white p-1 dark:bg-gray-900">
-              <DrawerBody>
-                {coreIsInitialized && rights ? <SideMenu onNavigate={handleNavigate} /> : null}
-              </DrawerBody>
-              <DrawerFooter>
-                <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
-                  <ButtonText>Close</ButtonText>
-                </Button>
-              </DrawerFooter>
-            </DrawerContent>
-          </Drawer>
-        )}
+      <View className="flex-1" ref={parentRef}>
+        {/* Drawer menu - always rendered as modal, closed by default */}
+        <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
+          <DrawerBackdrop onPress={() => setIsOpen(false)} />
+          <DrawerContent className="w-4/5 max-w-xs bg-white p-1 dark:bg-gray-900">
+            <DrawerBody>{coreIsInitialized && rights ? <SideMenu onNavigate={handleNavigate} /> : null}</DrawerBody>
+            <DrawerFooter>
+              <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
+                <ButtonText>Close</ButtonText>
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
 
         {/* Main content area */}
-        <View className={`flex-1 ${isLandscape ? 'w-3/4' : 'w-full'}`}>
+        <View className="w-full flex-1">
           <Slot />
         </View>
       </View>
@@ -399,20 +384,16 @@ export default function TabLayout() {
 
 interface CreateDrawerMenuButtonProps {
   setIsOpen: (isOpen: boolean) => void;
-  isLandscape: boolean;
 }
 
-const CreateDrawerMenuButton = ({ setIsOpen, isLandscape }: CreateDrawerMenuButtonProps) => {
-  if (isLandscape) {
-    return <View className="w-8" />; // Spacer to maintain layout balance
-  }
-
+const CreateDrawerMenuButton = ({ setIsOpen }: CreateDrawerMenuButtonProps) => {
   return (
     <Pressable
       className="p-2"
       onPress={() => {
         setIsOpen(true);
       }}
+      testID="drawer-menu-button"
     >
       <Menu size={24} color="white" />
     </Pressable>

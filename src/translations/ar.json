@@ -495,7 +495,8 @@
     "pin_color": "لون الدبوس",
     "recenter_map": "إعادة توسيط الخريطة",
     "set_as_current_call": "تعيين كمكالمة حالية",
-    "view_call_details": "عرض تفاصيل المكالمة"
+    "view_call_details": "عرض تفاصيل المكالمة",
+    "dispatched_resources": "المرسلون"
   },
   "notes": {
     "actions": {

@@ -1,16 +1,11 @@
-import { Stack, useFocusEffect } from 'expo-router';
 import { type Feature, type FeatureCollection, type GeoJsonProperties, type Geometry } from 'geojson';
 import mapboxgl from 'mapbox-gl';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
-import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { MAP_ICONS } from '@/constants/map-icons';
-import { useAnalytics } from '@/hooks/use-analytics';
-import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
@@ -22,9 +17,42 @@ const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.
 
 type MapIconKey = keyof typeof MAP_ICONS;
 
-export default function MapWeb() {
-  const { t } = useTranslation();
-  const { trackEvent } = useAnalytics();
+interface UnifiedMapViewProps {
+  /** Map pins to display */
+  pins?: MapMakerInfoData[];
+  /** Visible layers data to render */
+  visibleLayers?: GetMapLayersData[];
+  /** Whether to auto-fetch pins from API */
+  autoFetchPins?: boolean;
+  /** Callback when a pin is pressed */
+  onPinPress?: (pin: MapMakerInfoData) => void;
+  /** Callback when map is ready */
+  onMapReady?: () => void;
+  /** Whether to show user location */
+  showUserLocation?: boolean;
+  /** Whether to enable interaction */
+  interactive?: boolean;
+  /** Custom style overrides */
+  style?: any;
+  /** Test ID for testing */
+  testID?: string;
+}
+
+/**
+ * Unified Map View component for Web using mapbox-gl-js.
+ * Supports pins, layers, and user location.
+ */
+export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
+  pins: externalPins,
+  visibleLayers = [],
+  autoFetchPins = false,
+  onPinPress,
+  onMapReady,
+  showUserLocation = true,
+  interactive = true,
+  style,
+  testID = 'unified-map-view',
+}) => {
   const { colorScheme } = useColorScheme();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -32,16 +60,15 @@ export default function MapWeb() {
   const layerIdsRef = useRef<string[]>([]);
   const sourceIdsRef = useRef<string[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
-  const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
+  const [internalPins, setInternalPins] = useState<MapMakerInfoData[]>([]);
 
   const location = useLocationStore((state) => ({
     latitude: state.latitude,
     longitude: state.longitude,
   }));
 
-  // Map layers hook
-  const { layers, visibleLayers, isLoading: isLayersLoading, fetchLayers, toggleLayer, showAllLayers, hideAllLayers, getVisibleLayerData } = useMapLayers({ initialLayerType: MapLayerType.ALL, autoFetch: true });
+  // Use external pins if provided, otherwise use internal pins
+  const mapPins = externalPins ?? internalPins;
 
   // Get map style based on current theme
   const getMapStyle = useCallback(() => {
@@ -61,47 +88,47 @@ export default function MapWeb() {
 
   // Initialize map
   useEffect(() => {
-    if (map.current) return; // initialize map only once
+    if (map.current) return;
     if (!mapContainer.current) return;
 
     mapboxgl.accessToken = Env.MAPBOX_PUBKEY;
 
-    const initialCenter: [number, number] = location.longitude && location.latitude ? [location.longitude, location.latitude] : [-98.5795, 39.8283]; // Center of USA as fallback
+    const initialCenter: [number, number] = location.longitude && location.latitude ? [location.longitude, location.latitude] : [-98.5795, 39.8283];
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: getMapStyle(),
       center: initialCenter,
       zoom: location.latitude && location.longitude ? 12 : 3,
+      interactive,
     });
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    map.current.addControl(
-      new mapboxgl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true,
-        },
-        trackUserLocation: true,
-        showUserHeading: true,
-      })
-    );
+
+    if (showUserLocation) {
+      map.current.addControl(
+        new mapboxgl.GeolocateControl({
+          positionOptions: {
+            enableHighAccuracy: true,
+          },
+          trackUserLocation: true,
+          showUserHeading: true,
+        })
+      );
+    }
 
     map.current.on('load', () => {
       setIsMapReady(true);
-      logger.info({
-        message: 'Web map loaded successfully',
-      });
+      onMapReady?.();
     });
 
     return () => {
-      // Clean up markers
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
-
       map.current?.remove();
       map.current = null;
     };
-  }, [getMapStyle, location.latitude, location.longitude]);
+  }, [getMapStyle, location.latitude, location.longitude, interactive, showUserLocation, onMapReady]);
 
   // Update map style when theme changes
   useEffect(() => {
@@ -110,23 +137,18 @@ export default function MapWeb() {
     }
   }, [colorScheme, getMapStyle, isMapReady]);
 
-  // Handle navigation focus - refresh data when navigating back to map
-  useFocusEffect(
-    useCallback(() => {
-      fetchLayers();
-    }, [fetchLayers])
-  );
-
-  // Fetch map data and markers on mount
+  // Auto-fetch pins if enabled
   useEffect(() => {
+    if (!autoFetchPins) return;
+
     const abortController = new AbortController();
 
     const fetchMapDataAndMarkers = async () => {
       try {
         const mapDataAndMarkers = await getMapDataAndMarkers(abortController.signal);
 
-        if (mapDataAndMarkers && mapDataAndMarkers.Data) {
-          setMapPins(mapDataAndMarkers.Data.MapMakerInfos);
+        if (mapDataAndMarkers?.Data) {
+          setInternalPins(mapDataAndMarkers.Data.MapMakerInfos);
 
           // Center map on the data center if provided
           if (mapDataAndMarkers.Data.CenterLat && mapDataAndMarkers.Data.CenterLon && map.current) {
@@ -144,16 +166,12 @@ export default function MapWeb() {
           }
         }
       } catch (error) {
-        // Don't log aborted requests as errors
         if (error instanceof Error && (error.name === 'AbortError' || error.message === 'canceled')) {
-          logger.debug({
-            message: 'Map data fetch was aborted during component unmount',
-          });
           return;
         }
 
         logger.error({
-          message: 'Failed to fetch initial map data and markers',
+          message: 'Failed to fetch map data',
           context: { error },
         });
       }
@@ -164,7 +182,7 @@ export default function MapWeb() {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [autoFetchPins]);
 
   // Update markers when mapPins change
   useEffect(() => {
@@ -192,14 +210,11 @@ export default function MapWeb() {
       iconContainer.style.height = '32px';
       iconContainer.style.position = 'relative';
 
-      // Get the icon for this pin type
       const iconKey = (pin.ImagePath?.toLowerCase() || 'call') as MapIconKey;
       const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
 
       if (iconData) {
         const img = document.createElement('img');
-        // For web, we need to handle the require() differently
-        // The iconData.uri is a require() result, which in web context is a module
         const imgSrc = typeof iconData.uri === 'object' && 'default' in iconData.uri ? (iconData.uri as { default: string }).default : typeof iconData.uri === 'string' ? iconData.uri : `/mapping/${iconData.imgName}.png`;
         img.src = imgSrc;
         img.style.width = '32px';
@@ -226,6 +241,11 @@ export default function MapWeb() {
       title.style.textShadow = colorScheme === 'dark' ? '0 0 2px rgba(0,0,0,0.8)' : '0 0 2px rgba(255,255,255,0.8)';
       el.appendChild(title);
 
+      // Add click handler
+      el.addEventListener('click', () => {
+        onPinPress?.(pin);
+      });
+
       // Create popup
       const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
         `<div style="padding: 8px;">
@@ -241,7 +261,7 @@ export default function MapWeb() {
 
       markersRef.current.push(marker);
     });
-  }, [mapPins, isMapReady, colorScheme]);
+  }, [mapPins, isMapReady, colorScheme, onPinPress]);
 
   // Update layers when visibility changes
   useEffect(() => {
@@ -262,15 +282,12 @@ export default function MapWeb() {
     sourceIdsRef.current = [];
 
     // Add visible layers
-    const visibleLayerData = getVisibleLayerData();
-
-    visibleLayerData.forEach((layer) => {
+    visibleLayers.forEach((layer) => {
       if (!layer.Data?.Features || layer.Data.Features.length === 0) return;
 
       const sourceId = `custom-layer-source-${layer.Id}`;
       const layerId = `custom-layer-${layer.Id}`;
 
-      // Build a proper GeoJSON FeatureCollection from the layer data
       const featureCollection: FeatureCollection = {
         type: 'FeatureCollection',
         features: layer.Data.Features.flatMap((fc) => fc.features || []) as Feature<Geometry, GeoJsonProperties>[],
@@ -279,14 +296,12 @@ export default function MapWeb() {
       if (featureCollection.features.length === 0) return;
 
       try {
-        // Add source
         map.current!.addSource(sourceId, {
           type: 'geojson',
           data: featureCollection,
         });
         sourceIdsRef.current.push(sourceId);
 
-        // Determine layer type and add appropriate layer
         const type = layer.Data.Type?.toLowerCase() || 'polygon';
         const color = layer.Color || '#3b82f6';
 
@@ -315,7 +330,6 @@ export default function MapWeb() {
             },
           });
         } else {
-          // Default to fill layer for polygons
           map.current!.addLayer({
             id: layerId,
             type: 'fill',
@@ -336,200 +350,21 @@ export default function MapWeb() {
         });
       }
     });
-  }, [visibleLayers, layers, isMapReady, getVisibleLayerData]);
-
-  // Track when map view is rendered
-  useEffect(() => {
-    trackEvent('map_view_rendered', {
-      hasMapPins: mapPins.length > 0,
-      mapPinsCount: mapPins.length,
-      theme: colorScheme || 'light',
-      platform: 'web',
-      layersCount: layers.length,
-      visibleLayersCount: visibleLayers.size,
-    });
-  }, [trackEvent, mapPins.length, colorScheme, layers.length, visibleLayers.size]);
-
-  // Render layers panel modal
-  const renderLayersPanel = () => {
-    const isDark = colorScheme === 'dark';
-
-    return (
-      <Modal visible={isLayersPanelOpen} transparent animationType="slide" onRequestClose={() => setIsLayersPanelOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.layersPanelContainer, { backgroundColor: isDark ? '#1f2937' : '#ffffff' }]}>
-            <View style={styles.layersPanelHeader}>
-              <Text style={[styles.layersPanelTitle, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.layers')}</Text>
-              <TouchableOpacity onPress={() => setIsLayersPanelOpen(false)} style={styles.closeButton}>
-                <Text style={[styles.closeButtonText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.layersPanelActions}>
-              <TouchableOpacity onPress={showAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={hideAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.layersList}>
-              {layers.length === 0 ? (
-                <Text style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</Text>
-              ) : (
-                layers.map((layer) => (
-                  <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => toggleLayer(layer.Id)}>
-                    <View style={styles.layerInfo}>
-                      <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
-                      <Text style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
-                        {layer.Name}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={visibleLayers.has(layer.Id)}
-                      onValueChange={() => toggleLayer(layer.Id)}
-                      trackColor={{ false: isDark ? '#4b5563' : '#d1d5db', true: '#3b82f6' }}
-                      thumbColor={visibleLayers.has(layer.Id) ? '#ffffff' : '#f4f3f4'}
-                    />
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
-  const isDark = colorScheme === 'dark';
+  }, [visibleLayers, isMapReady]);
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: t('tabs.map'),
-          headerTitle: t('app.title'),
-          headerShown: true,
-          headerBackTitle: '',
-        }}
-      />
-      <View style={styles.container} testID="map-container">
-        <FocusAwareStatusBar />
-        <div ref={mapContainer} style={{ height: '100%', width: '100%' }} />
-
-        {/* Layers Button */}
-        <TouchableOpacity style={[styles.layersButton, { backgroundColor: isDark ? '#374151' : '#ffffff' }]} onPress={() => setIsLayersPanelOpen(true)} testID="layers-button">
-          <Text style={{ fontSize: 16 }}>🗂️</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Layers Panel Modal */}
-      {renderLayersPanel()}
-    </>
+    <View style={[styles.container, style]} testID={testID}>
+      <div ref={mapContainer} style={{ height: '100%', width: '100%' }} />
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
     height: '100%',
-    position: 'relative',
-  },
-  layersButton: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  layersPanelContainer: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    maxHeight: '60%',
-    paddingBottom: 20,
-  },
-  layersPanelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  layersPanelTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  layersPanelActions: {
-    flexDirection: 'row',
-    padding: 12,
-    gap: 8,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  layersList: {
-    paddingHorizontal: 16,
-  },
-  layerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  layerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 12,
-  },
-  layerColorIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  layerName: {
-    fontSize: 14,
-    flex: 1,
-  },
-  noLayersText: {
-    textAlign: 'center',
-    paddingVertical: 20,
-    fontSize: 14,
   },
 });
+
+export default UnifiedMapView;
