@@ -1,9 +1,10 @@
-import { AlertTriangle, FileText, Filter, Plus, RefreshCw, Send } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { AlertTriangle, FileText, Filter, Plus, Search, Send, X } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
+import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
@@ -79,6 +80,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleAddNote = () => {
     if (newNoteText.trim() && onAddCallNote) {
@@ -87,9 +89,32 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
     }
   };
 
-  // Determine which notes to display
+  // Determine which notes to display and apply search filter
   const displayNotes = isCallFilterActive && callNotes;
-  const notesCount = displayNotes ? callNotes?.length || 0 : notes.length;
+  
+  // Filter notes based on search query
+  const filteredNotes = useMemo(() => {
+    if (!searchQuery.trim()) return notes;
+    const query = searchQuery.toLowerCase().trim();
+    return notes.filter((n) => {
+      const title = (n.Title || '').toLowerCase();
+      const body = (stripHtmlTags(n.Body) || '').toLowerCase();
+      const category = (n.Category || '').toLowerCase();
+      return title.includes(query) || body.includes(query) || category.includes(query);
+    });
+  }, [notes, searchQuery]);
+  
+  const filteredCallNotes = useMemo(() => {
+    if (!callNotes || !searchQuery.trim()) return callNotes;
+    const query = searchQuery.toLowerCase().trim();
+    return callNotes.filter((n) => {
+      const note = (n.Note || '').toLowerCase();
+      const fullName = (n.FullName || '').toLowerCase();
+      return note.includes(query) || fullName.includes(query);
+    });
+  }, [callNotes, searchQuery]);
+  
+  const notesCount = displayNotes ? filteredCallNotes?.length || 0 : filteredNotes.length;
 
   return (
     <Box className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
@@ -111,7 +136,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
               </Badge>
             ) : null}
             <Pressable onPress={onRefresh} style={styles.iconButton}>
-              <Icon as={RefreshCw} size="xs" className={`text-gray-500 dark:text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
+              <AnimatedRefreshIcon isLoading={isLoading} />
             </Pressable>
             {!isCallFilterActive && onNewNote ? (
               <Pressable onPress={onNewNote} style={styles.iconButton}>
@@ -124,6 +149,25 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
 
       {!isCollapsed ? (
         <VStack className="flex-1">
+          {/* Search Input */}
+          <View style={styles.searchContainer}>
+            <Icon as={Search} size="xs" className="text-gray-400" />
+            <TextInput
+              style={styles.searchInput}
+              className="flex-1 text-sm text-gray-800 dark:text-gray-100"
+              placeholder={t('dispatch.search_notes_placeholder')}
+              placeholderTextColor="#9ca3af"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 ? (
+              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Icon as={X} size="xs" className="text-gray-400" />
+              </Pressable>
+            ) : null}
+          </View>
           {/* Add note input for call notes */}
           {isCallFilterActive && onAddCallNote ? (
             <HStack className="border-b border-gray-200 p-2 dark:border-gray-700" space="sm">
@@ -151,8 +195,8 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {displayNotes ? (
               // Show call notes
-              callNotes && callNotes.length > 0 ? (
-                callNotes.map((note) => <CallNoteItem key={note.CallNoteId} note={note} />)
+              filteredCallNotes && filteredCallNotes.length > 0 ? (
+                filteredCallNotes.map((note) => <CallNoteItem key={note.CallNoteId} note={note} />)
               ) : (
                 <View style={styles.emptyState}>
                   <Icon as={FileText} size="lg" className="text-gray-300 dark:text-gray-600" />
@@ -160,13 +204,13 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
                 </View>
               )
             ) : // Show general notes
-            notes.length === 0 ? (
+            filteredNotes.length === 0 ? (
               <View style={styles.emptyState}>
                 <Icon as={FileText} size="lg" className="text-gray-300 dark:text-gray-600" />
                 <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{t('dispatch.no_notes')}</Text>
               </View>
             ) : (
-              notes.slice(0, 10).map((note) => <NoteItem key={note.NoteId} note={note} onPress={() => onSelectNote?.(note.NoteId)} />)
+              filteredNotes.slice(0, 10).map((note) => <NoteItem key={note.NoteId} note={note} onPress={() => onSelectNote?.(note.NoteId)} />)
             )}
           </ScrollView>
         </VStack>
@@ -176,6 +220,20 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
 };
 
 const styles = StyleSheet.create({
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
   content: {
     flex: 1,
     padding: 8,

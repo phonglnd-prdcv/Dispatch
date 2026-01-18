@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 
 import { getAllUnitStatuses } from '@/api/satuses';
-import { getUnits } from '@/api/units/units';
+import { getUnitsInfos } from '@/api/units/units';
 import { type UnitTypeStatusResultData } from '@/models/v4/statuses/unitTypeStatusResultData';
-import { type UnitResultData } from '@/models/v4/units/unitResultData';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 
 interface UnitsState {
-  units: UnitResultData[];
+  units: UnitInfoResultData[];
   unitStatuses: UnitTypeStatusResultData[];
   isLoading: boolean;
   error: string | null;
@@ -21,11 +21,11 @@ export const useUnitsStore = create<UnitsState>((set) => ({
   fetchUnits: async () => {
     set({ isLoading: true, error: null });
     try {
-      const unitsResponse = await getUnits();
+      const unitsResponse = await getUnitsInfos('');
       const unitStatusesResponse = await getAllUnitStatuses();
       set({ units: unitsResponse.Data, unitStatuses: unitStatusesResponse.Data, isLoading: false });
     } catch (error) {
-      set({ error: 'Failed to fetch calls', isLoading: false });
+      set({ error: 'Failed to fetch units', isLoading: false });
     }
   },
 }));

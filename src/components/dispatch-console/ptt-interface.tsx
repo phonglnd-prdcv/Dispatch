@@ -11,8 +11,6 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 
-import { PanelHeader } from './panel-header';
-
 interface PTTInterfaceProps {
   onPTTPress?: () => void;
   onPTTRelease?: () => void;
@@ -25,7 +23,6 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const [isMuted, setIsMuted] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const { isPlaying, currentStream, setIsBottomSheetVisible } = useAudioStreamStore();
 
   const handleOpenAudioStreams = () => {
@@ -38,77 +35,57 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
 
   return (
     <Box className="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-      <PanelHeader title={t('dispatch.communications')} icon={Radio} iconColor="#10b981" isCollapsed={isCollapsed} onToggleCollapse={() => setIsCollapsed(!isCollapsed)} />
+      <HStack className="items-center justify-between p-2" space="sm">
+        {/* Channel & Stream Info */}
+        <HStack className="flex-1 items-center" space="sm">
+          {/* TX/RX Indicator */}
+          <View style={isTransmitting ? styles.transmittingIndicator : styles.readyIndicator}>
+            <Text className="text-xs font-bold text-white">{isTransmitting ? 'TX' : 'RX'}</Text>
+          </View>
 
-      {!isCollapsed ? (
-        <VStack className="p-3" space="md">
-          {/* Current Channel Display */}
-          <HStack className="items-center justify-between rounded-lg bg-gray-100 p-2 dark:bg-gray-800">
-            <HStack className="items-center" space="sm">
-              <Icon as={Radio} size="sm" className="text-green-500" />
-              <VStack>
-                <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.current_channel')}</Text>
-                <Text className="text-sm font-semibold text-gray-800 dark:text-gray-100">{currentChannel}</Text>
-              </VStack>
-            </HStack>
-            <HStack className="items-center" space="xs">
-              {isTransmitting ? (
-                <View style={styles.transmittingIndicator}>
-                  <Text className="text-xs font-bold text-white">TX</Text>
-                </View>
-              ) : (
-                <View style={styles.readyIndicator}>
-                  <Text className="text-xs font-bold text-white">RX</Text>
-                </View>
-              )}
-            </HStack>
-          </HStack>
-
-          {/* Audio Stream Status */}
-          <Pressable onPress={handleOpenAudioStreams}>
-            <HStack className="items-center justify-between rounded-lg bg-gray-100 p-2 dark:bg-gray-800">
-              <HStack className="items-center" space="sm">
-                {isPlaying ? <Icon as={Volume2} size="sm" className="text-blue-500" /> : <Icon as={VolumeX} size="sm" className="text-gray-400" />}
-                <VStack>
-                  <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.audio_stream')}</Text>
-                  <Text className="text-sm font-semibold text-gray-800 dark:text-gray-100">{currentStream ? currentStream.Name : t('dispatch.no_stream')}</Text>
-                </VStack>
+          {/* Channel Info */}
+          <VStack className="flex-1">
+            <Text className="text-xs text-gray-500 dark:text-gray-400" numberOfLines={1}>
+              {currentChannel}
+            </Text>
+            <Pressable onPress={handleOpenAudioStreams}>
+              <HStack className="items-center" space="xs">
+                <Icon as={isPlaying ? Volume2 : VolumeX} size="2xs" className={isPlaying ? 'text-blue-500' : 'text-gray-400'} />
+                <Text className="text-xs text-gray-600 dark:text-gray-300" numberOfLines={1}>
+                  {currentStream ? currentStream.Name : t('dispatch.no_stream')}
+                </Text>
               </HStack>
-              <Icon as={Headphones} size="sm" className="text-gray-400" />
-            </HStack>
+            </Pressable>
+          </VStack>
+        </HStack>
+
+        {/* Compact Controls */}
+        <HStack className="items-center" space="sm">
+          {/* Audio Streams Button */}
+          <Pressable onPress={handleOpenAudioStreams} style={styles.compactControlButton}>
+            <Icon as={Headphones} size="sm" color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
           </Pressable>
 
-          {/* PTT and Mute Controls */}
-          <HStack className="items-center justify-center" space="md">
-            {/* Mute Button */}
-            <Pressable onPress={() => setIsMuted(!isMuted)} style={[styles.controlButton, isMuted && styles.mutedButton]}>
-              <Icon as={isMuted ? MicOff : Mic} size="md" color={isMuted ? '#ef4444' : colorScheme === 'dark' ? '#fff' : '#374151'} />
-            </Pressable>
+          {/* Mute Button */}
+          <Pressable onPress={() => setIsMuted(!isMuted)} style={[styles.compactControlButton, isMuted && styles.mutedButton]}>
+            <Icon as={isMuted ? MicOff : Mic} size="sm" color={isMuted ? '#ef4444' : colorScheme === 'dark' ? '#fff' : '#374151'} />
+          </Pressable>
 
-            {/* PTT Button */}
-            <Pressable onPressIn={onPTTPress} onPressOut={onPTTRelease} style={[styles.pttButton, isTransmitting && styles.pttButtonActive]} disabled={isMuted}>
-              <VStack className="items-center">
-                <Icon as={Radio} size="lg" color="#fff" />
-                <Text className="mt-1 text-xs font-bold text-white">{t('dispatch.ptt')}</Text>
-              </VStack>
-            </Pressable>
-
-            {/* Volume/Settings Button */}
-            <Pressable onPress={handleOpenAudioStreams} style={styles.controlButton}>
-              <Icon as={Volume2} size="md" color={colorScheme === 'dark' ? '#fff' : '#374151'} />
-            </Pressable>
-          </HStack>
-        </VStack>
-      ) : null}
+          {/* PTT Button */}
+          <Pressable onPressIn={onPTTPress} onPressOut={onPTTRelease} style={[styles.pttButtonCompact, isTransmitting && styles.pttButtonActive]} disabled={isMuted}>
+            <Icon as={Radio} size="sm" color="#fff" />
+          </Pressable>
+        </HStack>
+      </HStack>
     </Box>
   );
 };
 
 const styles = StyleSheet.create({
-  controlButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  compactControlButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
@@ -116,18 +93,18 @@ const styles = StyleSheet.create({
   mutedButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
-  pttButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  pttButtonCompact: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#22c55e',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
   pttButtonActive: {
     backgroundColor: '#ef4444',
@@ -135,14 +112,18 @@ const styles = StyleSheet.create({
   },
   transmittingIndicator: {
     backgroundColor: '#ef4444',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
+    minWidth: 28,
+    alignItems: 'center',
   },
   readyIndicator: {
     backgroundColor: '#22c55e',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
+    minWidth: 28,
+    alignItems: 'center',
   },
 });

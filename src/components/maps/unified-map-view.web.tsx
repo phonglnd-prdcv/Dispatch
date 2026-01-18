@@ -137,6 +137,20 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
     }
   }, [colorScheme, getMapStyle, isMapReady]);
 
+  // Helper function to calculate center from markers
+  const calculateCenterFromMarkers = (markers: MapMakerInfoData[]): { lat: number; lon: number } | null => {
+    const validMarkers = markers.filter((m) => m.Latitude && m.Longitude);
+    if (validMarkers.length === 0) return null;
+
+    const sumLat = validMarkers.reduce((sum, m) => sum + m.Latitude, 0);
+    const sumLon = validMarkers.reduce((sum, m) => sum + m.Longitude, 0);
+
+    return {
+      lat: sumLat / validMarkers.length,
+      lon: sumLon / validMarkers.length,
+    };
+  };
+
   // Auto-fetch pins if enabled
   useEffect(() => {
     if (!autoFetchPins) return;
@@ -148,7 +162,8 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
         const mapDataAndMarkers = await getMapDataAndMarkers(abortController.signal);
 
         if (mapDataAndMarkers?.Data) {
-          setInternalPins(mapDataAndMarkers.Data.MapMakerInfos);
+          const markers = mapDataAndMarkers.Data.MapMakerInfos;
+          setInternalPins(markers);
 
           // Center map on the data center if provided
           if (mapDataAndMarkers.Data.CenterLat && mapDataAndMarkers.Data.CenterLon && map.current) {
@@ -160,6 +175,17 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
               map.current.flyTo({
                 center: [centerLon, centerLat],
                 zoom: zoomLevel,
+                duration: 1500,
+              });
+            }
+          } else if (markers.length > 0 && map.current) {
+            // Fallback: Calculate center from markers if CenterLat/CenterLon not provided
+            const center = calculateCenterFromMarkers(markers);
+            if (center) {
+              const zoomLevel = mapDataAndMarkers.Data.ZoomLevel ? parseFloat(mapDataAndMarkers.Data.ZoomLevel) : 12;
+              map.current.flyTo({
+                center: [center.lon, center.lat],
+                zoom: isNaN(zoomLevel) ? 12 : zoomLevel,
                 duration: 1500,
               });
             }

@@ -16,6 +16,10 @@ interface DispatchConsoleState {
   selectedCallNotes: CallNoteResultData[];
   isLoadingCallData: boolean;
 
+  // Map center coordinates for weather
+  mapCenterLatitude: number | null;
+  mapCenterLongitude: number | null;
+
   // Activity log
   activityLog: ActivityLogEntry[];
   maxLogEntries: number;
@@ -44,6 +48,7 @@ interface DispatchConsoleState {
   setCallExtraData: (data: CallExtraDataResultData | null) => void;
   setCallNotes: (notes: CallNoteResultData[]) => void;
   setIsLoadingCallData: (loading: boolean) => void;
+  setMapCenter: (latitude: number | null, longitude: number | null) => void;
   addActivityLogEntry: (entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) => void;
   clearActivityLog: () => void;
   setIsTransmitting: (isTransmitting: boolean) => void;
@@ -72,6 +77,8 @@ export const useDispatchConsoleStore = create<DispatchConsoleState>((set, get) =
   selectedCallExtraData: null,
   selectedCallNotes: [],
   isLoadingCallData: false,
+  mapCenterLatitude: null,
+  mapCenterLongitude: null,
   activityLog: [],
   maxLogEntries: 100,
   isTransmitting: false,
@@ -115,6 +122,7 @@ export const useDispatchConsoleStore = create<DispatchConsoleState>((set, get) =
   setCallExtraData: (data) => set({ selectedCallExtraData: data }),
   setCallNotes: (notes) => set({ selectedCallNotes: notes }),
   setIsLoadingCallData: (loading) => set({ isLoadingCallData: loading }),
+  setMapCenter: (latitude, longitude) => set({ mapCenterLatitude: latitude, mapCenterLongitude: longitude }),
 
   addActivityLogEntry: (entry) => {
     const { activityLog, maxLogEntries } = get();

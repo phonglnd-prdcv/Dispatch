@@ -1,12 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { type Href, router } from 'expo-router';
-import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { getCallExtraData } from '@/api/calls/calls';
 import { getCallNotes, saveCallNote } from '@/api/calls/callNotes';
+import { getCallExtraData } from '@/api/calls/calls';
+import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { AudioStreamBottomSheet } from '@/components/audio-stream/audio-stream-bottom-sheet';
 import { ActiveCallFilterBanner, ActiveCallsPanel, ActivityLogPanel, MapWidget, NotesPanel, PersonnelPanel, PTTInterface, StatsHeader, UnitsPanel } from '@/components/dispatch-console';
 import { Box } from '@/components/ui/box';
@@ -15,7 +15,7 @@ import { HStack } from '@/components/ui/hstack';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
-import { useAuthStore } from '@/stores/auth/store';
+import useAuthStore from '@/stores/auth/store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
 import { useHomeStore } from '@/stores/home/home-store';
@@ -24,22 +24,21 @@ import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 import { useUnitsStore } from '@/stores/units/store';
 
-export default function DispatchConsole() {
+export default function DispatchConsoleWeb() {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
-  const { colorScheme } = useColorScheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const isTablet = Math.min(width, height) >= 600;
 
   // Store hooks
   const { refreshAll } = useHomeStore();
+  const { userId } = useAuthStore();
   const { calls, callPriorities, isLoading: callsLoading, fetchCalls, fetchCallPriorities } = useCallsStore();
   const { units, isLoading: unitsLoading, fetchUnits } = useUnitsStore();
   const { personnel, isLoading: personnelLoading, fetchPersonnel } = usePersonnelStore();
   const { notes, isLoading: notesLoading, fetchNotes } = useNotesStore();
   const { lastUpdateTimestamp } = useSignalRStore();
-  const { userId } = useAuthStore();
 
   // Dispatch console store
   const {
@@ -53,16 +52,19 @@ export default function DispatchConsole() {
     selectedCallExtraData,
     selectedCallNotes,
     isLoadingCallData,
+    mapCenterLatitude,
+    mapCenterLongitude,
     setSelectedCallId,
     setSelectedUnitId,
     setSelectedPersonnelId,
+    addActivityLogEntry,
+    setIsTransmitting,
     toggleCallFilter,
     clearCallFilter,
     setCallExtraData,
     setCallNotes,
     setIsLoadingCallData,
-    addActivityLogEntry,
-    setIsTransmitting,
+    setMapCenter,
   } = useDispatchConsoleStore();
 
   // Local state
@@ -86,8 +88,28 @@ export default function DispatchConsole() {
     fetchUnits();
     fetchPersonnel();
     fetchNotes();
+    fetchMapCenter();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch map center coordinates for weather
+  const fetchMapCenter = async () => {
+    try {
+      const mapData = await getMapDataAndMarkers();
+      if (mapData?.Data?.CenterLat && mapData?.Data?.CenterLon) {
+        const lat = parseFloat(mapData.Data.CenterLat);
+        const lon = parseFloat(mapData.Data.CenterLon);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          setMapCenter(lat, lon);
+        }
+      }
+    } catch (error) {
+      logger.error({
+        message: 'Failed to fetch map center for weather',
+        context: { error },
+      });
+    }
+  };
 
   // Track analytics when view becomes visible
   useFocusEffect(
@@ -96,6 +118,7 @@ export default function DispatchConsole() {
         timestamp: new Date().toISOString(),
         isLandscape,
         isTablet,
+        platform: 'web',
       });
     }, [trackEvent, isLandscape, isTablet])
   );
@@ -103,60 +126,60 @@ export default function DispatchConsole() {
   // Listen for SignalR updates and refresh data
   useEffect(() => {
     if (lastUpdateTimestamp > 0) {
-      // Add activity log entry for update
       addActivityLogEntry({
         type: 'system',
         action: t('dispatch.system_update'),
         description: t('dispatch.data_refreshed'),
       });
 
-      // Refresh data
       fetchCalls();
       fetchUnits();
       fetchPersonnel();
-
-      // Refresh call data if filter is active
-      if (isCallFilterActive && selectedCallId) {
-        fetchCallData(selectedCallId);
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastUpdateTimestamp]);
 
-  // Fetch call extra data and notes when a call is selected for filtering
+  // Fetch call extra data and notes when filter is active
   useEffect(() => {
-    if (isCallFilterActive && selectedCallId) {
-      fetchCallData(selectedCallId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCallFilterActive, selectedCallId]);
+    const fetchCallData = async () => {
+      if (isCallFilterActive && selectedCallId) {
+        setIsLoadingCallData(true);
+        try {
+          const [extraDataResponse, notesResponse] = await Promise.all([getCallExtraData(selectedCallId), getCallNotes(selectedCallId)]);
 
-  // Fetch call extra data and notes
-  const fetchCallData = async (callId: string) => {
-    setIsLoadingCallData(true);
-    try {
-      const [extraDataResponse, notesResponse] = await Promise.all([getCallExtraData(callId), getCallNotes(callId)]);
+          if (extraDataResponse.Data) {
+            setCallExtraData(extraDataResponse.Data);
+          }
+          if (notesResponse.Data) {
+            setCallNotes(notesResponse.Data);
+          }
+        } catch (error) {
+          console.error('Error fetching call data:', error);
+        } finally {
+          setIsLoadingCallData(false);
+        }
+      }
+    };
 
-      if (extraDataResponse?.Data) {
-        setCallExtraData(extraDataResponse.Data);
-      }
-      if (notesResponse?.Data) {
-        setCallNotes(notesResponse.Data);
-      }
-    } catch (error) {
-      logger.error({
-        message: 'Failed to fetch call data',
-        context: { error, callId },
-      });
-    } finally {
-      setIsLoadingCallData(false);
-    }
-  };
+    fetchCallData();
+  }, [isCallFilterActive, selectedCallId, setIsLoadingCallData, setCallExtraData, setCallNotes]);
+
+  // Memoized selected call
+  const selectedCall = useMemo(() => {
+    return calls.find((c) => c.CallId === selectedCallId);
+  }, [calls, selectedCallId]);
+
+  // Memoized selected call priority
+  const selectedCallPriority = useMemo(() => {
+    if (!selectedCall) return undefined;
+    return callPriorities.find((p) => p.Id === selectedCall.Priority);
+  }, [selectedCall, callPriorities]);
 
   // Calculate stats
   const stats = useMemo(() => {
     const activeCalls = calls.filter((c) => c.State === 'Active' || c.State === 'Open').length;
     const pendingCalls = calls.filter((c) => c.State === 'Pending').length;
+    const scheduledCalls = calls.filter((c) => c.State === 'Scheduled').length;
     const availableUnits = units.filter((u) => !u.CurrentStatusId || u.CurrentStatusId === 'available').length;
     const onSceneUnits = units.filter((u) => u.CurrentStatusId === 'on_scene').length;
     const onDutyPersonnel = personnel.filter((p) => p.Staffing && p.Staffing.toLowerCase() !== 'off duty').length;
@@ -164,6 +187,7 @@ export default function DispatchConsole() {
     return {
       activeCalls,
       pendingCalls,
+      scheduledCalls,
       unitsAvailable: availableUnits,
       unitsOnScene: onSceneUnits,
       personnelOnDuty: onDutyPersonnel,
@@ -194,87 +218,14 @@ export default function DispatchConsole() {
     toggleCallFilter(callId);
     const call = calls.find((c) => c.CallId === callId);
     if (call) {
-      const currentlySelected = selectedCallId === callId && isCallFilterActive;
       addActivityLogEntry({
         type: 'call',
-        action: currentlySelected ? t('dispatch.call_filter_cleared') : t('dispatch.call_filter_active'),
+        action: isCallFilterActive && selectedCallId === callId ? t('dispatch.call_filter_cleared') : t('dispatch.call_filter_active'),
         description: `#${call.Number} - ${call.Name || call.Nature}`,
         metadata: { callId },
       });
     }
   };
-
-  // Handle clearing call filter
-  const handleClearCallFilter = () => {
-    clearCallFilter();
-    addActivityLogEntry({
-      type: 'system',
-      action: t('dispatch.call_filter_cleared'),
-      description: t('dispatch.showing_all_data'),
-    });
-  };
-
-  // Handle adding a note to the selected call
-  const handleAddCallNote = async (note: string) => {
-    if (!selectedCallId || !userId) return;
-
-    setIsAddingNote(true);
-    try {
-      await saveCallNote(selectedCallId, userId, note, null, null);
-      // Refresh call notes
-      const notesResponse = await getCallNotes(selectedCallId);
-      if (notesResponse?.Data) {
-        setCallNotes(notesResponse.Data);
-      }
-      addActivityLogEntry({
-        type: 'call',
-        action: t('dispatch.note_added'),
-        description: note.substring(0, 50) + (note.length > 50 ? '...' : ''),
-        metadata: { callId: selectedCallId },
-      });
-    } catch (error) {
-      logger.error({
-        message: 'Failed to add call note',
-        context: { error, callId: selectedCallId },
-      });
-    } finally {
-      setIsAddingNote(false);
-    }
-  };
-
-  // Handle setting unit status for a call
-  const handleSetUnitStatusForCall = (unitId: string, unitName: string) => {
-    // This could open a status selection modal or navigate to unit status screen
-    addActivityLogEntry({
-      type: 'unit',
-      action: t('dispatch.unit_status_change'),
-      description: unitName,
-      metadata: { unitId, callId: selectedCallId ?? undefined },
-    });
-    // For now, we'll log the event - in a full implementation, this would open a status picker
-  };
-
-  // Handle setting personnel status for a call
-  const handleSetPersonnelStatusForCall = (personnelId: string, personnelName: string) => {
-    addActivityLogEntry({
-      type: 'personnel',
-      action: t('dispatch.personnel_status_change'),
-      description: personnelName,
-      metadata: { personnelId, callId: selectedCallId ?? undefined },
-    });
-    // For now, we'll log the event - in a full implementation, this would open a status picker
-  };
-
-  // Get selected call for filter banner
-  const selectedCall = useMemo(() => {
-    if (!isCallFilterActive || !selectedCallId) return null;
-    return calls.find((c) => c.CallId === selectedCallId);
-  }, [calls, selectedCallId, isCallFilterActive]);
-
-  const selectedCallPriority = useMemo(() => {
-    if (!selectedCall) return undefined;
-    return callPriorities.find((p) => p.Id === selectedCall.Priority);
-  }, [selectedCall, callPriorities]);
 
   // Handle unit selection
   const handleSelectUnit = (unitId: string) => {
@@ -309,22 +260,80 @@ export default function DispatchConsole() {
     router.push('/(app)/home/map' as Href);
   };
 
+  // Handle clearing call filter
+  const handleClearCallFilter = () => {
+    clearCallFilter();
+    addActivityLogEntry({
+      type: 'system',
+      action: t('dispatch.call_filter_cleared'),
+      description: t('dispatch.showing_all_data'),
+    });
+  };
+
+  // Handle adding call note
+  const handleAddCallNote = async (note: string) => {
+    if (!selectedCallId || !note.trim() || !userId) return;
+
+    setIsAddingNote(true);
+    try {
+      await saveCallNote(selectedCallId, userId, note, null, null);
+
+      // Refresh call notes
+      const notesResponse = await getCallNotes(selectedCallId);
+      if (notesResponse.Data) {
+        setCallNotes(notesResponse.Data);
+      }
+
+      addActivityLogEntry({
+        type: 'call',
+        action: t('dispatch.note_added'),
+        description: note.substring(0, 50) + (note.length > 50 ? '...' : ''),
+        metadata: { callId: selectedCallId },
+      });
+    } catch (error) {
+      console.error('Error adding call note:', error);
+    } finally {
+      setIsAddingNote(false);
+    }
+  };
+
+  // Handle setting unit status for call
+  const handleSetUnitStatusForCall = (unitId: string) => {
+    const unit = units.find((u) => u.UnitId === unitId);
+    if (unit) {
+      addActivityLogEntry({
+        type: 'unit',
+        action: t('dispatch.unit_status_change'),
+        description: `${unit.Name}`,
+        metadata: { unitId, callId: selectedCallId ?? undefined },
+      });
+      // TODO: Implement status change modal or action
+    }
+  };
+
+  // Handle setting personnel status for call
+  const handleSetPersonnelStatusForCall = (personnelId: string) => {
+    const person = personnel.find((p) => p.UserId === personnelId);
+    if (person) {
+      addActivityLogEntry({
+        type: 'personnel',
+        action: t('dispatch.personnel_status_change'),
+        description: `${person.FirstName} ${person.LastName}`,
+        metadata: { personnelId, callId: selectedCallId ?? undefined },
+      });
+      // TODO: Implement status change modal or action
+    }
+  };
+
   // Determine layout based on screen size and orientation
   const renderLayout = () => {
-    // Tablet landscape - 3-column layout
+    // Desktop/Tablet landscape - 3-column layout
     if (isTablet && isLandscape) {
       return (
         <HStack className="flex-1" space="sm">
           {/* Left Column - Calls & Units */}
           <VStack className="flex-1" space="sm" style={styles.column}>
             <ActiveCallsPanel
-              calls={calls}
-              priorities={callPriorities}
-              isLoading={callsLoading}
-              onRefresh={() => {
-                fetchCalls();
-                fetchCallPriorities();
-              }}
               selectedCallId={selectedCallId ?? undefined}
               onSelectCall={handleSelectCall}
               isFilterActive={isCallFilterActive}
@@ -344,14 +353,8 @@ export default function DispatchConsole() {
 
           {/* Center Column - Map */}
           <VStack className="flex-[1.5]" space="sm" style={styles.column}>
-            <MapWidget onExpandMap={handleExpandMap} autoFetchPins={true} />
-            <ActivityLogPanel
-              entries={activityLog}
-              isLoading={false}
-              isCallFilterActive={isCallFilterActive}
-              selectedCallId={selectedCallId ?? undefined}
-              callActivity={selectedCallExtraData?.Activity}
-            />
+            <MapWidget onExpandMap={handleExpandMap} />
+            <ActivityLogPanel entries={activityLog} isLoading={false} isCallFilterActive={isCallFilterActive} selectedCallId={selectedCallId ?? undefined} callActivity={selectedCallExtraData?.Activity} />
           </VStack>
 
           {/* Right Column - Personnel, Notes, PTT */}
@@ -389,13 +392,6 @@ export default function DispatchConsole() {
           {/* Left Column */}
           <VStack className="flex-1" space="sm" style={styles.column}>
             <ActiveCallsPanel
-              calls={calls}
-              priorities={callPriorities}
-              isLoading={callsLoading}
-              onRefresh={() => {
-                fetchCalls();
-                fetchCallPriorities();
-              }}
               selectedCallId={selectedCallId ?? undefined}
               onSelectCall={handleSelectCall}
               isFilterActive={isCallFilterActive}
@@ -426,7 +422,7 @@ export default function DispatchConsole() {
 
           {/* Right Column */}
           <VStack className="flex-1" space="sm" style={styles.column}>
-            <MapWidget onExpandMap={handleExpandMap} autoFetchPins={true} />
+            <MapWidget onExpandMap={handleExpandMap} />
             <NotesPanel
               notes={notes}
               isLoading={notesLoading || isLoadingCallData}
@@ -437,13 +433,7 @@ export default function DispatchConsole() {
               isAddingNote={isAddingNote}
             />
             <PTTInterface onPTTPress={handlePTTPress} onPTTRelease={handlePTTRelease} isTransmitting={isTransmitting} currentChannel={currentChannel} />
-            <ActivityLogPanel
-              entries={activityLog}
-              isLoading={false}
-              isCallFilterActive={isCallFilterActive}
-              selectedCallId={selectedCallId ?? undefined}
-              callActivity={selectedCallExtraData?.Activity}
-            />
+            <ActivityLogPanel entries={activityLog} isLoading={false} isCallFilterActive={isCallFilterActive} selectedCallId={selectedCallId ?? undefined} callActivity={selectedCallExtraData?.Activity} />
           </VStack>
         </HStack>
       );
@@ -454,19 +444,12 @@ export default function DispatchConsole() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <VStack space="sm">
           <ActiveCallsPanel
-            calls={calls}
-            priorities={callPriorities}
-            isLoading={callsLoading}
-            onRefresh={() => {
-              fetchCalls();
-              fetchCallPriorities();
-            }}
             selectedCallId={selectedCallId ?? undefined}
             onSelectCall={handleSelectCall}
             isFilterActive={isCallFilterActive}
           />
 
-          <MapWidget onExpandMap={handleExpandMap} autoFetchPins={true} />
+          <MapWidget onExpandMap={handleExpandMap} />
 
           <HStack space="sm">
             <Box className="flex-1">
@@ -509,13 +492,7 @@ export default function DispatchConsole() {
             isAddingNote={isAddingNote}
           />
 
-          <ActivityLogPanel
-            entries={activityLog}
-            isLoading={false}
-            isCallFilterActive={isCallFilterActive}
-            selectedCallId={selectedCallId ?? undefined}
-            callActivity={selectedCallExtraData?.Activity}
-          />
+          <ActivityLogPanel entries={activityLog} isLoading={false} isCallFilterActive={isCallFilterActive} selectedCallId={selectedCallId ?? undefined} callActivity={selectedCallExtraData?.Activity} />
         </VStack>
       </ScrollView>
     );
@@ -529,16 +506,17 @@ export default function DispatchConsole() {
       <StatsHeader
         activeCalls={stats.activeCalls}
         pendingCalls={stats.pendingCalls}
+        scheduledCalls={stats.scheduledCalls}
         unitsAvailable={stats.unitsAvailable}
         unitsOnScene={stats.unitsOnScene}
         personnelOnDuty={stats.personnelOnDuty}
         currentTime={currentTime}
+        weatherLatitude={mapCenterLatitude}
+        weatherLongitude={mapCenterLongitude}
       />
 
       {/* Active Call Filter Banner */}
-      {isCallFilterActive && selectedCall && (
-        <ActiveCallFilterBanner call={selectedCall} priority={selectedCallPriority} onClearFilter={handleClearCallFilter} />
-      )}
+      {isCallFilterActive && selectedCall && <ActiveCallFilterBanner call={selectedCall} priority={selectedCallPriority} onClearFilter={handleClearCallFilter} />}
 
       {/* Main Content */}
       <Box className="flex-1 bg-gray-100 p-2 dark:bg-gray-950">{renderLayout()}</Box>
@@ -556,10 +534,6 @@ const styles = StyleSheet.create({
   },
   column: {
     minWidth: 0,
-  },
-  map: {
-    flex: 1,
-    minHeight: 200,
   },
   scrollContent: {
     paddingBottom: 20,

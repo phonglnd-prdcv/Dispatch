@@ -470,7 +470,11 @@
     "recenter_map": "Recentrar mapa",
     "set_as_current_call": "Establecer como llamada actual",
     "view_call_details": "Ver detalles de la llamada",
-    "dispatched_resources": "Despachados"
+    "dispatched_resources": "Despachados",
+    "search_personnel_placeholder": "Buscar personal...",
+    "search_calls_placeholder": "Buscar llamadas...",
+    "search_units_placeholder": "Buscar unidades...",
+    "search_notes_placeholder": "Buscar notas..."
   },
   "notes": {
     "actions": {

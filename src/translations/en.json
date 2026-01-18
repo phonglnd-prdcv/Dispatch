@@ -666,6 +666,7 @@
   "dispatch": {
     "active_calls": "Active Calls",
     "pending_calls": "Pending",
+    "scheduled_calls": "Scheduled",
     "units_available": "Available",
     "units_on_scene": "On Scene",
     "personnel_on_duty": "On Duty",
@@ -716,7 +717,31 @@
     "unit_status_change": "Unit Status Change",
     "personnel_status_change": "Personnel Status Change",
     "view_call_details": "View Call Details",
-    "dispatched_resources": "Dispatched"
+    "dispatched_resources": "Dispatched",
+    "unassigned": "Unassigned",
+    "available": "Available",
+    "unknown": "Unknown",
+    "search_personnel_placeholder": "Search personnel...",
+    "search_calls_placeholder": "Search calls...",
+    "search_units_placeholder": "Search units...",
+    "search_notes_placeholder": "Search notes...",
+    "weather": {
+      "clear": "Clear",
+      "mainly_clear": "Mainly Clear",
+      "partly_cloudy": "Partly Cloudy",
+      "overcast": "Overcast",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "freezing_drizzle": "Freezing Drizzle",
+      "rain": "Rain",
+      "freezing_rain": "Freezing Rain",
+      "snow": "Snow",
+      "rain_showers": "Rain Showers",
+      "snow_showers": "Snow Showers",
+      "thunderstorm": "Thunderstorm",
+      "thunderstorm_hail": "Thunderstorm w/ Hail",
+      "unknown": "Unknown"
+    }
   },
   "tabs": {
     "calls": "Calls",

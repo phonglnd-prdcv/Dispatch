@@ -3,8 +3,8 @@ import React from 'react';
 
 /**
  * Root index page for the authenticated app.
- * Redirects to the home tabs which serves as the main dashboard.
+ * Redirects to the home page which serves as the main dashboard.
  */
 export default function AppIndex() {
-  return <Redirect href="/(app)/home" />;
+  return <Redirect href="/home" />;
 }

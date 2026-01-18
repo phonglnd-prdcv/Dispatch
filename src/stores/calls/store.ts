@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 import { getCallPriorities } from '@/api/calls/callPriorities';
@@ -30,15 +29,6 @@ export const useCallsStore = create<CallsState>((set, get) => ({
   init: async () => {
     set({ isLoading: true, error: null });
 
-    // Skip API calls on web platform - network requests are blocked
-    if (Platform.OS === 'web') {
-      logger.info({
-        message: 'Calls store init: Skipping API calls on web platform',
-      });
-      set({ isLoading: false });
-      return;
-    }
-
     try {
       const callsResponse = await getCalls();
       const callPrioritiesResponse = await getCallPriorities();
@@ -61,9 +51,20 @@ export const useCallsStore = create<CallsState>((set, get) => ({
   fetchCalls: async () => {
     set({ isLoading: true, error: null });
     try {
+      logger.info({
+        message: 'Fetching calls from API',
+      });
       const response = await getCalls();
-      set({ calls: response.Data, isLoading: false });
+      logger.info({
+        message: 'Calls fetched successfully',
+        context: { count: response?.Data?.length ?? 0 },
+      });
+      set({ calls: response?.Data ?? [], isLoading: false });
     } catch (error) {
+      logger.error({
+        message: 'Failed to fetch calls',
+        context: { error },
+      });
       set({ error: 'Failed to fetch calls', isLoading: false });
     }
   },
@@ -71,8 +72,12 @@ export const useCallsStore = create<CallsState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await getCallPriorities();
-      set({ callPriorities: response.Data, isLoading: false });
+      set({ callPriorities: response?.Data ?? [], isLoading: false });
     } catch (error) {
+      logger.error({
+        message: 'Failed to fetch call priorities',
+        context: { error },
+      });
       set({ error: 'Failed to fetch call priorities', isLoading: false });
     }
   },
@@ -86,8 +91,12 @@ export const useCallsStore = create<CallsState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await getCallTypes();
-      set({ callTypes: response.Data, isLoading: false });
+      set({ callTypes: response?.Data ?? [], isLoading: false });
     } catch (error) {
+      logger.error({
+        message: 'Failed to fetch call types',
+        context: { error },
+      });
       set({ error: 'Failed to fetch call types', isLoading: false });
     }
   },

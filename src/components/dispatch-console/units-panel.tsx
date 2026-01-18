@@ -1,21 +1,22 @@
-import { Circle, Filter, MapPin, Plus, RefreshCw, Truck } from 'lucide-react-native';
+import { Building2, Circle, Filter, MapPin, Phone, Plus, Search, Truck, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
+import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
-import { type UnitResultData } from '@/models/v4/units/unitResultData';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 
 import { PanelHeader } from './panel-header';
 
 interface UnitsPanelProps {
-  units: UnitResultData[];
+  units: UnitInfoResultData[];
   isLoading: boolean;
   onRefresh: () => void;
   selectedUnitId?: string;
@@ -27,8 +28,12 @@ interface UnitsPanelProps {
   onSetUnitStatusForCall?: (unitId: string, unitName: string) => void;
 }
 
-const getStatusColor = (statusId: string): string => {
-  // Common status colors - customize based on your status definitions
+const getStatusColor = (statusColor: string | undefined, statusId: string): string => {
+  // If the API provides a color, use it
+  if (statusColor) {
+    return statusColor;
+  }
+  // Fallback to common status colors based on status ID
   const statusColors: Record<string, string> = {
     available: '#22c55e',
     responding: '#f59e0b',
@@ -40,14 +45,15 @@ const getStatusColor = (statusId: string): string => {
 };
 
 const UnitItem: React.FC<{
-  unit: UnitResultData;
+  unit: UnitInfoResultData;
   isSelected: boolean;
   isOnCall?: boolean;
   onPress: () => void;
   onSetStatus?: () => void;
 }> = ({ unit, isSelected, isOnCall, onPress, onSetStatus }) => {
   const { t } = useTranslation();
-  const statusColor = getStatusColor(unit.CurrentStatusId);
+  const statusColor = getStatusColor(unit.CurrentStatusColor, unit.CurrentStatusId);
+  const hasDestination = unit.CurrentDestinationName && unit.CurrentDestinationName.trim() !== '';
 
   return (
     <Pressable onPress={onPress}>
@@ -69,15 +75,23 @@ const UnitItem: React.FC<{
                 ) : null}
               </HStack>
               <Text className="text-xs text-gray-500 dark:text-gray-400" numberOfLines={1}>
-                {unit.Type || unit.GroupName || 'Unassigned'}
+                {unit.Type || unit.GroupName || t('dispatch.unassigned')}
               </Text>
+              {hasDestination ? (
+                <HStack className="mt-0.5 items-center" space="xs">
+                  <Icon as={unit.CurrentDestinationId?.startsWith('call-') ? Phone : Building2} size="xs" className="text-amber-500" />
+                  <Text className="text-xs font-medium text-amber-600 dark:text-amber-400" numberOfLines={1}>
+                    {unit.CurrentDestinationName}
+                  </Text>
+                </HStack>
+              ) : null}
             </VStack>
           </HStack>
           <VStack className="items-end" space="xs">
             <HStack className="items-center" space="xs">
               <Circle size={8} fill={statusColor} color={statusColor} />
               <Text style={{ color: statusColor }} className="text-xs font-medium">
-                {unit.Note || 'Available'}
+                {unit.CurrentStatus || unit.Note || t('dispatch.available')}
               </Text>
             </HStack>
             {unit.Latitude && unit.Longitude ? (
@@ -107,18 +121,35 @@ const UnitItem: React.FC<{
 export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefresh, selectedUnitId, onSelectUnit, isCallFilterActive, selectedCallId, callDispatches, onSetUnitStatusForCall }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter units based on call dispatches when filter is active
+  // Filter units based on call dispatches when filter is active and search query
   const displayedUnits = useMemo(() => {
-    if (!isCallFilterActive || !callDispatches || callDispatches.length === 0) {
-      return units;
-    }
-    // Get unit names from dispatches (dispatches contain unit info by name)
-    const dispatchedUnitNames = callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase());
+    let filtered = units;
+    
+    if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
+      // Get unit names from dispatches (dispatches contain unit info by name)
+      const dispatchedUnitNames = callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase());
 
-    // Also check units whose CurrentDestinationId matches the call
-    return units.filter((u) => dispatchedUnitNames.includes(u.Name.toLowerCase()) || (selectedCallId && u.CurrentDestinationId === selectedCallId));
-  }, [units, isCallFilterActive, callDispatches, selectedCallId]);
+      // Also check units whose CurrentDestinationId matches the call
+      filtered = units.filter((u) => dispatchedUnitNames.includes(u.Name.toLowerCase()) || (selectedCallId && u.CurrentDestinationId === selectedCallId));
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((u) => {
+        const name = (u.Name || '').toLowerCase();
+        const type = (u.Type || '').toLowerCase();
+        const groupName = (u.GroupName || '').toLowerCase();
+        const status = (u.CurrentStatus || '').toLowerCase();
+        const note = (u.Note || '').toLowerCase();
+        return name.includes(query) || type.includes(query) || groupName.includes(query) || status.includes(query) || note.includes(query);
+      });
+    }
+    
+    return filtered;
+  }, [units, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
 
   // Get list of unit names that are dispatched to the call
   const dispatchedUnitNames = useMemo(() => {
@@ -153,14 +184,34 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
               </Badge>
             ) : null}
             <Pressable onPress={onRefresh} style={styles.iconButton}>
-              <Icon as={RefreshCw} size="xs" className={`text-gray-500 dark:text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
+              <AnimatedRefreshIcon isLoading={isLoading} />
             </Pressable>
           </HStack>
         }
       />
 
       {!isCollapsed ? (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentWrapper}>
+          {/* Search Input */}
+          <View style={styles.searchContainer}>
+            <Icon as={Search} size="xs" className="text-gray-400" />
+            <TextInput
+              style={styles.searchInput}
+              className="flex-1 text-sm text-gray-800 dark:text-gray-100"
+              placeholder={t('dispatch.search_units_placeholder')}
+              placeholderTextColor="#9ca3af"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 ? (
+              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Icon as={X} size="xs" className="text-gray-400" />
+              </Pressable>
+            ) : null}
+          </View>
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {displayedUnits.length === 0 ? (
             <View style={styles.emptyState}>
               <Icon as={Truck} size="lg" className="text-gray-300 dark:text-gray-600" />
@@ -178,13 +229,31 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
               />
             ))
           )}
-        </ScrollView>
+          </ScrollView>
+        </View>
       ) : null}
     </Box>
   );
 };
 
 const styles = StyleSheet.create({
+  contentWrapper: {
+    flex: 1,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
   content: {
     flex: 1,
     padding: 8,

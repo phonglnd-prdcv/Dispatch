@@ -7,6 +7,7 @@ import { ActiveCallsPanel } from '../active-calls-panel';
 import { getCallExtraData } from '@/api/calls/calls';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
+import { useCallsStore } from '@/stores/calls/store';
 import { useSecurityStore } from '@/stores/security/store';
 
 // Mock the router
@@ -31,6 +32,11 @@ jest.mock('@/api/calls/calls', () => ({
 // Mock the security store
 jest.mock('@/stores/security/store', () => ({
   useSecurityStore: jest.fn(),
+}));
+
+// Mock the calls store
+jest.mock('@/stores/calls/store', () => ({
+  useCallsStore: jest.fn(),
 }));
 
 // Mock the logger
@@ -110,6 +116,7 @@ jest.mock('../panel-header', () => ({
 }));
 
 const mockUseSecurityStore = useSecurityStore as jest.MockedFunction<typeof useSecurityStore>;
+const mockUseCallsStore = useCallsStore as jest.MockedFunction<typeof useCallsStore>;
 const mockGetCallExtraData = getCallExtraData as jest.MockedFunction<typeof getCallExtraData>;
 
 const mockCalls: CallResultData[] = [
@@ -260,6 +267,14 @@ describe('ActiveCallsPanel', () => {
     mockUseSecurityStore.mockReturnValue({
       canUserCreateCalls: true,
     } as any);
+    mockUseCallsStore.mockReturnValue({
+      calls: mockCalls,
+      callPriorities: mockPriorities,
+      isLoading: false,
+      error: null,
+      fetchCalls: jest.fn(),
+      fetchCallPriorities: jest.fn(),
+    } as any);
     mockGetCallExtraData.mockResolvedValue({
       Data: {
         Dispatches: mockDispatches,
@@ -272,7 +287,7 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('renders correctly with calls', async () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     // Should show panel header with title
     expect(screen.getByTestId('panel-title')).toBeTruthy();
@@ -287,7 +302,7 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('filters out closed calls', () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     // Count should be 2 (only Active and Open calls)
     expect(screen.getByTestId('panel-count')).toHaveTextContent('2');
@@ -295,14 +310,22 @@ describe('ActiveCallsPanel', () => {
 
   it('shows empty state when no active calls', () => {
     const closedCalls = mockCalls.filter((c) => c.State === 'Closed');
-    render(<ActiveCallsPanel calls={closedCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    mockUseCallsStore.mockReturnValue({
+      calls: closedCalls,
+      callPriorities: mockPriorities,
+      isLoading: false,
+      error: null,
+      fetchCalls: jest.fn(),
+      fetchCallPriorities: jest.fn(),
+    } as any);
+    render(<ActiveCallsPanel />);
 
     expect(screen.getByText('dispatch.no_active_calls')).toBeTruthy();
   });
 
   it('calls onSelectCall when call is pressed', async () => {
     const onSelectCall = jest.fn();
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} onSelectCall={onSelectCall} />);
+    render(<ActiveCallsPanel onSelectCall={onSelectCall} />);
 
     // Wait for component to stabilize
     await waitFor(() => {
@@ -311,15 +334,14 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('calls onRefresh when refresh button is pressed', () => {
-    const onRefresh = jest.fn();
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={onRefresh} />);
+    render(<ActiveCallsPanel />);
 
     // The refresh button should be in the panel header rightContent
     // We've mocked PanelHeader to render rightContent
   });
 
   it('navigates to call details when details button is pressed', async () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     // Wait for component to render
     await waitFor(() => {
@@ -332,7 +354,7 @@ describe('ActiveCallsPanel', () => {
       canUserCreateCalls: true,
     } as any);
 
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     // Panel header should contain the new call button via rightContent
     expect(screen.getByTestId('panel-header')).toBeTruthy();
@@ -343,13 +365,13 @@ describe('ActiveCallsPanel', () => {
       canUserCreateCalls: false,
     } as any);
 
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     expect(screen.getByTestId('panel-header')).toBeTruthy();
   });
 
   it('collapses and expands panel', () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     const toggleButton = screen.getByTestId('toggle-collapse');
     fireEvent.press(toggleButton);
@@ -360,7 +382,7 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('highlights selected call when filter is active', async () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} selectedCallId="call-1" isFilterActive={true} />);
+    render(<ActiveCallsPanel selectedCallId="call-1" isFilterActive={true} />);
 
     await waitFor(() => {
       expect(screen.getByText('#001')).toBeTruthy();
@@ -371,7 +393,7 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('fetches and displays dispatched resources', async () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     // Wait for the component to render and effects to run
     await waitFor(
@@ -388,7 +410,7 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('displays call address when available', async () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     await waitFor(() => {
       expect(screen.getByText('123 Main St')).toBeTruthy();
@@ -396,7 +418,7 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('displays call name or nature', async () => {
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={jest.fn()} />);
+    render(<ActiveCallsPanel />);
 
     await waitFor(() => {
       expect(screen.getByText('Test Call 1')).toBeTruthy();
@@ -404,15 +426,23 @@ describe('ActiveCallsPanel', () => {
   });
 
   it('clears dispatch cache on refresh', async () => {
-    const onRefresh = jest.fn();
-    render(<ActiveCallsPanel calls={mockCalls} priorities={mockPriorities} isLoading={false} onRefresh={onRefresh} />);
+    const mockFetchCalls = jest.fn();
+    mockUseCallsStore.mockReturnValue({
+      calls: mockCalls,
+      callPriorities: mockPriorities,
+      isLoading: false,
+      error: null,
+      fetchCalls: mockFetchCalls,
+      fetchCallPriorities: jest.fn(),
+    } as any);
+    render(<ActiveCallsPanel />);
 
     // Wait for component to render
     await waitFor(() => {
       expect(screen.getByText('#001')).toBeTruthy();
     });
 
-    // The refresh function should be provided to the component
-    expect(onRefresh).not.toHaveBeenCalled();
+    // The fetchCalls function should have been called on mount
+    expect(mockFetchCalls).toHaveBeenCalled();
   });
 });

@@ -32,7 +32,7 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const router = useRouter();
-  //const { profile, logout } = useAuthStore();
+  const { logout } = useAuthStore();
   const securityStoreState = useSecurityStore();
 
   // Add safety check for store state
@@ -53,6 +53,34 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
       testID: 'side-menu-home',
     },
     {
+      id: 'calls',
+      title: t('tabs.calls'),
+      icon: Megaphone,
+      route: '/(app)/calls',
+      testID: 'side-menu-calls',
+    },
+    {
+      id: 'personnel',
+      title: t('tabs.personnel'),
+      icon: Users,
+      route: '/(app)/personnel',
+      testID: 'side-menu-personnel',
+    },
+    {
+      id: 'units',
+      title: t('units.title'),
+      icon: Truck,
+      route: '/(app)/units',
+      testID: 'side-menu-units',
+    },
+    {
+      id: 'map',
+      title: t('tabs.map'),
+      icon: Map,
+      route: '/(app)/map',
+      testID: 'side-menu-map',
+    },
+    {
       id: 'messages',
       title: t('tabs.messages'),
       icon: Mail,
@@ -65,13 +93,6 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
       icon: Contact,
       route: '/(app)/contacts',
       testID: 'side-menu-contacts',
-    },
-    {
-      id: 'map',
-      title: t('tabs.map'),
-      icon: Map,
-      route: '/(app)/map',
-      testID: 'side-menu-map',
     },
     {
       id: 'notes',
@@ -132,8 +153,8 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
   }, []);
 
   // Get user display name and department name from security store
-  //const displayName = securityStoreState.rights?.FullName || profile?.name || t('common.unknown_user');
-  //const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
+  const displayName = securityStoreState.rights?.FullName || t('common.unknown_user');
+  const departmentName = securityStoreState.rights?.DepartmentName || t('common.unknown_department');
 
   const isDark = colorScheme === 'dark';
 
@@ -151,10 +172,10 @@ export const SideMenu: React.FC<SideMenuProps> = React.memo(({ onNavigate }) => 
 
               <VStack space="xs" className="flex-1">
                 <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`} testID="side-menu-profile-name" numberOfLines={1}>
-                  {/*{displayName}*/}
+                  {displayName}
                 </Text>
                 <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`} testID="side-menu-profile-department">
-                  {/*{departmentName}*/}
+                  {departmentName}
                 </Text>
               </VStack>
             </HStack>
