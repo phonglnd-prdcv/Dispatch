@@ -1,0 +1,1020 @@
+import { type HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { Platform } from 'react-native';
+
+import { Env } from '@/lib/env';
+import { logger } from '@/lib/logging';
+import useAuthStore from '@/stores/auth/store';
+
+export interface SignalRHubConfig {
+  name: string;
+  url: string;
+  methods: string[];
+}
+
+export interface SignalRHubConnectConfig {
+  name: string;
+  eventingUrl: string; // Base EventingUrl from config (trailing slash will be added if missing)
+  hubName: string;
+  methods: string[];
+}
+
+export interface SignalRMessage {
+  type: string;
+  data: unknown;
+}
+
+export enum HubConnectingState {
+  IDLE = 'idle',
+  RECONNECTING = 'reconnecting',
+  DIRECT_CONNECTING = 'direct-connecting',
+}
+
+/**
+ * Type for registered hub method handlers to enable proper cleanup
+ */
+interface HubMethodHandler {
+  method: string;
+  handler: (data: unknown) => void;
+}
+
+/**
+ * SignalR Service - Manages SignalR hub connections with proper lifecycle management
+ * for web and native platforms. Handles memory leak prevention, connection pooling,
+ * and proper cleanup.
+ */
+class SignalRService {
+  private connections: Map<string, HubConnection> = new Map();
+  private reconnectAttempts: Map<string, number> = new Map();
+  private hubConfigs: Map<string, SignalRHubConnectConfig> = new Map();
+  private connectionLocks: Map<string, Promise<void>> = new Map();
+  private reconnectingHubs: Set<string> = new Set();
+  private hubStates: Map<string, HubConnectingState> = new Map();
+
+  // Track timeouts for cleanup
+  private reconnectTimeouts: Map<string, ReturnType<typeof setTimeout>> = new Map();
+
+  // Track registered method handlers per hub for cleanup
+  private hubMethodHandlers: Map<string, HubMethodHandler[]> = new Map();
+
+  // Event emitter with proper cleanup tracking
+  private eventListeners: Map<string, Set<(data: unknown) => void>> = new Map();
+
+  // Web platform visibility tracking
+  private isPageVisible: boolean = true;
+  private visibilityChangeHandler: (() => void) | null = null;
+
+  // Abort controllers for cancelling pending operations
+  private pendingConnections: Map<string, AbortController> = new Map();
+
+  private readonly MAX_RECONNECT_ATTEMPTS = 5;
+  private readonly RECONNECT_INTERVAL = 5000; // 5 seconds
+  private readonly RECONNECT_BACKOFF_MULTIPLIER = 1.5;
+
+  private static instance: SignalRService | null = null;
+
+  private constructor() {
+    this.setupVisibilityHandling();
+  }
+
+  public static getInstance(): SignalRService {
+    if (!SignalRService.instance) {
+      SignalRService.instance = new SignalRService();
+      logger.info({
+        message: 'SignalR service singleton instance created',
+      });
+    }
+
+    return SignalRService.instance;
+  }
+
+  /**
+   * Set up visibility change handling for web platform
+   * This prevents reconnection attempts when the tab is not visible
+   */
+  private setupVisibilityHandling(): void {
+    if (Platform.OS !== 'web') {
+      return;
+    }
+
+    // Check if document is available (browser environment)
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    this.visibilityChangeHandler = () => {
+      const wasVisible = this.isPageVisible;
+      this.isPageVisible = document.visibilityState === 'visible';
+
+      logger.debug({
+        message: 'Page visibility changed',
+        context: { wasVisible, isNowVisible: this.isPageVisible },
+      });
+
+      if (!wasVisible && this.isPageVisible) {
+        // Page became visible - check connections and reconnect if needed
+        this.checkAndReconnectOnVisibilityResume();
+      } else if (wasVisible && !this.isPageVisible) {
+        // Page became hidden - cancel pending reconnects to save resources
+        this.cancelAllPendingReconnects();
+      }
+    };
+
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+  }
+
+  /**
+   * Clean up visibility handling on service destruction
+   */
+  private cleanupVisibilityHandling(): void {
+    if (Platform.OS !== 'web' || typeof document === 'undefined' || !this.visibilityChangeHandler) {
+      return;
+    }
+
+    document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+    this.visibilityChangeHandler = null;
+  }
+
+  /**
+   * Cancel all pending reconnection timeouts
+   */
+  private cancelAllPendingReconnects(): void {
+    this.reconnectTimeouts.forEach((timeoutId, hubName) => {
+      clearTimeout(timeoutId);
+      logger.debug({
+        message: `Cancelled pending reconnect for hub: ${hubName}`,
+      });
+    });
+    this.reconnectTimeouts.clear();
+  }
+
+  /**
+   * Cancel a specific pending reconnection timeout
+   */
+  private cancelPendingReconnect(hubName: string): void {
+    const timeoutId = this.reconnectTimeouts.get(hubName);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      this.reconnectTimeouts.delete(hubName);
+      logger.debug({
+        message: `Cancelled pending reconnect for hub: ${hubName}`,
+      });
+    }
+  }
+
+  /**
+   * Check connections and attempt reconnection for disconnected hubs when page becomes visible
+   */
+  private async checkAndReconnectOnVisibilityResume(): Promise<void> {
+    logger.info({
+      message: 'Checking connections after visibility resume',
+    });
+
+    // Check each configured hub and reconnect if disconnected
+    for (const [hubName, config] of this.hubConfigs) {
+      const connection = this.connections.get(hubName);
+      const isConnected = connection?.state === HubConnectionState.Connected;
+
+      if (!isConnected && !this.isHubConnecting(hubName)) {
+        logger.info({
+          message: `Hub ${hubName} is disconnected, attempting reconnection after visibility resume`,
+        });
+
+        // Reset reconnect attempts on visibility resume to give fresh attempts
+        this.reconnectAttempts.set(hubName, 0);
+
+        try {
+          await this.connectToHubWithEventingUrl(config);
+        } catch (error) {
+          logger.error({
+            message: `Failed to reconnect hub ${hubName} after visibility resume`,
+            context: { error },
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Check if a hub is connected or in the process of connecting
+   */
+  public isHubAvailable(hubName: string): boolean {
+    return this.connections.has(hubName) || this.isHubConnecting(hubName);
+  }
+
+  /**
+   * Check if a hub is in any connecting state (reconnecting or direct-connecting)
+   */
+  private isHubConnecting(hubName: string): boolean {
+    const state = this.hubStates.get(hubName);
+    return state === HubConnectingState.RECONNECTING || state === HubConnectingState.DIRECT_CONNECTING;
+  }
+
+  /**
+   * Check if a hub is specifically in reconnecting state
+   * @deprecated Use for testing purposes only
+   */
+  public isHubReconnecting(hubName: string): boolean {
+    return this.hubStates.get(hubName) === HubConnectingState.RECONNECTING;
+  }
+
+  /**
+   * Set hub state and manage legacy reconnectingHubs set for backward compatibility
+   */
+  private setHubState(hubName: string, state: HubConnectingState): void {
+    if (state === HubConnectingState.IDLE) {
+      this.hubStates.delete(hubName);
+      this.reconnectingHubs.delete(hubName);
+    } else {
+      this.hubStates.set(hubName, state);
+      if (state === HubConnectingState.RECONNECTING) {
+        this.reconnectingHubs.add(hubName);
+      } else {
+        this.reconnectingHubs.delete(hubName);
+      }
+    }
+  }
+
+  public async connectToHubWithEventingUrl(config: SignalRHubConnectConfig): Promise<void> {
+    // Check for existing lock to prevent concurrent connections to the same hub
+    const existingLock = this.connectionLocks.get(config.name);
+    if (existingLock) {
+      logger.info({
+        message: `Connection to hub ${config.name} is already in progress, waiting...`,
+      });
+      await existingLock;
+      return;
+    }
+
+    // Create a new connection promise and store it as a lock
+    const connectionPromise = this._connectToHubWithEventingUrlInternal(config);
+    this.connectionLocks.set(config.name, connectionPromise);
+
+    try {
+      await connectionPromise;
+    } finally {
+      // Remove the lock after connection completes (success or failure)
+      this.connectionLocks.delete(config.name);
+    }
+  }
+
+  /**
+   * Clean up method handlers registered on a connection
+   */
+  private cleanupHubMethodHandlers(hubName: string, connection: HubConnection): void {
+    const handlers = this.hubMethodHandlers.get(hubName);
+    if (handlers) {
+      handlers.forEach(({ method, handler }) => {
+        try {
+          connection.off(method, handler);
+          logger.debug({
+            message: `Unregistered method handler: ${method} from hub: ${hubName}`,
+          });
+        } catch (error) {
+          // Connection might already be disposed
+          logger.debug({
+            message: `Could not unregister method handler: ${method} from hub: ${hubName}`,
+            context: { error },
+          });
+        }
+      });
+      this.hubMethodHandlers.delete(hubName);
+    }
+  }
+
+  private async _connectToHubWithEventingUrlInternal(config: SignalRHubConnectConfig): Promise<void> {
+    // Create an AbortController for this connection attempt
+    const abortController = new AbortController();
+    const previousController = this.pendingConnections.get(config.name);
+
+    // Cancel any previous pending connection
+    if (previousController) {
+      previousController.abort();
+    }
+
+    this.pendingConnections.set(config.name, abortController);
+
+    try {
+      // Check if aborted before starting
+      if (abortController.signal.aborted) {
+        throw new Error('Connection attempt was cancelled');
+      }
+
+      if (this.connections.has(config.name)) {
+        logger.info({
+          message: `Already connected to hub: ${config.name}`,
+        });
+        return;
+      }
+
+      // Check if hub is already in direct-connecting state to prevent duplicates
+      const currentState = this.hubStates.get(config.name);
+      if (currentState === HubConnectingState.DIRECT_CONNECTING) {
+        logger.info({
+          message: `Hub ${config.name} is already in direct-connecting state, skipping duplicate connection attempt`,
+        });
+        return;
+      }
+
+      // Log if hub is reconnecting but proceed with direct connection attempt
+      if (currentState === HubConnectingState.RECONNECTING) {
+        logger.info({
+          message: `Hub ${config.name} is currently reconnecting, proceeding with direct connection attempt`,
+        });
+      }
+
+      // Mark as direct-connecting
+      this.setHubState(config.name, HubConnectingState.DIRECT_CONNECTING);
+
+      const token = useAuthStore.getState().accessToken;
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      if (!config.eventingUrl) {
+        throw new Error('EventingUrl is required for SignalR connection');
+      }
+
+      // Parse the incoming eventingUrl into path and query components
+      const url = new URL(config.eventingUrl);
+
+      // Append the hub name to the path (ensuring a single slash)
+      const pathWithHub = url.pathname.endsWith('/') ? `${url.pathname}${config.hubName}` : `${url.pathname}/${config.hubName}`;
+
+      // Reassemble the URL with the hub in the path
+      let fullUrl = `${url.protocol}//${url.host}${pathWithHub}`;
+
+      // For geolocation hub, add token as URL parameter instead of header
+      const isGeolocationHub = config.hubName === Env.REALTIME_GEO_HUB_NAME;
+
+      // Merge existing query parameters with access_token if needed
+      const queryParams = new URLSearchParams(url.search);
+      if (isGeolocationHub) {
+        queryParams.set('access_token', token);
+      }
+
+      // Add query string if there are any parameters
+      if (queryParams.toString()) {
+        fullUrl = `${fullUrl}?${queryParams.toString()}`;
+      }
+
+      logger.info({
+        message: `Connecting to hub: ${config.name}`,
+        context: { config, fullUrl: isGeolocationHub ? fullUrl.replace(/access_token=[^&]+/, 'access_token=***') : fullUrl },
+      });
+
+      // Store the config for potential reconnections
+      this.hubConfigs.set(config.name, config);
+
+      // Check if aborted before building connection
+      if (abortController.signal.aborted) {
+        throw new Error('Connection attempt was cancelled');
+      }
+
+      const connectionBuilder = new HubConnectionBuilder()
+        .withUrl(
+          fullUrl,
+          isGeolocationHub
+            ? {}
+            : {
+                accessTokenFactory: () => token,
+              }
+        )
+        .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+        .configureLogging(LogLevel.Information);
+
+      const connection = connectionBuilder.build();
+
+      // Set up event handlers
+      connection.onclose(() => {
+        this.handleConnectionClose(config.name);
+      });
+
+      connection.onreconnecting((error) => {
+        logger.warn({
+          message: `Reconnecting to hub: ${config.name}`,
+          context: { error },
+        });
+      });
+
+      connection.onreconnected((connectionId) => {
+        logger.info({
+          message: `Reconnected to hub: ${config.name}`,
+          context: { connectionId },
+        });
+        this.reconnectAttempts.set(config.name, 0);
+      });
+
+      // Initialize handlers array for this hub
+      this.hubMethodHandlers.set(config.name, []);
+
+      // Register all methods and track handlers for cleanup
+      config.methods.forEach((method) => {
+        logger.info({
+          message: `Registering ${method} message from hub: ${config.name}`,
+          context: { method },
+        });
+
+        const handler = (data: unknown) => {
+          logger.info({
+            message: `Received ${method} message from hub: ${config.name}`,
+            context: { method, data },
+          });
+          this.handleMessage(config.name, method, data);
+        };
+
+        connection.on(method, handler);
+
+        // Track the handler for cleanup
+        const handlers = this.hubMethodHandlers.get(config.name);
+        if (handlers) {
+          handlers.push({ method, handler });
+        }
+      });
+
+      // Check if aborted before starting connection
+      if (abortController.signal.aborted) {
+        // Clean up the connection we built
+        this.cleanupHubMethodHandlers(config.name, connection);
+        throw new Error('Connection attempt was cancelled');
+      }
+
+      await connection.start();
+      this.connections.set(config.name, connection);
+      this.reconnectAttempts.set(config.name, 0);
+
+      // Clear the direct-connecting state on successful connection
+      this.setHubState(config.name, HubConnectingState.IDLE);
+
+      // Clear any pending reconnect timeout since we're now connected
+      this.cancelPendingReconnect(config.name);
+
+      logger.info({
+        message: `Connected to hub: ${config.name}`,
+      });
+    } catch (error) {
+      // Clear the direct-connecting state on failed connection
+      this.setHubState(config.name, HubConnectingState.IDLE);
+
+      // Don't log cancellation errors as errors
+      if (abortController.signal.aborted) {
+        logger.debug({
+          message: `Connection attempt to hub ${config.name} was cancelled`,
+        });
+        return;
+      }
+
+      logger.error({
+        message: `Failed to connect to hub: ${config.name}`,
+        context: { error },
+      });
+      throw error;
+    } finally {
+      // Clean up the abort controller
+      if (this.pendingConnections.get(config.name) === abortController) {
+        this.pendingConnections.delete(config.name);
+      }
+    }
+  }
+
+  public async connectToHub(config: SignalRHubConfig): Promise<void> {
+    // Check for existing lock to prevent concurrent connections to the same hub
+    const existingLock = this.connectionLocks.get(config.name);
+    if (existingLock) {
+      logger.info({
+        message: `Connection to hub ${config.name} is already in progress, waiting...`,
+      });
+      await existingLock;
+      return;
+    }
+
+    // Create a new connection promise and store it as a lock
+    const connectionPromise = this._connectToHubInternal(config);
+    this.connectionLocks.set(config.name, connectionPromise);
+
+    try {
+      await connectionPromise;
+    } finally {
+      // Remove the lock after connection completes (success or failure)
+      this.connectionLocks.delete(config.name);
+    }
+  }
+
+  private async _connectToHubInternal(config: SignalRHubConfig): Promise<void> {
+    // Create an AbortController for this connection attempt
+    const abortController = new AbortController();
+    const previousController = this.pendingConnections.get(config.name);
+
+    // Cancel any previous pending connection
+    if (previousController) {
+      previousController.abort();
+    }
+
+    this.pendingConnections.set(config.name, abortController);
+
+    try {
+      // Check if aborted before starting
+      if (abortController.signal.aborted) {
+        throw new Error('Connection attempt was cancelled');
+      }
+
+      if (this.connections.has(config.name)) {
+        logger.info({
+          message: `Already connected to hub: ${config.name}`,
+        });
+        return;
+      }
+
+      // Check if hub is already in direct-connecting state to prevent duplicates
+      const currentState = this.hubStates.get(config.name);
+      if (currentState === HubConnectingState.DIRECT_CONNECTING) {
+        logger.info({
+          message: `Hub ${config.name} is already in direct-connecting state, skipping duplicate connection attempt`,
+        });
+        return;
+      }
+
+      // Log if hub is reconnecting but proceed with direct connection attempt
+      if (currentState === HubConnectingState.RECONNECTING) {
+        logger.info({
+          message: `Hub ${config.name} is currently reconnecting, proceeding with direct connection attempt`,
+        });
+      }
+
+      // Mark as direct-connecting
+      this.setHubState(config.name, HubConnectingState.DIRECT_CONNECTING);
+
+      const token = useAuthStore.getState().accessToken;
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      logger.info({
+        message: `Connecting to hub: ${config.name}`,
+        context: { config },
+      });
+
+      // Check if aborted before building connection
+      if (abortController.signal.aborted) {
+        throw new Error('Connection attempt was cancelled');
+      }
+
+      const connection = new HubConnectionBuilder()
+        .withUrl(config.url, {
+          accessTokenFactory: () => token,
+        })
+        .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
+        .configureLogging(LogLevel.Information)
+        .build();
+
+      // Set up event handlers
+      connection.onclose(() => {
+        this.handleConnectionClose(config.name);
+      });
+
+      connection.onreconnecting((error) => {
+        logger.warn({
+          message: `Reconnecting to hub: ${config.name}`,
+          context: { error },
+        });
+      });
+
+      connection.onreconnected((connectionId) => {
+        logger.info({
+          message: `Reconnected to hub: ${config.name}`,
+          context: { connectionId },
+        });
+        this.reconnectAttempts.set(config.name, 0);
+      });
+
+      // Initialize handlers array for this hub
+      this.hubMethodHandlers.set(config.name, []);
+
+      // Register all methods and track handlers for cleanup
+      config.methods.forEach((method) => {
+        logger.info({
+          message: `Registering ${method} message from hub: ${config.name}`,
+          context: { method },
+        });
+
+        const handler = (data: unknown) => {
+          logger.info({
+            message: `Received ${method} message from hub: ${config.name}`,
+            context: { method, data },
+          });
+          this.handleMessage(config.name, method, data);
+        };
+
+        connection.on(method, handler);
+
+        // Track the handler for cleanup
+        const handlers = this.hubMethodHandlers.get(config.name);
+        if (handlers) {
+          handlers.push({ method, handler });
+        }
+      });
+
+      // Check if aborted before starting connection
+      if (abortController.signal.aborted) {
+        // Clean up the connection we built
+        this.cleanupHubMethodHandlers(config.name, connection);
+        throw new Error('Connection attempt was cancelled');
+      }
+
+      await connection.start();
+      this.connections.set(config.name, connection);
+      this.reconnectAttempts.set(config.name, 0);
+
+      // Clear the direct-connecting state on successful connection
+      this.setHubState(config.name, HubConnectingState.IDLE);
+
+      // Clear any pending reconnect timeout since we're now connected
+      this.cancelPendingReconnect(config.name);
+
+      logger.info({
+        message: `Connected to hub: ${config.name}`,
+      });
+    } catch (error) {
+      // Clear the direct-connecting state on failed connection
+      this.setHubState(config.name, HubConnectingState.IDLE);
+
+      // Don't log cancellation errors as errors
+      if (abortController.signal.aborted) {
+        logger.debug({
+          message: `Connection attempt to hub ${config.name} was cancelled`,
+        });
+        return;
+      }
+
+      logger.error({
+        message: `Failed to connect to hub: ${config.name}`,
+        context: { error },
+      });
+      throw error;
+    } finally {
+      // Clean up the abort controller
+      if (this.pendingConnections.get(config.name) === abortController) {
+        this.pendingConnections.delete(config.name);
+      }
+    }
+  }
+
+  private handleConnectionClose(hubName: string): void {
+    // Cancel any existing reconnect timeout for this hub
+    this.cancelPendingReconnect(hubName);
+
+    const attempts = this.reconnectAttempts.get(hubName) || 0;
+    if (attempts < this.MAX_RECONNECT_ATTEMPTS) {
+      this.reconnectAttempts.set(hubName, attempts + 1);
+      const currentAttempts = attempts + 1;
+
+      const hubConfig = this.hubConfigs.get(hubName);
+      if (hubConfig) {
+        // Calculate backoff delay
+        const backoffDelay = Math.min(this.RECONNECT_INTERVAL * Math.pow(this.RECONNECT_BACKOFF_MULTIPLIER, attempts), 30000);
+
+        logger.info({
+          message: `Scheduling reconnection attempt ${currentAttempts}/${this.MAX_RECONNECT_ATTEMPTS} for hub: ${hubName}`,
+          context: { backoffDelay },
+        });
+
+        // Store the timeout ID for cleanup
+        const timeoutId = setTimeout(async () => {
+          // Remove the timeout from tracking
+          this.reconnectTimeouts.delete(hubName);
+
+          // On web, check if page is visible before reconnecting
+          if (Platform.OS === 'web' && !this.isPageVisible) {
+            logger.debug({
+              message: `Skipping reconnection for hub ${hubName} - page is not visible`,
+            });
+            return;
+          }
+
+          try {
+            // Check if the hub config was removed (e.g., by explicit disconnect)
+            const currentHubConfig = this.hubConfigs.get(hubName);
+            if (!currentHubConfig) {
+              logger.debug({
+                message: `Hub ${hubName} config was removed, skipping reconnection attempt`,
+              });
+              return;
+            }
+
+            // If a live connection exists, skip; if it's stale/closed, drop it
+            const existingConn = this.connections.get(hubName);
+            if (existingConn && existingConn.state === HubConnectionState.Connected) {
+              logger.debug({
+                message: `Hub ${hubName} is already connected, skipping reconnection attempt`,
+              });
+              return;
+            }
+
+            // Mark as reconnecting and remove stale entry (if any) to allow a fresh connect
+            this.setHubState(hubName, HubConnectingState.RECONNECTING);
+            if (existingConn) {
+              // Clean up method handlers before removing connection
+              this.cleanupHubMethodHandlers(hubName, existingConn);
+              this.connections.delete(hubName);
+            }
+
+            try {
+              // Refresh authentication token before reconnecting
+              logger.info({
+                message: `Refreshing authentication token before reconnecting to hub: ${hubName}`,
+              });
+
+              await useAuthStore.getState().refreshAccessToken();
+
+              // Verify we have a valid token after refresh
+              const token = useAuthStore.getState().accessToken;
+              if (!token) {
+                throw new Error('No valid authentication token available after refresh');
+              }
+
+              logger.info({
+                message: `Token refreshed successfully, attempting to reconnect to hub: ${hubName} (attempt ${currentAttempts}/${this.MAX_RECONNECT_ATTEMPTS})`,
+              });
+
+              // Remove the connection from our maps to allow fresh connection
+              // This is now safe because we have the reconnecting flag set
+              this.connections.delete(hubName);
+
+              await this.connectToHubWithEventingUrl(currentHubConfig);
+
+              // Clear reconnecting state on successful reconnection
+              this.setHubState(hubName, HubConnectingState.IDLE);
+
+              logger.info({
+                message: `Successfully reconnected to hub: ${hubName} after ${currentAttempts} attempts`,
+              });
+            } catch (reconnectionError) {
+              // Clear reconnecting state on failed reconnection
+              this.setHubState(hubName, HubConnectingState.IDLE);
+
+              logger.error({
+                message: `Failed to refresh token or reconnect to hub: ${hubName}`,
+                context: { error: reconnectionError, attempts: currentAttempts, maxAttempts: this.MAX_RECONNECT_ATTEMPTS },
+              });
+
+              // Re-throw to trigger the outer catch block
+              throw reconnectionError;
+            }
+          } catch (error) {
+            // This catch block handles the overall reconnection attempt failure
+            // The reconnecting flag has already been cleared in the inner catch block
+            logger.error({
+              message: `Reconnection attempt failed for hub: ${hubName}`,
+              context: { error, attempts: currentAttempts, maxAttempts: this.MAX_RECONNECT_ATTEMPTS },
+            });
+
+            // Don't immediately retry; let the next connection close event trigger another attempt
+            // This prevents rapid retry loops that could overwhelm the server
+          }
+        }, backoffDelay);
+
+        // Track the timeout for cleanup
+        this.reconnectTimeouts.set(hubName, timeoutId);
+      } else {
+        logger.error({
+          message: `No stored config found for hub: ${hubName}, cannot attempt reconnection`,
+        });
+      }
+    } else {
+      logger.error({
+        message: `Max reconnection attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached for hub: ${hubName}`,
+      });
+
+      // Clean up resources for this failed connection
+      const connection = this.connections.get(hubName);
+      if (connection) {
+        this.cleanupHubMethodHandlers(hubName, connection);
+      }
+      this.connections.delete(hubName);
+      this.reconnectAttempts.delete(hubName);
+      this.hubConfigs.delete(hubName);
+      this.setHubState(hubName, HubConnectingState.IDLE);
+    }
+  }
+
+  private handleMessage(hubName: string, method: string, data: unknown): void {
+    logger.debug({
+      message: `Received message from hub: ${hubName}`,
+      context: { method, data },
+    });
+    // Emit event for subscribers using the method name as the event name
+    this.emit(method, data);
+  }
+
+  public async disconnectFromHub(hubName: string): Promise<void> {
+    // Cancel any pending reconnection timeout
+    this.cancelPendingReconnect(hubName);
+
+    // Cancel any pending connection attempt
+    const pendingConnection = this.pendingConnections.get(hubName);
+    if (pendingConnection) {
+      pendingConnection.abort();
+      this.pendingConnections.delete(hubName);
+    }
+
+    // Wait for any ongoing connection attempt to complete
+    const existingLock = this.connectionLocks.get(hubName);
+    if (existingLock) {
+      logger.info({
+        message: `Waiting for ongoing connection to hub ${hubName} to complete before disconnecting`,
+      });
+      try {
+        await existingLock;
+      } catch (error) {
+        // Ignore connection errors when we're trying to disconnect
+        logger.debug({
+          message: `Connection attempt failed while waiting to disconnect from hub ${hubName}`,
+          context: { error },
+        });
+      }
+    }
+
+    const connection = this.connections.get(hubName);
+    if (connection) {
+      try {
+        // Clean up method handlers
+        this.cleanupHubMethodHandlers(hubName, connection);
+
+        await connection.stop();
+        this.connections.delete(hubName);
+        this.reconnectAttempts.delete(hubName);
+        this.hubConfigs.delete(hubName);
+        this.setHubState(hubName, HubConnectingState.IDLE);
+        logger.info({
+          message: `Disconnected from hub: ${hubName}`,
+        });
+      } catch (error) {
+        logger.error({
+          message: `Error disconnecting from hub: ${hubName}`,
+          context: { error },
+        });
+        throw error;
+      }
+    } else {
+      // Even if no connection exists, clear the state in case it's set
+      this.setHubState(hubName, HubConnectingState.IDLE);
+      this.reconnectAttempts.delete(hubName);
+      this.hubConfigs.delete(hubName);
+    }
+  }
+
+  public async invoke(hubName: string, method: string, data: unknown): Promise<void> {
+    // Wait for any ongoing connection attempt to complete
+    const existingLock = this.connectionLocks.get(hubName);
+    if (existingLock) {
+      logger.debug({
+        message: `Waiting for ongoing connection to hub ${hubName} to complete before invoking method`,
+        context: { method },
+      });
+      await existingLock;
+    }
+
+    const connection = this.connections.get(hubName);
+    if (connection) {
+      try {
+        return await connection.invoke(method, data);
+      } catch (error) {
+        logger.error({
+          message: `Error invoking method ${method} from hub: ${hubName}`,
+          context: { error },
+        });
+        throw error;
+      }
+    } else if (this.reconnectingHubs.has(hubName)) {
+      throw new Error(`Cannot invoke method ${method} on hub ${hubName}: hub is currently reconnecting`);
+    } else {
+      throw new Error(`Cannot invoke method ${method} on hub ${hubName}: hub is not connected`);
+    }
+  }
+
+  // Method to reset the singleton instance (primarily for testing)
+  public static resetInstance(): void {
+    if (SignalRService.instance) {
+      // Clean up visibility handling
+      SignalRService.instance.cleanupVisibilityHandling();
+
+      // Cancel all pending reconnects
+      SignalRService.instance.cancelAllPendingReconnects();
+
+      // Cancel all pending connections
+      SignalRService.instance.pendingConnections.forEach((controller) => {
+        controller.abort();
+      });
+      SignalRService.instance.pendingConnections.clear();
+
+      // Clean up all method handlers
+      SignalRService.instance.connections.forEach((connection, hubName) => {
+        SignalRService.instance!.cleanupHubMethodHandlers(hubName, connection);
+      });
+
+      // Clear all event listeners
+      SignalRService.instance.eventListeners.clear();
+
+      // Disconnect all connections before resetting
+      SignalRService.instance.disconnectAll().catch((error) => {
+        logger.error({
+          message: 'Error disconnecting all hubs during instance reset',
+          context: { error },
+        });
+      });
+    }
+    SignalRService.instance = null;
+    logger.debug({
+      message: 'SignalR service singleton instance reset',
+    });
+  }
+
+  public async disconnectAll(): Promise<void> {
+    // Cancel all pending reconnects first
+    this.cancelAllPendingReconnects();
+
+    // Cancel all pending connections
+    this.pendingConnections.forEach((controller) => {
+      controller.abort();
+    });
+    this.pendingConnections.clear();
+
+    const disconnectPromises = Array.from(this.connections.keys()).map((hubName) => this.disconnectFromHub(hubName));
+    await Promise.all(disconnectPromises);
+  }
+
+  // Event emitter methods - note: eventListeners is declared in the class properties above
+  public on(event: string, callback: (data: unknown) => void): void {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, new Set());
+    }
+    this.eventListeners.get(event)?.add(callback);
+  }
+
+  public off(event: string, callback: (data: unknown) => void): void {
+    this.eventListeners.get(event)?.delete(callback);
+  }
+
+  /**
+   * Remove all listeners for a specific event
+   */
+  public offAll(event: string): void {
+    this.eventListeners.delete(event);
+  }
+
+  /**
+   * Remove all event listeners (useful for cleanup)
+   */
+  public removeAllListeners(): void {
+    this.eventListeners.clear();
+  }
+
+  private emit(event: string, data: unknown): void {
+    this.eventListeners.get(event)?.forEach((callback) => callback(data));
+  }
+
+  /**
+   * Get the actual connection state of a hub
+   */
+  public getHubConnectionState(hubName: string): HubConnectionState | null {
+    const connection = this.connections.get(hubName);
+    return connection ? connection.state : null;
+  }
+
+  /**
+   * Check if a hub is currently connected
+   */
+  public isHubConnected(hubName: string): boolean {
+    const connection = this.connections.get(hubName);
+    return connection?.state === HubConnectionState.Connected;
+  }
+
+  /**
+   * Get the number of registered event listeners for a specific event
+   * Useful for debugging memory leaks
+   */
+  public getEventListenerCount(event: string): number {
+    return this.eventListeners.get(event)?.size ?? 0;
+  }
+
+  /**
+   * Get total number of all event listeners
+   * Useful for debugging memory leaks
+   */
+  public getTotalEventListenerCount(): number {
+    let total = 0;
+    this.eventListeners.forEach((listeners) => {
+      total += listeners.size;
+    });
+    return total;
+  }
+
+  /**
+   * Check if page is visible (web platform only)
+   */
+  public isVisible(): boolean {
+    return this.isPageVisible;
+  }
+}
+
+export const signalRService = SignalRService.getInstance();
+export { SignalRService };

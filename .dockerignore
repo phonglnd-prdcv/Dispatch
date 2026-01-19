@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.expo/
+web-build/
+android/
+ios/
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+__tests__/
+__mocks__/
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# Git
+.git/
+.gitignore
+
+# Environment files (build time only, runtime injected)
+.env
+.env.*
+!.env.docker.example
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Docker files (don't need to copy into build context)
+docker-compose*.yml
+
+# Expo/EAS
+eas.json
+.easignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+Jenkinsfile
+
+# Misc
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.maestro/

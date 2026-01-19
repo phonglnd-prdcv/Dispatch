@@ -87,7 +87,87 @@ LOGGING_KEY=
   </tr>
 </table>
 
-## Deployment ##
+## Docker Deployment
+
+### Building the Docker Image
+
+```bash
+# Build the Docker image
+yarn docker:build
+
+# Or using docker directly
+docker build -t resgrid-dispatch-web .
+```
+
+### Running with Docker
+
+1. Copy the example environment file:
+```bash
+cp .env.docker.example .env.docker
+```
+
+2. Edit `.env.docker` with your configuration values.
+
+3. Run the container:
+```bash
+# Using yarn script
+yarn docker:run
+
+# Or using docker-compose
+yarn docker:up
+```
+
+### Docker Environment Variables
+
+The following environment variables can be set at runtime (no rebuild required):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISPATCH_BASE_API_URL` | `https://api.resgrid.com` | Base URL for the Resgrid API |
+| `DISPATCH_API_VERSION` | `v4` | API version |
+| `DISPATCH_RESGRID_API_URL` | `/api/v4` | API path |
+| `DISPATCH_CHANNEL_HUB_NAME` | `eventingHub` | SignalR events hub name |
+| `DISPATCH_REALTIME_GEO_HUB_NAME` | `geolocationHub` | SignalR geolocation hub name |
+| `DISPATCH_LOGGING_KEY` | `` | Logging API key |
+| `DISPATCH_APP_KEY` | `` | Application key |
+| `DISPATCH_MAPBOX_PUBKEY` | `` | Mapbox public key |
+| `DISPATCH_SENTRY_DSN` | `` | Sentry DSN for error tracking |
+| `DISPATCH_COUNTLY_APP_KEY` | `` | Countly analytics app key |
+| `DISPATCH_COUNTLY_SERVER_URL` | `` | Countly server URL |
+| `DISPATCH_MAINTENANCE_MODE` | `false` | Enable maintenance mode |
+
+### Docker Commands
+
+```bash
+# Build image
+yarn docker:build
+
+# Run container with environment file
+yarn docker:run
+
+# Start with docker-compose (detached)
+yarn docker:up
+
+# Stop docker-compose services
+yarn docker:down
+
+# View logs
+yarn docker:logs
+```
+
+### Manual Docker Run
+
+```bash
+docker run -d \
+  -p 3000:80 \
+  -e DISPATCH_BASE_API_URL=https://api.resgrid.com \
+  -e DISPATCH_API_VERSION=v4 \
+  -e DISPATCH_MAPBOX_PUBKEY=your_mapbox_key \
+  --name resgrid-dispatch \
+  resgrid-dispatch-web
+```
+
+### Pull from Docker Hub
 
     docker pull resgridllc/dispatch
 
