@@ -318,6 +318,18 @@ export default function EditCallWeb() {
   }, [showLocationPicker, showAddressSelection, showDispatchModal]);
 
   const onSubmit = async (data: FormValues) => {
+    if (!callId) {
+      toast.show({
+        placement: 'top',
+        render: () => (
+          <Box className="rounded-lg bg-red-500 p-4 shadow-lg">
+            <Text className="text-white">{t('call_detail.missing_call_id')}</Text>
+          </Box>
+        ),
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -330,7 +342,7 @@ export default function EditCallWeb() {
       const type = callTypes.find((t) => t.Name === data.type);
 
       await useCallDetailStore.getState().updateCall({
-        callId: callId!,
+        callId: callId,
         name: data.name,
         nature: data.nature,
         priority: priority?.Id || 0,

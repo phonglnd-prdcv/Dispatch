@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ClockIcon, EditIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, MapPinIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon, XCircleIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
@@ -74,7 +75,7 @@ export default function CallDetailWeb() {
     setIsNotesModalOpen(true);
   };
 
-  const handleEditCall = () => router.push(`/call/${callId}/edit` as Href);
+  const handleEditCall = useCallback(() => router.push(`/call/${callId}/edit` as Href), [router, callId]);
   const handleCloseCall = () => setIsCloseCallModalOpen(true);
 
   const handleSetActive = async () => {
@@ -144,7 +145,7 @@ export default function CallDetailWeb() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleEditCall, router, setActiveTab]);
 
   const handleRoute = async () => {
     if (!coordinates.latitude || !coordinates.longitude) {
@@ -224,7 +225,7 @@ export default function CallDetailWeb() {
             <View style={styles.infoRow}>
               <Text style={StyleSheet.flatten([styles.infoLabel, isDark ? styles.infoLabelDark : styles.infoLabelLight])}>{t('call_detail.note')}</Text>
               <View style={StyleSheet.flatten([styles.noteContainer, isDark ? styles.noteContainerDark : styles.noteContainerLight])}>
-                <div style={{ color: isDark ? '#d1d5db' : '#374151', fontSize: 14, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: call.Note || '<em>No notes</em>' }} />
+                <div style={{ color: isDark ? '#d1d5db' : '#374151', fontSize: 14, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(call.Note || '<em>No notes</em>') }} />
               </View>
             </View>
           </View>
@@ -247,7 +248,7 @@ export default function CallDetailWeb() {
                   <Text style={StyleSheet.flatten([styles.protocolName, isDark ? styles.protocolNameDark : styles.protocolNameLight])}>{protocol.Name}</Text>
                   <Text style={StyleSheet.flatten([styles.protocolDescription, isDark ? styles.protocolDescriptionDark : styles.protocolDescriptionLight])}>{protocol.Description}</Text>
                   <View style={StyleSheet.flatten([styles.protocolText, isDark ? styles.protocolTextDark : styles.protocolTextLight])}>
-                    <div style={{ color: isDark ? '#d1d5db' : '#374151', fontSize: 14, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: protocol.ProtocolText || '' }} />
+                    <div style={{ color: isDark ? '#d1d5db' : '#374151', fontSize: 14, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(protocol.ProtocolText || '') }} />
                   </View>
                 </Card>
               ))
@@ -335,7 +336,7 @@ export default function CallDetailWeb() {
 
             {/* Call Nature */}
             <View style={StyleSheet.flatten([styles.natureContainer, isDark ? styles.natureContainerDark : styles.natureContainerLight])}>
-              <div style={{ color: isDark ? '#d1d5db' : '#374151', fontSize: 14, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: call.Nature || '' }} />
+              <div style={{ color: isDark ? '#d1d5db' : '#374151', fontSize: 14, lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(call.Nature || '') }} />
             </View>
 
             {/* Priority Badge */}

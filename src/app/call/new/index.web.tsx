@@ -303,7 +303,7 @@ export default function NewCallWeb() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showLocationPicker, showAddressSelection, showDispatchModal]);
+  }, [showLocationPicker, showAddressSelection, showDispatchModal, handleSubmit, onSubmit, router]);
 
   const onSubmit = async (data: FormValues) => {
     try {
