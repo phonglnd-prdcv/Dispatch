@@ -761,6 +761,19 @@
       "no_statuses_available": "No statuses available",
       "no_staffings_available": "No staffing levels available"
     },
+    "unit_actions_panel": {
+      "status": "Status",
+      "select_status": "Select Status",
+      "destination": "Destination",
+      "no_destination": "No Destination",
+      "note": "Note",
+      "note_placeholder": "Add an optional note...",
+      "update_status": "Update Status",
+      "no_statuses_available": "No statuses available",
+      "no_active_calls": "No active calls",
+      "no_stations_available": "No stations available",
+      "no_destinations_available": "No destinations available"
+    },
     "call": "Call",
     "station": "Station",
     "calls": "Calls",

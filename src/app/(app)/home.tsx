@@ -18,6 +18,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { isCallActive, isCallPending, isCallScheduled } from '@/lib/utils';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import useAuthStore from '@/stores/auth/store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
@@ -76,6 +77,7 @@ export default function DispatchConsole() {
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [selectedPersonnelData, setSelectedPersonnelData] = useState<PersonnelInfoResultData | null>(null);
+  const [selectedUnitData, setSelectedUnitData] = useState<UnitInfoResultData | null>(null);
 
   // Update time every second
   useEffect(() => {
@@ -311,6 +313,12 @@ export default function DispatchConsole() {
     const isAlreadySelected = selectedUnitId === unitId;
     setSelectedUnitId(isAlreadySelected ? null : unitId);
     const unit = units.find((u) => u.UnitId === unitId);
+    setSelectedUnitData(isAlreadySelected ? null : (unit ?? null));
+    // Clear personnel selection when selecting a unit
+    if (!isAlreadySelected) {
+      setSelectedPersonnelId(null);
+      setSelectedPersonnelData(null);
+    }
     if (unit) {
       addActivityLogEntry({
         type: 'unit',
@@ -326,6 +334,11 @@ export default function DispatchConsole() {
     const isAlreadySelected = selectedPersonnelId === personnelId;
     setSelectedPersonnelId(isAlreadySelected ? null : personnelId);
     setSelectedPersonnelData(isAlreadySelected ? null : (person ?? null));
+    // Clear unit selection when selecting personnel
+    if (!isAlreadySelected) {
+      setSelectedUnitId(null);
+      setSelectedUnitData(null);
+    }
     if (person) {
       addActivityLogEntry({
         type: 'personnel',
@@ -344,6 +357,11 @@ export default function DispatchConsole() {
   const handleStaffingUpdated = useCallback(() => {
     fetchPersonnel();
   }, [fetchPersonnel]);
+
+  // Handle unit status update completion - refresh units list
+  const handleUnitStatusUpdated = useCallback(() => {
+    fetchUnits();
+  }, [fetchUnits]);
 
   // Handle expanding map
   const handleExpandMap = () => {
@@ -386,8 +404,10 @@ export default function DispatchConsole() {
               selectedUnitId={selectedUnitId ?? undefined}
               selectedPersonnelId={selectedPersonnelId ?? undefined}
               selectedPersonnel={selectedPersonnelData}
+              selectedUnit={selectedUnitData}
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
+              onUnitStatusUpdated={handleUnitStatusUpdated}
             />
           </VStack>
 
@@ -474,8 +494,10 @@ export default function DispatchConsole() {
               selectedUnitId={selectedUnitId ?? undefined}
               selectedPersonnelId={selectedPersonnelId ?? undefined}
               selectedPersonnel={selectedPersonnelData}
+              selectedUnit={selectedUnitData}
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
+              onUnitStatusUpdated={handleUnitStatusUpdated}
             />
           </VStack>
         </HStack>
@@ -542,8 +564,10 @@ export default function DispatchConsole() {
             selectedUnitId={selectedUnitId ?? undefined}
             selectedPersonnelId={selectedPersonnelId ?? undefined}
             selectedPersonnel={selectedPersonnelData}
+            selectedUnit={selectedUnitData}
             onStatusUpdated={handleStatusUpdated}
             onStaffingUpdated={handleStaffingUpdated}
+            onUnitStatusUpdated={handleUnitStatusUpdated}
           />
         </VStack>
       </ScrollView>

@@ -95,7 +95,7 @@ const CallItemWrapper: React.FC<{
   const textColor = invertColor(bgColor, true);
 
   // Build styles safely to avoid passing false/undefined values on web
-  const wrapperStyle = isSelected && isFilterActive ? [styles.callItemWrapper, styles.selectedCall] : styles.callItemWrapper;
+  const wrapperStyle = isSelected && isFilterActive ? StyleSheet.flatten([styles.callItemWrapper, styles.selectedCall]) : styles.callItemWrapper;
 
   return (
     <Pressable onPress={onPress}>
@@ -118,7 +118,7 @@ const CallItemWrapper: React.FC<{
               onOpenDetails();
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={[styles.detailsButton, { backgroundColor: `${bgColor}dd` }]}
+            style={StyleSheet.flatten([styles.detailsButton, { backgroundColor: `${bgColor}dd` }])}
           >
             <ExternalLink size={12} color={textColor} />
           </Pressable>

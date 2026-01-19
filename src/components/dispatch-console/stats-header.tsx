@@ -28,7 +28,7 @@ const StatItem: React.FC<StatItemProps> = ({ icon, label, value, color, darkColo
 
   return (
     <HStack className={`flex-1 items-center rounded-lg p-2 ${bgClassName}`} space="sm">
-      <View style={[styles.iconContainer, { backgroundColor: displayColor }]}>
+      <View style={StyleSheet.flatten([styles.iconContainer, { backgroundColor: displayColor }])}>
         <Icon as={icon} size="sm" color="#fff" />
       </View>
       <VStack>

@@ -185,7 +185,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
               <Pressable
                 onPress={handleAddNote}
                 disabled={!newNoteText.trim() || isAddingNote}
-                style={[styles.sendButton, (!newNoteText.trim() || isAddingNote) && styles.sendButtonDisabled]}
+                style={StyleSheet.flatten([styles.sendButton, (!newNoteText.trim() || isAddingNote) && styles.sendButtonDisabled])}
               >
                 <Icon as={Send} size="sm" className={newNoteText.trim() && !isAddingNote ? 'text-indigo-500' : 'text-gray-400'} />
               </Pressable>

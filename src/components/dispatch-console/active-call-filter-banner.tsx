@@ -20,7 +20,7 @@ export const ActiveCallFilterBanner: React.FC<ActiveCallFilterBannerProps> = ({ 
   const bgColor = priority?.Color || '#6366f1';
 
   return (
-    <HStack style={[styles.banner, { backgroundColor: bgColor }]} className="items-center justify-between rounded-lg px-3 py-2">
+    <HStack style={StyleSheet.flatten([styles.banner, { backgroundColor: bgColor }])} className="items-center justify-between rounded-lg px-3 py-2">
       <HStack className="flex-1 items-center" space="sm">
         <Icon as={AlertTriangle} size="sm" color="#fff" />
         <Text className="flex-1 text-sm font-semibold text-white" numberOfLines={1}>

@@ -67,12 +67,12 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
           </Pressable>
 
           {/* Mute Button */}
-          <Pressable onPress={() => setIsMuted(!isMuted)} style={[styles.compactControlButton, isMuted && styles.mutedButton]}>
+          <Pressable onPress={() => setIsMuted(!isMuted)} style={StyleSheet.flatten([styles.compactControlButton, isMuted && styles.mutedButton])}>
             <Icon as={isMuted ? MicOff : Mic} size="sm" color={isMuted ? '#ef4444' : colorScheme === 'dark' ? '#fff' : '#374151'} />
           </Pressable>
 
           {/* PTT Button */}
-          <Pressable onPressIn={onPTTPress} onPressOut={onPTTRelease} style={[styles.pttButtonCompact, isTransmitting && styles.pttButtonActive]} disabled={isMuted}>
+          <Pressable onPressIn={onPTTPress} onPressOut={onPTTRelease} style={StyleSheet.flatten([styles.pttButtonCompact, isTransmitting && styles.pttButtonActive])} disabled={isMuted}>
             <Icon as={Radio} size="sm" color="#fff" />
           </Pressable>
         </HStack>

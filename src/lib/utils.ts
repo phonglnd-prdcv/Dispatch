@@ -1,3 +1,4 @@
+import * as he from 'he';
 import { Linking } from 'react-native';
 import { Platform } from 'react-native';
 import type { StoreApi, UseBoundStore } from 'zustand';
@@ -166,24 +167,13 @@ export function uuidv4() {
 export function stripHtmlTags(html: string): string {
   if (!html) return '';
 
-  // Remove HTML tags using regex
-  const withoutTags = html.replace(/<[^>]*>/g, '');
+  // Decode all HTML entities first using 'he' library
+  const decoded = he.decode(html, { isAttributeValue: false });
 
-  // Replace common HTML entities
-  return withoutTags
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&rsquo;/g, "'")
-    .replace(/&lsquo;/g, "'")
-    .replace(/&ldquo;/g, '"')
-    .replace(/&rdquo;/g, '"')
-    .replace(/&mdash;/g, '—')
-    .replace(/&ndash;/g, '–')
-    .trim();
+  // Remove HTML tags from the decoded string
+  const withoutTags = decoded.replace(/<[^>]*>/g, '');
+
+  return withoutTags.trim();
 }
 
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];

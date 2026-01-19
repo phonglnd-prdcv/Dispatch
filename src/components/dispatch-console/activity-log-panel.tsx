@@ -11,11 +11,14 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { type RadioLogEntry } from '@/stores/dispatch/dispatch-console-store';
 import { usePersonnelActionsStore } from '@/stores/dispatch/personnel-actions-store';
+import { useUnitActionsStore } from '@/stores/dispatch/unit-actions-store';
 
 import { PanelHeader } from './panel-header';
 import { PersonnelActionsPanel } from './personnel-actions-panel';
+import { UnitActionsPanel } from './unit-actions-panel';
 
 export interface ActivityLogEntry {
   id: string;
@@ -50,6 +53,9 @@ interface ActivityLogPanelProps {
   // Actions props - context-aware actions
   selectedUnitId?: string;
   selectedPersonnelId?: string;
+  // Unit data for actions panel
+  selectedUnit?: UnitInfoResultData | null;
+  onUnitStatusUpdated?: () => void;
   // Personnel data for actions panel
   selectedPersonnel?: PersonnelInfoResultData | null;
   onStatusUpdated?: () => void;
@@ -116,7 +122,7 @@ const ActivityLogItem: React.FC<{ entry: ActivityLogEntry }> = ({ entry }) => {
 
   return (
     <HStack className="mb-2 items-start border-b border-gray-100 pb-2 dark:border-gray-800" space="sm">
-      <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+      <View style={StyleSheet.flatten([styles.iconContainer, { backgroundColor: `${color}20` }])}>
         <Icon as={IconComponent} size="xs" color={color} />
       </View>
       <VStack className="flex-1">
@@ -154,7 +160,7 @@ const CallActivityItem: React.FC<{ activity: DispatchedEventResultData }> = ({ a
 
   return (
     <HStack className="mb-2 items-start border-b border-gray-100 pb-2 dark:border-gray-800" space="sm">
-      <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+      <View style={StyleSheet.flatten([styles.iconContainer, { backgroundColor: `${color}20` }])}>
         <Icon as={IconComponent} size="xs" color={color} />
       </View>
       <VStack className="flex-1">
@@ -187,7 +193,7 @@ const RadioLogItem: React.FC<{ entry: RadioLogEntry }> = ({ entry }) => {
 
   return (
     <HStack className="mb-2 items-start border-b border-gray-100 pb-2 dark:border-gray-800" space="sm">
-      <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+      <View style={StyleSheet.flatten([styles.iconContainer, { backgroundColor: `${color}20` }])}>
         <Icon as={Mic} size="xs" color={color} />
       </View>
       <VStack className="flex-1">
@@ -223,9 +229,9 @@ interface ActionButtonProps {
 
 const ActionButton: React.FC<ActionButtonProps> = ({ icon: IconComponent, label, onPress, color = '#3b82f6', disabled = false }) => {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={[styles.actionButton, disabled && styles.actionButtonDisabled, { borderColor: `${color}40` }]}>
+    <Pressable onPress={onPress} disabled={disabled} style={StyleSheet.flatten([styles.actionButton, disabled && styles.actionButtonDisabled, { borderColor: `${color}40` }])}>
       <VStack className="items-center" space="xs">
-        <View style={[styles.actionIconContainer, { backgroundColor: `${color}20` }]}>
+        <View style={StyleSheet.flatten([styles.actionIconContainer, { backgroundColor: `${color}20` }])}>
           <Icon as={IconComponent} size="sm" color={disabled ? '#9ca3af' : color} />
         </View>
         <Text className={`text-center text-xs ${disabled ? 'text-gray-400' : 'text-gray-700 dark:text-gray-300'}`} numberOfLines={2}>
@@ -244,12 +250,12 @@ const TabButton: React.FC<{
   onPress: () => void;
 }> = ({ label, icon: IconComponent, isActive, count, onPress }) => {
   return (
-    <Pressable onPress={onPress} style={[styles.tabButton, isActive && styles.tabButtonActive]}>
+    <Pressable onPress={onPress} style={StyleSheet.flatten([styles.tabButton, isActive && styles.tabButtonActive])}>
       <HStack className="items-center" space="xs">
         <Icon as={IconComponent} size="xs" className={isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'} />
         <Text className={`text-xs font-medium ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-gray-400'}`}>{label}</Text>
         {count !== undefined && count > 0 ? (
-          <View style={[styles.badge, isActive && styles.badgeActive]}>
+          <View style={StyleSheet.flatten([styles.badge, isActive && styles.badgeActive])}>
             <Text className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>{count > 99 ? '99+' : count}</Text>
           </View>
         ) : null}
@@ -270,6 +276,8 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   radioLog = [],
   selectedUnitId,
   selectedPersonnelId,
+  selectedUnit,
+  onUnitStatusUpdated,
   selectedPersonnel,
   onStatusUpdated,
   onStaffingUpdated,
@@ -288,10 +296,34 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   const [activeTab, setActiveTab] = useState<TabType>('activity');
 
   // Personnel actions store
-  const { isActionsOpen, openActions, closeActions } = usePersonnelActionsStore();
+  const { isActionsOpen: isPersonnelActionsOpen, openActions: openPersonnelActions, closeActions: closePersonnelActions } = usePersonnelActionsStore();
+
+  // Unit actions store
+  const { isActionsOpen: isUnitActionsOpen, openActions: openUnitActions, closeActions: closeUnitActions } = useUnitActionsStore();
 
   // Track previous personnel selection to avoid unnecessary store updates
   const prevSelectedPersonnelIdRef = useRef<string | undefined>(undefined);
+
+  // Track previous unit selection to avoid unnecessary store updates
+  const prevSelectedUnitIdRef = useRef<string | undefined>(undefined);
+
+  // Track previous call selection to avoid unnecessary tab switches
+  const prevSelectedCallIdRef = useRef<string | undefined>(undefined);
+
+  // Switch to actions tab when a call is selected (for quick note/close actions)
+  useEffect(() => {
+    const prevId = prevSelectedCallIdRef.current;
+    const currentId = selectedCallId;
+
+    // Only act if the selection actually changed
+    if (prevId !== currentId) {
+      prevSelectedCallIdRef.current = currentId;
+
+      if (isCallFilterActive && currentId) {
+        setActiveTab('actions'); // Automatically switch to actions tab for call actions
+      }
+    }
+  }, [isCallFilterActive, selectedCallId]);
 
   // Open actions panel and switch to actions tab when personnel is selected
   useEffect(() => {
@@ -303,14 +335,33 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
       prevSelectedPersonnelIdRef.current = currentId;
 
       if (selectedPersonnel && currentId) {
-        openActions(selectedPersonnel);
+        openPersonnelActions(selectedPersonnel);
         setActiveTab('actions'); // Automatically switch to actions tab
       } else if (prevId && !currentId) {
         // Only close if we had a selection before and now we don't
-        closeActions();
+        closePersonnelActions();
       }
     }
-  }, [selectedPersonnel, selectedPersonnelId, openActions, closeActions]);
+  }, [selectedPersonnel, selectedPersonnelId, openPersonnelActions, closePersonnelActions]);
+
+  // Open actions panel and switch to actions tab when unit is selected
+  useEffect(() => {
+    const prevId = prevSelectedUnitIdRef.current;
+    const currentId = selectedUnitId;
+
+    // Only act if the selection actually changed
+    if (prevId !== currentId) {
+      prevSelectedUnitIdRef.current = currentId;
+
+      if (selectedUnit && currentId) {
+        openUnitActions(selectedUnit);
+        setActiveTab('actions'); // Automatically switch to actions tab
+      } else if (prevId && !currentId) {
+        // Only close if we had a selection before and now we don't
+        closeUnitActions();
+      }
+    }
+  }, [selectedUnit, selectedUnitId, openUnitActions, closeUnitActions]);
 
   // Filter entries when call filter is active
   const filteredEntries = isCallFilterActive && selectedCallId ? entries.filter((entry) => entry.metadata?.callId === selectedCallId || entry.type === 'system') : entries;
@@ -384,6 +435,11 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
     // If personnel is selected, show the personnel actions panel
     if (selectedPersonnel) {
       return <PersonnelActionsPanel personnel={selectedPersonnel} onStatusUpdated={onStatusUpdated} onStaffingUpdated={onStaffingUpdated} />;
+    }
+
+    // If unit is selected, show the unit actions panel
+    if (selectedUnit) {
+      return <UnitActionsPanel unit={selectedUnit} onStatusUpdated={onUnitStatusUpdated} />;
     }
 
     return (

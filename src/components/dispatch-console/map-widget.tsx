@@ -47,32 +47,32 @@ export const MapWidget: React.FC<MapWidgetProps> = ({ pins, onExpandMap, onRefre
     return (
       <Modal visible={isLayersPanelOpen} transparent animationType="slide" onRequestClose={() => setIsLayersPanelOpen(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.layersPanelContainer, { backgroundColor: isDark ? '#1f2937' : '#ffffff' }]}>
+          <View style={StyleSheet.flatten([styles.layersPanelContainer, { backgroundColor: isDark ? '#1f2937' : '#ffffff' }])}>
             <View style={styles.layersPanelHeader}>
-              <RNText style={[styles.layersPanelTitle, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.layers')}</RNText>
+              <RNText style={StyleSheet.flatten([styles.layersPanelTitle, { color: isDark ? '#ffffff' : '#000000' }])}>{t('map.layers')}</RNText>
               <TouchableOpacity onPress={() => setIsLayersPanelOpen(false)} style={styles.closeButton}>
-                <RNText style={[styles.closeButtonText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>✕</RNText>
+                <RNText style={StyleSheet.flatten([styles.closeButtonText, { color: isDark ? '#9ca3af' : '#6b7280' }])}>✕</RNText>
               </TouchableOpacity>
             </View>
 
             <View style={styles.layersPanelActions}>
-              <TouchableOpacity onPress={showAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                <RNText style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</RNText>
+              <TouchableOpacity onPress={showAllLayers} style={StyleSheet.flatten([styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }])}>
+                <RNText style={StyleSheet.flatten([styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }])}>{t('map.show_all')}</RNText>
               </TouchableOpacity>
-              <TouchableOpacity onPress={hideAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                <RNText style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</RNText>
+              <TouchableOpacity onPress={hideAllLayers} style={StyleSheet.flatten([styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }])}>
+                <RNText style={StyleSheet.flatten([styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }])}>{t('map.hide_all')}</RNText>
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.layersList}>
               {layers.length === 0 ? (
-                <RNText style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</RNText>
+                <RNText style={StyleSheet.flatten([styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }])}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</RNText>
               ) : (
                 layers.map((layer) => (
-                  <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => toggleLayer(layer.Id)}>
+                  <Pressable key={layer.Id} style={StyleSheet.flatten([styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }])} onPress={() => toggleLayer(layer.Id)}>
                     <View style={styles.layerInfo}>
-                      <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
-                      <RNText style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
+                      <View style={StyleSheet.flatten([styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }])} />
+                      <RNText style={StyleSheet.flatten([styles.layerName, { color: isDark ? '#ffffff' : '#000000' }])} numberOfLines={1}>
                         {layer.Name}
                       </RNText>
                     </View>

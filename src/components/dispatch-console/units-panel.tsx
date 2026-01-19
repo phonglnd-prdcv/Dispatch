@@ -60,7 +60,7 @@ const UnitItem: React.FC<{
       <Box className={`mb-2 rounded-lg border bg-white p-2 dark:bg-gray-800 ${isSelected ? 'border-indigo-500' : 'border-gray-200 dark:border-gray-700'}`}>
         <HStack className="items-center justify-between">
           <HStack className="flex-1 items-center" space="sm">
-            <View style={[styles.statusIndicator, { backgroundColor: statusColor }]}>
+            <View style={StyleSheet.flatten([styles.statusIndicator, { backgroundColor: statusColor }])}>
               <Icon as={Truck} size="xs" color="#fff" />
             </View>
             <VStack className="flex-1">

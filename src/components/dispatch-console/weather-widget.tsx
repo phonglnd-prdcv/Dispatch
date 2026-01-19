@@ -142,7 +142,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ latitude, longitud
 
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.compactContainer, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+      <View style={StyleSheet.flatten([styles.container, styles.compactContainer, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }])}>
         <ActivityIndicator size="small" color={isDark ? '#9ca3af' : '#6b7280'} />
       </View>
     );
@@ -150,7 +150,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ latitude, longitud
 
   if (error || !weather) {
     return (
-      <View style={[styles.container, styles.compactContainer, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+      <View style={StyleSheet.flatten([styles.container, styles.compactContainer, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }])}>
         <Icon as={Cloud} size="sm" className="text-gray-400" />
         <Text className="ml-1 text-xs text-gray-500 dark:text-gray-400">--°F</Text>
       </View>
@@ -172,7 +172,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ latitude, longitud
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+    <View style={StyleSheet.flatten([styles.container, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }])}>
       <HStack className="items-center" space="sm">
         <Icon as={WeatherIcon} size="lg" className="text-blue-500 dark:text-blue-400" />
         <VStack>

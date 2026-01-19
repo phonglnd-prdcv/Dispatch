@@ -45,7 +45,7 @@ const PersonnelItem: React.FC<{
       <Box className={`mb-2 rounded-lg border bg-white p-2 dark:bg-gray-800 ${isSelected ? 'border-indigo-500' : 'border-gray-200 dark:border-gray-700'}`}>
         <HStack className="items-center justify-between">
           <HStack className="flex-1 items-center" space="sm">
-            <View style={[styles.avatar, { borderColor: statusColor }]}>
+            <View style={StyleSheet.flatten([styles.avatar, { borderColor: statusColor }])}>
               <Icon as={User} size="sm" color={statusColor} />
             </View>
             <VStack className="flex-1">

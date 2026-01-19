@@ -1,10 +1,10 @@
-import { Building2, Check, ChevronRight, Phone, Send, User, X, Zap } from 'lucide-react-native';
+import { Building2, Check, ChevronRight, Phone, Send, Truck, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { getAllGroups } from '@/api/groups/groups';
-import { getAllPersonnelStaffings, getAllPersonnelStatuses } from '@/api/satuses';
+import { getAllUnitStatuses } from '@/api/satuses';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
@@ -16,18 +16,17 @@ import { VStack } from '@/components/ui/vstack';
 import { invertColor, isCallActive } from '@/lib/utils';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
-import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { useCallsStore } from '@/stores/calls/store';
-import { usePersonnelActionsStore } from '@/stores/dispatch/personnel-actions-store';
+import { useUnitActionsStore } from '@/stores/dispatch/unit-actions-store';
 
-interface PersonnelActionsPanelProps {
-  personnel?: PersonnelInfoResultData | null;
+interface UnitActionsPanelProps {
+  unit?: UnitInfoResultData | null;
   onStatusUpdated?: () => void;
-  onStaffingUpdated?: () => void;
 }
 
-// Reusable status/staffing option for the action sheet
+// Reusable status option for the action sheet
 const StatusSheetOption: React.FC<{
   status: StatusesResultData;
   isSelected: boolean;
@@ -40,19 +39,24 @@ const StatusSheetOption: React.FC<{
     <Pressable onPress={onSelect}>
       <HStack
         className={`mb-2 items-center justify-between rounded-lg border-2 px-3 py-2.5 ${
-          isSelected ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+          isSelected ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
         }`}
       >
         <HStack className="items-center" space="sm">
-          <View style={{ ...styles.statusIndicator, backgroundColor: bgColor }}>
+          <View style={StyleSheet.flatten([styles.statusIndicator, { backgroundColor: bgColor }])}>
             <Text style={{ color: textColor }} className="text-sm font-bold">
               {status.Text.substring(0, 2).toUpperCase()}
             </Text>
           </View>
-          <Text className="text-sm font-medium text-gray-800 dark:text-gray-100">{status.Text}</Text>
+          <VStack className="flex-1">
+            <Text className="text-sm font-medium text-gray-800 dark:text-gray-100">{status.Text}</Text>
+            {status.Detail > 0 ? (
+              <Text className="text-xs text-gray-500 dark:text-gray-400">{status.Detail === 1 ? 'Station destination' : status.Detail === 2 ? 'Call destination' : 'Call or Station destination'}</Text>
+            ) : null}
+          </VStack>
         </HStack>
         {isSelected ? (
-          <View style={{ ...styles.checkIcon, backgroundColor: '#6366f1' }}>
+          <View style={StyleSheet.flatten([styles.checkIcon, { backgroundColor: '#3b82f6' }])}>
             <Icon as={Check} size="sm" color="#fff" />
           </View>
         ) : null}
@@ -78,26 +82,22 @@ const DestinationSheetOption: React.FC<{
     <Pressable onPress={onSelect}>
       <HStack
         className={`mb-2 items-center justify-between rounded-lg border px-3 py-2.5 ${
-          isSelected ? 'border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+          isSelected ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
         }`}
       >
         <HStack className="flex-1 items-center" space="sm">
-          {isNone ? (
-            <Icon as={X} size="sm" className={isSelected ? 'text-indigo-500' : 'text-gray-400'} />
-          ) : (
-            <Icon as={isCall ? Phone : Building2} size="sm" className={isSelected ? 'text-indigo-500' : 'text-gray-500'} />
-          )}
+          {isNone ? <Icon as={X} size="sm" className={isSelected ? 'text-blue-500' : 'text-gray-400'} /> : <Icon as={isCall ? Phone : Building2} size="sm" className={isSelected ? 'text-blue-500' : 'text-gray-500'} />}
           <Text className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100" numberOfLines={1}>
             {isNone ? label : isCall ? `#${call?.Number} - ${call?.Name}` : station?.Name}
           </Text>
         </HStack>
-        {isSelected ? <Icon as={Check} size="sm" className="text-indigo-500" /> : null}
+        {isSelected ? <Icon as={Check} size="sm" className="text-blue-500" /> : null}
       </HStack>
     </Pressable>
   );
 };
 
-export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ personnel: personnelProp, onStatusUpdated, onStaffingUpdated }) => {
+export const UnitActionsPanel: React.FC<UnitActionsPanelProps> = ({ unit: unitProp, onStatusUpdated }) => {
   const { t } = useTranslation();
 
   // Get calls directly from calls store using selector
@@ -106,32 +106,25 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
 
   // Local state for action sheets
   const [isStatusSheetOpen, setIsStatusSheetOpen] = useState(false);
-  const [isStaffingSheetOpen, setIsStaffingSheetOpen] = useState(false);
   const [isDestinationSheetOpen, setIsDestinationSheetOpen] = useState(false);
   const [destinationTab, setDestinationTab] = useState<'calls' | 'stations'>('calls');
 
-  // Local state for selected status and staffing (to fix synchronization issues)
+  // Local state for selected status (to fix synchronization issues)
   const [localSelectedStatus, setLocalSelectedStatus] = useState<StatusesResultData | null>(null);
-  const [localSelectedStaffing, setLocalSelectedStaffing] = useState<StatusesResultData | null>(null);
 
   // Store state
   const {
-    selectedPersonnel: storeSelectedPersonnel,
+    selectedUnit: storeSelectedUnit,
     selectedStatus: storeSelectedStatus,
     statusDestinationType,
     statusSelectedCall,
     statusSelectedStation,
     statusNote,
     isSubmittingStatus,
-    selectedStaffing: storeSelectedStaffing,
-    staffingNote,
-    isSubmittingStaffing,
     availableStatuses,
-    availableStaffings,
     availableStations,
     isLoadingOptions,
     statusError,
-    staffingError,
     closeActions,
     setSelectedStatus: setStoreSelectedStatus,
     setStatusDestinationType,
@@ -139,28 +132,19 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     setStatusSelectedStation,
     setStatusNote,
     submitStatus: storeSubmitStatus,
-    setSelectedStaffing: setStoreSelectedStaffing,
-    setStaffingNote,
-    submitStaffing: storeSubmitStaffing,
     setAvailableStatuses,
-    setAvailableStaffings,
     setAvailableCalls,
     setAvailableStations,
     setIsLoadingOptions,
-  } = usePersonnelActionsStore();
+  } = useUnitActionsStore();
 
-  // Use local state for selected status/staffing, synced with store
+  // Use local state for selected status, synced with store
   const selectedStatus = localSelectedStatus;
-  const selectedStaffing = localSelectedStaffing;
 
   // Sync local state with store (for initial values and external changes)
   useEffect(() => {
     setLocalSelectedStatus(storeSelectedStatus);
   }, [storeSelectedStatus]);
-
-  useEffect(() => {
-    setLocalSelectedStaffing(storeSelectedStaffing);
-  }, [storeSelectedStaffing]);
 
   // Wrapper to update both local state and store
   const setSelectedStatus = useCallback(
@@ -171,45 +155,44 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     [setStoreSelectedStatus]
   );
 
-  const setSelectedStaffing = useCallback(
-    (staffing: StatusesResultData | null) => {
-      setLocalSelectedStaffing(staffing);
-      setStoreSelectedStaffing(staffing);
-    },
-    [setStoreSelectedStaffing]
-  );
-
   // Use prop if available, fallback to store
-  const selectedPersonnel = personnelProp ?? storeSelectedPersonnel;
+  const selectedUnit = unitProp ?? storeSelectedUnit;
 
   // Load options when panel opens
   useEffect(() => {
     const loadOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const [statusesResult, staffingsResult, groupsResult] = await Promise.all([getAllPersonnelStatuses(), getAllPersonnelStaffings(), getAllGroups()]);
+        const [statusesResult, groupsResult] = await Promise.all([getAllUnitStatuses(), getAllGroups()]);
 
-        if (statusesResult?.Data) {
-          setAvailableStatuses(statusesResult.Data);
-        }
-        if (staffingsResult?.Data) {
-          setAvailableStaffings(staffingsResult.Data);
+        if (statusesResult?.Data && statusesResult.Data.length > 0) {
+          // Unit statuses come grouped by unit type, we need to extract the statuses
+          // For now, use the first unit type's statuses or flatten all
+          const allStatuses: StatusesResultData[] = [];
+          statusesResult.Data.forEach((unitType) => {
+            if (unitType.Statuses) {
+              allStatuses.push(...unitType.Statuses);
+            }
+          });
+          // Remove duplicates by Id
+          const uniqueStatuses = allStatuses.filter((status, index, self) => index === self.findIndex((s) => s.Id === status.Id));
+          setAvailableStatuses(uniqueStatuses);
         }
         if (groupsResult?.Data) {
           const stations = groupsResult.Data.filter((g) => g.GroupType?.toLowerCase().includes('station'));
           setAvailableStations(stations.length > 0 ? stations : groupsResult.Data);
         }
       } catch (error) {
-        console.error('Failed to load personnel action options:', error);
+        console.error('Failed to load unit action options:', error);
       } finally {
         setIsLoadingOptions(false);
       }
     };
 
-    if (selectedPersonnel) {
+    if (selectedUnit) {
       loadOptions();
     }
-  }, [selectedPersonnel, setAvailableStatuses, setAvailableStaffings, setAvailableStations, setIsLoadingOptions]);
+  }, [selectedUnit, setAvailableStatuses, setAvailableStations, setIsLoadingOptions]);
 
   // Update available calls from calls store
   useEffect(() => {
@@ -217,28 +200,28 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     setAvailableCalls(activeCalls);
   }, [calls, setAvailableCalls]);
 
-  // Track the last personnel ID we initialized destination for
-  const lastInitializedPersonnelIdRef = useRef<string | null>(null);
+  // Track the last unit ID we initialized destination for
+  const lastInitializedUnitIdRef = useRef<string | null>(null);
 
-  // Initialize destination from selected personnel's current destination (only once per personnel)
+  // Initialize destination from selected unit's current destination (only once per unit)
   useEffect(() => {
-    if (!selectedPersonnel) {
-      lastInitializedPersonnelIdRef.current = null;
+    if (!selectedUnit) {
+      lastInitializedUnitIdRef.current = null;
       return;
     }
 
-    // Only initialize once per personnel - skip if we already initialized for this person
-    if (lastInitializedPersonnelIdRef.current === selectedPersonnel.UserId) {
+    // Only initialize once per unit - skip if we already initialized for this unit
+    if (lastInitializedUnitIdRef.current === selectedUnit.UnitId) {
       return;
     }
 
     // If no destination set, just mark as initialized
-    if (!selectedPersonnel.StatusDestinationId) {
-      lastInitializedPersonnelIdRef.current = selectedPersonnel.UserId;
+    if (!selectedUnit.CurrentDestinationId) {
+      lastInitializedUnitIdRef.current = selectedUnit.UnitId;
       return;
     }
 
-    const destinationId = selectedPersonnel.StatusDestinationId;
+    const destinationId = selectedUnit.CurrentDestinationId;
 
     // Check if the destination is a call (check available calls)
     const matchingCall = calls.find((c) => c.CallId === destinationId);
@@ -246,7 +229,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
       setStatusDestinationType('call');
       setStatusSelectedCall(matchingCall);
       setStatusSelectedStation(null);
-      lastInitializedPersonnelIdRef.current = selectedPersonnel.UserId;
+      lastInitializedUnitIdRef.current = selectedUnit.UnitId;
       return;
     }
 
@@ -256,40 +239,27 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
       setStatusDestinationType('station');
       setStatusSelectedStation(matchingStation);
       setStatusSelectedCall(null);
-      lastInitializedPersonnelIdRef.current = selectedPersonnel.UserId;
+      lastInitializedUnitIdRef.current = selectedUnit.UnitId;
       return;
     }
 
     // If we couldn't match but have data loaded, mark as initialized anyway
-    // (the personnel has a destination that doesn't exist in our lists)
     if (calls.length > 0 || availableStations.length > 0) {
-      lastInitializedPersonnelIdRef.current = selectedPersonnel.UserId;
+      lastInitializedUnitIdRef.current = selectedUnit.UnitId;
     }
-  }, [selectedPersonnel, calls, availableStations, setStatusDestinationType, setStatusSelectedCall, setStatusSelectedStation]);
+  }, [selectedUnit, calls, availableStations, setStatusDestinationType, setStatusSelectedCall, setStatusSelectedStation]);
 
   const handleSubmitStatus = useCallback(async () => {
-    // Pass current personnel and status directly to avoid state sync issues
+    // Pass current unit and status directly to avoid state sync issues
     const success = await storeSubmitStatus({
-      personnel: selectedPersonnel ?? undefined,
+      unit: selectedUnit ?? undefined,
       status: localSelectedStatus ?? undefined,
     });
     if (success) {
       setLocalSelectedStatus(null);
       onStatusUpdated?.();
     }
-  }, [storeSubmitStatus, selectedPersonnel, localSelectedStatus, onStatusUpdated]);
-
-  const handleSubmitStaffing = useCallback(async () => {
-    // Pass current personnel and staffing directly to avoid state sync issues
-    const success = await storeSubmitStaffing({
-      personnel: selectedPersonnel ?? undefined,
-      staffing: localSelectedStaffing ?? undefined,
-    });
-    if (success) {
-      setLocalSelectedStaffing(null);
-      onStaffingUpdated?.();
-    }
-  }, [storeSubmitStaffing, selectedPersonnel, localSelectedStaffing, onStaffingUpdated]);
+  }, [storeSubmitStatus, selectedUnit, localSelectedStatus, onStatusUpdated]);
 
   // Get destination display text
   const getDestinationDisplay = useMemo(() => {
@@ -299,28 +269,18 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     if (statusDestinationType === 'station' && statusSelectedStation) {
       return statusSelectedStation.Name;
     }
-    return t('dispatch.personnel_actions.no_destination');
+    return t('dispatch.unit_actions_panel.no_destination');
   }, [statusDestinationType, statusSelectedCall, statusSelectedStation, t]);
-
-  // Check if status detail requires a destination
-  // Detail: 0 = No destination, 1 = Station only, 2 = Call only, 3 = Both
-  const requiresDestination = useMemo(() => {
-    if (!selectedStatus) return false;
-    return selectedStatus.Detail > 0;
-  }, [selectedStatus]);
 
   // Check destination type allowed based on Detail
   // Detail: 0 = No destination needed, 1 = Station only, 2 = Call only, 3 = Both
-  // When Detail > 0, the destination sheet can be opened
   const destinationConfig = useMemo(() => {
     if (!selectedStatus) {
-      return { showStations: true, showCalls: true }; // Default to both when no status
+      return { showStations: true, showCalls: true };
     }
-    // Detail 0 means no destination, but if sheet is open, show both as fallback
     if (selectedStatus.Detail === 0) {
       return { showStations: true, showCalls: true };
     }
-    // Detail 1 = Station only, 2 = Call only, 3 = Both
     return {
       showStations: selectedStatus.Detail === 1 || selectedStatus.Detail === 3,
       showCalls: selectedStatus.Detail === 2 || selectedStatus.Detail === 3,
@@ -332,18 +292,10 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
   const statusNoteConfig = useMemo(() => {
     if (!selectedStatus) return { show: true, required: false };
     return {
-      show: true, // Always show note
+      show: true,
       required: selectedStatus.Note === 2,
     };
   }, [selectedStatus]);
-
-  const staffingNoteConfig = useMemo(() => {
-    if (!selectedStaffing) return { show: true, required: false };
-    return {
-      show: true, // Always show note
-      required: selectedStaffing.Note === 2,
-    };
-  }, [selectedStaffing]);
 
   // Validate status can be submitted
   const canSubmitStatus = useMemo(() => {
@@ -353,23 +305,9 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     return true;
   }, [selectedStatus, statusNote]);
 
-  // Validate staffing can be submitted
-  const canSubmitStaffing = useMemo(() => {
-    if (!selectedStaffing) return false;
-    // Check if note is required and not provided
-    if (selectedStaffing.Note === 2 && !staffingNote.trim()) return false;
-    return true;
-  }, [selectedStaffing, staffingNote]);
-
   // Active calls for destination selection
   const activeCalls = useMemo(() => {
-    const filtered = calls.filter((c) => isCallActive(c.State));
-    console.log('[PersonnelActionsPanel] Active calls:', {
-      totalCalls: calls.length,
-      activeCalls: filtered.length,
-      allStates: calls.map((c) => c.State),
-    });
-    return filtered;
+    return calls.filter((c) => isCallActive(c.State));
   }, [calls]);
 
   // Refresh calls when destination sheet opens
@@ -389,12 +327,6 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     }
   };
 
-  // Handle staffing selection
-  const handleStaffingSelect = (staffing: StatusesResultData) => {
-    setSelectedStaffing(staffing);
-    setIsStaffingSheetOpen(false);
-  };
-
   // Handle destination selection
   const handleDestinationSelect = (type: 'none' | 'call' | 'station', item?: CallResultData | GroupResultData) => {
     if (type === 'none') {
@@ -409,26 +341,26 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     setIsDestinationSheetOpen(false);
   };
 
-  // Don't render if no personnel selected
-  if (!selectedPersonnel) {
+  // Don't render if no unit selected
+  if (!selectedUnit) {
     return null;
   }
 
   return (
     <>
-      <Box className="rounded-lg border border-indigo-300 bg-white dark:border-indigo-700 dark:bg-gray-900">
-        {/* Header with selected personnel */}
+      <Box className="rounded-lg border border-blue-300 bg-white dark:border-blue-700 dark:bg-gray-900">
+        {/* Header with selected unit */}
         <HStack className="items-center justify-between border-b border-gray-200 px-2 py-1.5 dark:border-gray-700">
           <HStack className="flex-1 items-center" space="xs">
             <View style={styles.avatar}>
-              <Icon as={User} size="xs" className="text-indigo-500" />
+              <Icon as={Truck} size="xs" className="text-blue-500" />
             </View>
             <VStack className="flex-1">
               <Text className="text-sm font-semibold text-gray-800 dark:text-gray-100" numberOfLines={1}>
-                {selectedPersonnel.FirstName} {selectedPersonnel.LastName}
+                {selectedUnit.Name}
               </Text>
               <Text className="text-xs text-gray-500 dark:text-gray-400" numberOfLines={1}>
-                {selectedPersonnel.GroupName || t('dispatch.unassigned')}
+                {selectedUnit.Type || selectedUnit.GroupName || t('dispatch.unassigned')}
               </Text>
             </VStack>
           </HStack>
@@ -449,16 +381,16 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
             <Pressable onPress={() => setIsStatusSheetOpen(true)}>
               <HStack className="items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
                 <HStack className="flex-1 items-center" space="sm">
-                  <Icon as={Zap} size="sm" className="text-indigo-500" />
+                  <Icon as={Truck} size="sm" className="text-blue-500" />
                   <VStack className="flex-1">
-                    <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.personnel_actions.status_tab')}</Text>
+                    <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.unit_actions_panel.status')}</Text>
                     {selectedStatus ? (
                       <HStack className="items-center" space="xs">
-                        <View style={{ ...styles.miniIndicator, backgroundColor: selectedStatus.BColor || '#6b7280' }} />
+                        <View style={StyleSheet.flatten([styles.miniIndicator, { backgroundColor: selectedStatus.BColor || '#6b7280' }])} />
                         <Text className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedStatus.Text}</Text>
                       </HStack>
                     ) : (
-                      <Text className="text-sm text-gray-400 dark:text-gray-500">{t('dispatch.personnel_actions.select_status')}</Text>
+                      <Text className="text-sm text-gray-400 dark:text-gray-500">{t('dispatch.unit_actions_panel.select_status')}</Text>
                     )}
                   </VStack>
                 </HStack>
@@ -473,7 +405,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
                   <HStack className="flex-1 items-center" space="sm">
                     <Icon as={statusDestinationType === 'call' ? Phone : Building2} size="sm" className="text-amber-500" />
                     <VStack className="flex-1">
-                      <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.personnel_actions.destination')}</Text>
+                      <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.unit_actions_panel.destination')}</Text>
                       <Text className="text-sm font-medium text-gray-800 dark:text-gray-100" numberOfLines={1}>
                         {getDestinationDisplay}
                       </Text>
@@ -490,7 +422,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
               className={`rounded-lg border bg-white px-3 py-2 text-sm text-gray-800 dark:bg-gray-800 dark:text-gray-100 ${
                 statusNoteConfig.required && !statusNote.trim() ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700'
               }`}
-              placeholder={`${t('dispatch.personnel_actions.note')}${statusNoteConfig.required ? ' *' : ` (${t('common.optional')})`}`}
+              placeholder={`${t('dispatch.unit_actions_panel.note')}${statusNoteConfig.required ? ' *' : ` (${t('common.optional')})`}`}
               placeholderTextColor="#9ca3af"
               value={statusNote}
               onChangeText={setStatusNote}
@@ -500,56 +432,9 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
             {selectedStatus ? (
               <>
                 {statusError ? <Text className="text-xs text-red-500">{statusError}</Text> : null}
-                <Button size="sm" onPress={handleSubmitStatus} isDisabled={!canSubmitStatus || isSubmittingStatus} className="bg-indigo-600">
+                <Button size="sm" onPress={handleSubmitStatus} isDisabled={!canSubmitStatus || isSubmittingStatus} className="bg-blue-600">
                   {isSubmittingStatus ? <ButtonSpinner color="white" /> : <Icon as={Send} size="xs" color="white" />}
-                  <ButtonText className="ml-1 text-xs">{t('dispatch.personnel_actions.update_status')}</ButtonText>
-                </Button>
-              </>
-            ) : null}
-
-            {/* Divider */}
-            <View className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
-
-            {/* Staffing Selection Button */}
-            <Pressable onPress={() => setIsStaffingSheetOpen(true)}>
-              <HStack className="items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-                <HStack className="flex-1 items-center" space="sm">
-                  <Icon as={User} size="sm" className="text-green-500" />
-                  <VStack className="flex-1">
-                    <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.personnel_actions.staffing_tab')}</Text>
-                    {selectedStaffing ? (
-                      <HStack className="items-center" space="xs">
-                        <View style={{ ...styles.miniIndicator, backgroundColor: selectedStaffing.BColor || '#6b7280' }} />
-                        <Text className="text-sm font-medium text-gray-800 dark:text-gray-100">{selectedStaffing.Text}</Text>
-                      </HStack>
-                    ) : (
-                      <Text className="text-sm text-gray-400 dark:text-gray-500">{t('dispatch.personnel_actions.select_staffing')}</Text>
-                    )}
-                  </VStack>
-                </HStack>
-                <Icon as={ChevronRight} size="sm" className="text-gray-400" />
-              </HStack>
-            </Pressable>
-
-            {/* Staffing Note Input - Always visible */}
-            <TextInput
-              style={styles.noteInput}
-              className={`rounded-lg border bg-white px-3 py-2 text-sm text-gray-800 dark:bg-gray-800 dark:text-gray-100 ${
-                staffingNoteConfig.required && !staffingNote.trim() ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700'
-              }`}
-              placeholder={`${t('dispatch.personnel_actions.note')}${staffingNoteConfig.required ? ' *' : ` (${t('common.optional')})`}`}
-              placeholderTextColor="#9ca3af"
-              value={staffingNote}
-              onChangeText={setStaffingNote}
-            />
-
-            {/* Update Staffing Button */}
-            {selectedStaffing ? (
-              <>
-                {staffingError ? <Text className="text-xs text-red-500">{staffingError}</Text> : null}
-                <Button size="sm" onPress={handleSubmitStaffing} isDisabled={!canSubmitStaffing || isSubmittingStaffing} className="bg-green-600">
-                  {isSubmittingStaffing ? <ButtonSpinner color="white" /> : <Icon as={Send} size="xs" color="white" />}
-                  <ButtonText className="ml-1 text-xs">{t('dispatch.personnel_actions.update_staffing')}</ButtonText>
+                  <ButtonText className="ml-1 text-xs">{t('dispatch.unit_actions_panel.update_status')}</ButtonText>
                 </Button>
               </>
             ) : null}
@@ -565,32 +450,12 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
             <ActionsheetDragIndicator />
           </ActionsheetDragIndicatorWrapper>
           <VStack className="w-full" space="md">
-            <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('dispatch.personnel_actions.select_status')}</Text>
+            <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('dispatch.unit_actions_panel.select_status')}</Text>
             <ScrollView style={styles.sheetList} showsVerticalScrollIndicator={false}>
               {availableStatuses.length === 0 ? (
-                <Text className="py-4 text-center text-gray-500 dark:text-gray-400">{t('dispatch.personnel_actions.no_statuses_available')}</Text>
+                <Text className="py-4 text-center text-gray-500 dark:text-gray-400">{t('dispatch.unit_actions_panel.no_statuses_available')}</Text>
               ) : (
                 availableStatuses.map((status) => <StatusSheetOption key={status.Id} status={status} isSelected={selectedStatus?.Id === status.Id} onSelect={() => handleStatusSelect(status)} />)
-              )}
-            </ScrollView>
-          </VStack>
-        </ActionsheetContent>
-      </Actionsheet>
-
-      {/* Staffing Selection Action Sheet */}
-      <Actionsheet isOpen={isStaffingSheetOpen} onClose={() => setIsStaffingSheetOpen(false)} snapPoints={[50]}>
-        <ActionsheetBackdrop />
-        <ActionsheetContent className="rounded-t-2xl bg-white px-4 pb-6 dark:bg-gray-900">
-          <ActionsheetDragIndicatorWrapper>
-            <ActionsheetDragIndicator />
-          </ActionsheetDragIndicatorWrapper>
-          <VStack className="w-full" space="md">
-            <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('dispatch.personnel_actions.select_staffing')}</Text>
-            <ScrollView style={styles.sheetList} showsVerticalScrollIndicator={false}>
-              {availableStaffings.length === 0 ? (
-                <Text className="py-4 text-center text-gray-500 dark:text-gray-400">{t('dispatch.personnel_actions.no_staffings_available')}</Text>
-              ) : (
-                availableStaffings.map((staffing) => <StatusSheetOption key={staffing.Id} status={staffing} isSelected={selectedStaffing?.Id === staffing.Id} onSelect={() => handleStaffingSelect(staffing)} />)
               )}
             </ScrollView>
           </VStack>
@@ -605,10 +470,10 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
             <ActionsheetDragIndicator />
           </ActionsheetDragIndicatorWrapper>
           <VStack className="w-full flex-1" space="sm">
-            <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('dispatch.personnel_actions.destination')}</Text>
+            <Text className="text-lg font-semibold text-gray-800 dark:text-gray-100">{t('dispatch.unit_actions_panel.destination')}</Text>
 
             {/* No Destination Option */}
-            <DestinationSheetOption type="none" isSelected={statusDestinationType === 'none'} onSelect={() => handleDestinationSelect('none')} label={t('dispatch.personnel_actions.no_destination')} />
+            <DestinationSheetOption type="none" isSelected={statusDestinationType === 'none'} onSelect={() => handleDestinationSelect('none')} label={t('dispatch.unit_actions_panel.no_destination')} />
 
             {/* Tabs for Calls and Stations */}
             {destinationConfig.showCalls || destinationConfig.showStations ? (
@@ -616,14 +481,14 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
                 <HStack className="rounded-lg bg-gray-100 p-1 dark:bg-gray-800" space="xs">
                   {destinationConfig.showCalls ? (
                     <Pressable onPress={() => setDestinationTab('calls')} className={`flex-1 rounded-md px-3 py-2 ${destinationTab === 'calls' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
-                      <Text className={`text-center text-sm font-medium ${destinationTab === 'calls' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      <Text className={`text-center text-sm font-medium ${destinationTab === 'calls' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
                         {t('dispatch.calls')} ({activeCalls.length})
                       </Text>
                     </Pressable>
                   ) : null}
                   {destinationConfig.showStations ? (
                     <Pressable onPress={() => setDestinationTab('stations')} className={`flex-1 rounded-md px-3 py-2 ${destinationTab === 'stations' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
-                      <Text className={`text-center text-sm font-medium ${destinationTab === 'stations' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                      <Text className={`text-center text-sm font-medium ${destinationTab === 'stations' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
                         {t('dispatch.stations')} ({availableStations.length})
                       </Text>
                     </Pressable>
@@ -646,7 +511,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
                           />
                         ))
                       ) : (
-                        <Text className="py-8 text-center text-sm text-gray-400">{t('dispatch.personnel_actions.no_active_calls')}</Text>
+                        <Text className="py-8 text-center text-sm text-gray-400">{t('dispatch.unit_actions_panel.no_active_calls')}</Text>
                       )}
                     </VStack>
                   ) : null}
@@ -665,14 +530,14 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
                           />
                         ))
                       ) : (
-                        <Text className="py-8 text-center text-sm text-gray-400">{t('dispatch.personnel_actions.no_stations_available')}</Text>
+                        <Text className="py-8 text-center text-sm text-gray-400">{t('dispatch.unit_actions_panel.no_stations_available')}</Text>
                       )}
                     </VStack>
                   ) : null}
                 </ScrollView>
               </>
             ) : (
-              <Text className="py-4 text-center text-gray-500 dark:text-gray-400">{t('dispatch.personnel_actions.no_destinations_available')}</Text>
+              <Text className="py-4 text-center text-gray-500 dark:text-gray-400">{t('dispatch.unit_actions_panel.no_destinations_available')}</Text>
             )}
           </VStack>
         </ActionsheetContent>
@@ -686,11 +551,11 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: '#6366f1',
+    borderColor: '#3b82f6',
   },
   closeButton: {
     padding: 4,

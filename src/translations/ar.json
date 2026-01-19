@@ -770,6 +770,19 @@
       "no_statuses_available": "لا توجد حالات متاحة",
       "no_staffings_available": "لا توجد مستويات تعيين متاحة"
     },
+    "unit_actions_panel": {
+      "status": "الحالة",
+      "select_status": "اختر الحالة",
+      "destination": "الوجهة",
+      "no_destination": "بدون وجهة",
+      "note": "ملاحظة",
+      "note_placeholder": "أضف ملاحظة اختيارية...",
+      "update_status": "تحديث الحالة",
+      "no_statuses_available": "لا توجد حالات متاحة",
+      "no_active_calls": "لا توجد مكالمات نشطة",
+      "no_stations_available": "لا توجد محطات متاحة",
+      "no_destinations_available": "لا توجد وجهات متاحة"
+    },
     "call": "مكالمة",
     "station": "محطة",
     "calls": "المكالمات",

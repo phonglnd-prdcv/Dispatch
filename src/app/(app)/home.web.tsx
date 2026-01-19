@@ -17,6 +17,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { isCallActive, isCallPending, isCallScheduled } from '@/lib/utils';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
+import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import useAuthStore from '@/stores/auth/store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
@@ -82,6 +83,7 @@ export default function DispatchConsoleWeb() {
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
   const [isAddingNote, setIsAddingNote] = useState(false);
   const [selectedPersonnelData, setSelectedPersonnelData] = useState<PersonnelInfoResultData | null>(null);
+  const [selectedUnitData, setSelectedUnitData] = useState<UnitInfoResultData | null>(null);
 
   // Track previous timestamps to detect changes
   const prevPersonnelTimestamp = useRef(0);
@@ -331,15 +333,23 @@ export default function DispatchConsoleWeb() {
   };
 
   // Handle unit selection - toggle if already selected
-  const handleSelectUnit = (unitId: string) => {
+  const handleSelectUnit = (unitId: string, unit?: UnitInfoResultData) => {
     const isAlreadySelected = selectedUnitId === unitId;
     setSelectedUnitId(isAlreadySelected ? null : unitId);
-    const unit = units.find((u) => u.UnitId === unitId);
-    if (unit) {
+    // Find unit from array if not passed directly
+    const unitData = unit ?? units.find((u) => u.UnitId === unitId);
+    setSelectedUnitData(isAlreadySelected ? null : (unitData ?? null));
+    // Clear personnel selection when selecting a unit
+    if (!isAlreadySelected) {
+      setSelectedPersonnelId(null);
+      setSelectedPersonnelData(null);
+    }
+    const unitToLog = unitData;
+    if (unitToLog) {
       addActivityLogEntry({
         type: 'unit',
         action: isAlreadySelected ? t('dispatch.unit_deselected') : t('dispatch.unit_selected'),
-        description: unit.Name,
+        description: unitToLog.Name,
         metadata: { unitId },
       });
     }
@@ -350,6 +360,11 @@ export default function DispatchConsoleWeb() {
     const isAlreadySelected = selectedPersonnelId === personnelId;
     setSelectedPersonnelId(isAlreadySelected ? null : personnelId);
     setSelectedPersonnelData(isAlreadySelected ? null : (person ?? null));
+    // Clear unit selection when selecting personnel
+    if (!isAlreadySelected) {
+      setSelectedUnitId(null);
+      setSelectedUnitData(null);
+    }
     if (person) {
       addActivityLogEntry({
         type: 'personnel',
@@ -368,6 +383,11 @@ export default function DispatchConsoleWeb() {
   const handleStaffingUpdated = useCallback(() => {
     fetchPersonnel();
   }, [fetchPersonnel]);
+
+  // Handle unit status update completion - refresh units list
+  const handleUnitStatusUpdated = useCallback(() => {
+    fetchUnits();
+  }, [fetchUnits]);
 
   // Handle expanding map
   const handleExpandMap = () => {
@@ -479,8 +499,10 @@ export default function DispatchConsoleWeb() {
               selectedUnitId={selectedUnitId ?? undefined}
               selectedPersonnelId={selectedPersonnelId ?? undefined}
               selectedPersonnel={selectedPersonnelData}
+              selectedUnit={selectedUnitData}
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
+              onUnitStatusUpdated={handleUnitStatusUpdated}
             />
           </VStack>
 
@@ -571,8 +593,10 @@ export default function DispatchConsoleWeb() {
               selectedUnitId={selectedUnitId ?? undefined}
               selectedPersonnelId={selectedPersonnelId ?? undefined}
               selectedPersonnel={selectedPersonnelData}
+              selectedUnit={selectedUnitData}
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
+              onUnitStatusUpdated={handleUnitStatusUpdated}
             />
           </VStack>
         </HStack>
@@ -643,8 +667,10 @@ export default function DispatchConsoleWeb() {
             selectedUnitId={selectedUnitId ?? undefined}
             selectedPersonnelId={selectedPersonnelId ?? undefined}
             selectedPersonnel={selectedPersonnelData}
+            selectedUnit={selectedUnitData}
             onStatusUpdated={handleStatusUpdated}
             onStaffingUpdated={handleStaffingUpdated}
+            onUnitStatusUpdated={handleUnitStatusUpdated}
           />
         </VStack>
       </ScrollView>

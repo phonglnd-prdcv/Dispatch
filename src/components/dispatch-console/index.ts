@@ -10,5 +10,6 @@ export { PersonnelActionsPanel } from './personnel-actions-panel';
 export { PersonnelPanel } from './personnel-panel';
 export { PTTInterface } from './ptt-interface';
 export { StatsHeader } from './stats-header';
+export { UnitActionsPanel } from './unit-actions-panel';
 export { UnitsPanel } from './units-panel';
 export { WeatherWidget } from './weather-widget';

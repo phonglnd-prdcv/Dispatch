@@ -748,6 +748,19 @@
       "no_statuses_available": "No hay estados disponibles",
       "no_staffings_available": "No hay niveles de dotación disponibles"
     },
+    "unit_actions_panel": {
+      "status": "Estado",
+      "select_status": "Seleccionar Estado",
+      "destination": "Destino",
+      "no_destination": "Sin Destino",
+      "note": "Nota",
+      "note_placeholder": "Añadir una nota opcional...",
+      "update_status": "Actualizar Estado",
+      "no_statuses_available": "No hay estados disponibles",
+      "no_active_calls": "No hay llamadas activas",
+      "no_stations_available": "No hay estaciones disponibles",
+      "no_destinations_available": "No hay destinos disponibles"
+    },
     "call": "Llamada",
     "station": "Estación",
     "calls": "Llamadas",
