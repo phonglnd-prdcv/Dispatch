@@ -1,6 +1,6 @@
-import Mapbox, { type LineLayerStyle, type FillLayerStyle, type CircleLayerStyle } from '@rnmapbox/maps';
+import Mapbox, { type CircleLayerStyle, type FillLayerStyle, type LineLayerStyle } from '@rnmapbox/maps';
 import { Stack, useFocusEffect } from 'expo-router';
-import { type Feature, type GeoJsonProperties, type Geometry, type FeatureCollection } from 'geojson';
+import { type Feature, type FeatureCollection, type GeoJsonProperties, type Geometry } from 'geojson';
 import { LayersIcon, NavigationIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

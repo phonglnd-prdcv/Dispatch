@@ -379,10 +379,7 @@ describe('Calendar Store', () => {
 
 	describe('setCalendarItemAttendingStatus', () => {
 		it('should update attendance successfully', async () => {
-			mockedApi.setCalendarAttending.mockResolvedValue({
-				Id: '123',
-				...createMockBaseResponse(),
-			});
+			mockedApi.setCalendarAttending.mockResolvedValue(undefined);
 
 			// Set initial state with the item
 			useCalendarStore.setState({
@@ -622,17 +619,7 @@ describe('Calendar Store', () => {
 		describe('setCalendarItemAttendingStatus', () => {
 			it('should call setCalendarAttending with correct parameters', async () => {
 				// Arrange
-				const mockResponse = {
-					Id: 'attendance-123',
-					PageSize: 0,
-					Timestamp: new Date().toISOString(),
-					Version: '1.0',
-					Node: 'test',
-					RequestId: 'test-123',
-					Status: 'Success',
-					Environment: 'test'
-				};
-				mockedApi.setCalendarAttending.mockResolvedValue(mockResponse);
+				mockedApi.setCalendarAttending.mockResolvedValue(undefined);
 
 				const { result } = renderHook(() => useCalendarStore());
 
@@ -651,17 +638,7 @@ describe('Calendar Store', () => {
 
 			it('should handle empty note parameter', async () => {
 				// Arrange
-				const mockResponse = {
-					Id: 'attendance-123',
-					PageSize: 0,
-					Timestamp: new Date().toISOString(),
-					Version: '1.0',
-					Node: 'test',
-					RequestId: 'test-123',
-					Status: 'Success',
-					Environment: 'test'
-				};
-				mockedApi.setCalendarAttending.mockResolvedValue(mockResponse);
+				mockedApi.setCalendarAttending.mockResolvedValue(undefined);
 
 				const { result } = renderHook(() => useCalendarStore());
 
@@ -797,17 +774,7 @@ describe('Calendar Store', () => {
 
 			it('setAttendance should call setCalendarItemAttendingStatus', async () => {
 				// Arrange
-				const mockResponse = {
-					Id: 'attendance-123',
-					PageSize: 0,
-					Timestamp: new Date().toISOString(),
-					Version: '1.0',
-					Node: 'test',
-					RequestId: 'test-123',
-					Status: 'Success',
-					Environment: 'test'
-				};
-				mockedApi.setCalendarAttending.mockResolvedValue(mockResponse);
+				mockedApi.setCalendarAttending.mockResolvedValue(undefined);
 
 				const { result } = renderHook(() => useCalendarStore());
 

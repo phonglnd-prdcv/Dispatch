@@ -29,6 +29,7 @@ on:
         options:
           - android
           - ios
+          - web
           - all
       release_notes:
         type: string
@@ -40,17 +41,16 @@ env:
   EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
   EXPO_APPLE_PASSWORD: ${{ secrets.EXPO_APPLE_PASSWORD }}
   EXPO_TEAM_ID: ${{ secrets.EXPO_TEAM_ID }}
-  CREDENTIALS_JSON_BASE64: ${{ secrets.CREDENTIALS_JSON_BASE64 }}
   POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-  RESPOND_BASE_API_URL: ${{ secrets.RESPOND_BASE_API_URL }}
-  RESPOND_CHANNEL_API_URL: ${{ secrets.RESPOND_CHANNEL_API_URL }}
-  RESPOND_LOGGING_KEY: ${{ secrets.RESPOND_LOGGING_KEY }}
-  RESPOND_MAPBOX_DLKEY: ${{ secrets.RESPOND_MAPBOX_DLKEY }}
-  RESPOND_MAPBOX_PUBKEY: ${{ secrets.RESPOND_MAPBOX_PUBKEY }}
-  RESPOND_SENTRY_DSN: ${{ secrets.RESPOND_SENTRY_DSN }}
-  RESPOND_ANDROID_KS: ${{ secrets.RESPOND_ANDROID_KS }}
-  RESPOND_GOOGLE_SERVICES: ${{ secrets.RESPOND_GOOGLE_SERVICES }}
+  DISPATCH_BASE_API_URL: ${{ secrets.DISPATCH_BASE_API_URL }}
+  DISPATCH_CHANNEL_API_URL: ${{ secrets.DISPATCH_CHANNEL_API_URL }}
+  DISPATCH_LOGGING_KEY: ${{ secrets.DISPATCH_LOGGING_KEY }}
+  DISPATCH_MAPBOX_DLKEY: ${{ secrets.DISPATCH_MAPBOX_DLKEY }}
+  DISPATCH_MAPBOX_PUBKEY: ${{ secrets.DISPATCH_MAPBOX_PUBKEY }}
+  DISPATCH_SENTRY_DSN: ${{ secrets.DISPATCH_SENTRY_DSN }}
+  DISPATCH_ANDROID_KS: ${{ secrets.DISPATCH_ANDROID_KS }}
+  DISPATCH_GOOGLE_SERVICES: ${{ secrets.DISPATCH_GOOGLE_SERVICES }}
   MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
   APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
   APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -62,16 +62,18 @@ env:
   BUNDLE_ID: ${{ secrets.MATCH_UNIT_BUNDLEID }}
   EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
   SCHEME: ${{ secrets.SCHEME }}
-  RESPOND_IOS_CERT: ${{ secrets.RESPOND_IOS_CERT }}
+  DISPATCH_IOS_CERT: ${{ secrets.DISPATCH_IOS_CERT }}
   EXPO_ASC_API_KEY_PATH: ${{ secrets.EXPO_ASC_API_KEY_PATH }}
   EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID }}
   EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
   EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_TEAM_ID }}
   EXPO_APPLE_TEAM_TYPE: ${{ secrets.EXPO_APPLE_TEAM_TYPE }}
-  RESPOND_APTABASE_APP_KEY: ${{ secrets.RESPOND_APTABASE_APP_KEY }}
-  RESPOND_APTABASE_URL: ${{ secrets.RESPOND_APTABASE_URL }}
-  RESPOND_COUNTLY_APP_KEY: ${{ secrets.RESPOND_COUNTLY_APP_KEY }}
-  RESPOND_COUNTLY_URL: ${{ secrets.RESPOND_COUNTLY_URL }}
+  DISPATCH_APTABASE_APP_KEY: ${{ secrets.DISPATCH_APTABASE_APP_KEY }}
+  DISPATCH_APTABASE_URL: ${{ secrets.DISPATCH_APTABASE_URL }}
+  DISPATCH_COUNTLY_APP_KEY: ${{ secrets.DISPATCH_COUNTLY_APP_KEY }}
+  DISPATCH_COUNTLY_URL: ${{ secrets.DISPATCH_COUNTLY_URL }}
+  CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
+  CHANGERAWR_API_URL: ${{ secrets.CHANGERAWR_API_URL }}
   NODE_OPTIONS: --openssl-legacy-provider
 
 jobs:
@@ -116,12 +118,40 @@ jobs:
     if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
-        platform: [android, ios]
+        platform: [android, ios, web]
     runs-on: ${{ matrix.platform == 'ios' && 'macos-15' || 'ubuntu-latest' }}
     environment: RNBuild
     steps:
       - name: 🏗 Checkout repository
         uses: actions/checkout@v4
+
+      - name: 🧹 Free up disk space (Android)
+        if: matrix.platform == 'android'
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+          
+          # Remove unnecessary large packages
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/lib/jvm/temurin-11-jdk-amd64
+          
+          # Remove Docker images
+          docker system prune -af || true
+          
+          # Remove cached apt packages
+          sudo apt-get clean || true
+          sudo rm -rf /var/lib/apt/lists/*
+          
+          # Remove swap
+          sudo swapoff -a || true
+          sudo rm -f /swapfile || true
+          
+          echo "Disk space after cleanup:"
+          df -h
 
       - name: 🏗 Setup Node.js
         uses: actions/setup-node@v4
@@ -158,7 +188,7 @@ jobs:
 
       - name: 📋 Create Google Json File
         run: |
-          echo $RESPOND_GOOGLE_SERVICES | base64 -d > google-services.json
+          echo $DISPATCH_GOOGLE_SERVICES | base64 -d > google-services.json
 
       - name: 📋 Update package.json Versions
         run: |
@@ -176,7 +206,7 @@ jobs:
             fi
           fi
 
-          androidVersionCode=$((5080345 + ${{ github.run_number }}))
+          androidVersionCode=${{ github.run_number }}
           echo "Android Version Code: ${androidVersionCode}"
 
           # Fix the main entry in package.json
@@ -184,7 +214,7 @@ jobs:
             # Create a backup
             cp package.json package.json.bak
             # Update the package.json
-            jq --arg version "10.${{ github.run_number }}" --argjson versionCode "$androidVersionCode" '.version = $version | .versionCode = $versionCode' package.json > package.json.tmp && mv package.json.tmp package.json
+            jq --arg version "1.${{ github.run_number }}" --argjson versionCode "$androidVersionCode" '.version = $version | .versionCode = $versionCode' package.json > package.json.tmp && mv package.json.tmp package.json
             echo "Updated package.json versions"
             cat package.json | grep "version"
             cat package.json | grep "versionCode"
@@ -207,10 +237,12 @@ jobs:
           eas --version
 
       - name: 📋 Create iOS Cert
+        if: matrix.platform == 'ios'
         run: |
-          echo $RESPOND_IOS_CERT | base64 -d > AuthKey_HRBP5FNJN6.p8
+          echo $DISPATCH_IOS_CERT | base64 -d > AuthKey_HRBP5FNJN6.p8
 
       - name: 📋 Restore gradle.properties
+        if: matrix.platform == 'android'
         env:
           GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
         shell: bash
@@ -218,12 +250,84 @@ jobs:
           mkdir -p ~/.gradle/
           echo ${GRADLE_PROPERTIES} > ~/.gradle/gradle.properties
 
+      - name: 🌐 Build Web Export
+        if: (matrix.platform == 'web' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.platform == 'web' || github.event.inputs.platform == 'all'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          npx expo export --platform web
+        env:
+          NODE_ENV: production
+          APP_ENV: production
+          # Unset DISPATCH_* env vars for web build to use defaults from env.js
+          # Actual values will be injected at Docker container runtime via envsubst
+          DISPATCH_BASE_API_URL: ''
+          DISPATCH_API_VERSION: ''
+          DISPATCH_RESGRID_API_URL: ''
+          DISPATCH_CHANNEL_HUB_NAME: ''
+          DISPATCH_REALTIME_GEO_HUB_NAME: ''
+          DISPATCH_LOGGING_KEY: ''
+          DISPATCH_APP_KEY: ''
+          DISPATCH_MAPBOX_PUBKEY: ''
+          DISPATCH_MAPBOX_DLKEY: ''
+          DISPATCH_SENTRY_DSN: ''
+          DISPATCH_COUNTLY_APP_KEY: ''
+          DISPATCH_COUNTLY_SERVER_URL: ''
+          DISPATCH_MAINTENANCE_MODE: ''
+
+      - name: 📦 Zip Web Export
+        if: (matrix.platform == 'web' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.platform == 'web' || github.event.inputs.platform == 'all'))
+        run: |
+          cd dist
+          zip -r ../ResgridDispatch-web.zip .
+          cd ..
+          echo "Web export zipped successfully"
+          ls -la ResgridDispatch-web.zip
+
+      - name: 🐳 Set up QEMU
+        if: (matrix.platform == 'web' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.platform == 'web' || github.event.inputs.platform == 'all'))
+        uses: docker/setup-qemu-action@v3
+
+      - name: 🐳 Set up Docker Buildx
+        if: (matrix.platform == 'web' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.platform == 'web' || github.event.inputs.platform == 'all'))
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🐳 Log in to Docker Hub
+        if: (matrix.platform == 'web' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.platform == 'web' || github.event.inputs.platform == 'all'))
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 🐳 Extract metadata for Docker
+        if: (matrix.platform == 'web' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.platform == 'web' || github.event.inputs.platform == 'all'))
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: resgridllc/dispatch
+          tags: |
+            type=raw,value=latest
+            type=raw,value=1.${{ github.run_number }}
+            type=sha,prefix={{branch}}-
+
+      - name: 🐳 Build and push Docker image
+        if: (matrix.platform == 'web' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.platform == 'web' || github.event.inputs.platform == 'all'))
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
       - name: 📱 Build Development APK
         if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'dev'))
         run: |
           # Build with increased memory limit
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform android --profile development --local --non-interactive --output=./ResgridRespond-dev.apk
+          eas build --platform android --profile development --local --non-interactive --output=./ResgridDispatch-dev.apk
         env:
           NODE_ENV: development
 
@@ -231,7 +335,7 @@ jobs:
         if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform android --profile production-apk --local --non-interactive --output=./ResgridRespond-prod.apk
+          eas build --platform android --profile production-apk --local --non-interactive --output=./ResgridDispatch-prod.apk
         env:
           NODE_ENV: production
 
@@ -239,7 +343,7 @@ jobs:
         if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-aab'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform android --profile production --local --non-interactive --output=./ResgridRespond-prod.aab
+          eas build --platform android --profile production --local --non-interactive --output=./ResgridDispatch-prod.aab
         env:
           NODE_ENV: production
 
@@ -247,7 +351,7 @@ jobs:
         if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-dev'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform ios --profile development --local --non-interactive --output=./ResgridRespond-ios-dev.ipa
+          eas build --platform ios --profile development --local --non-interactive --output=./ResgridDispatch-ios-dev.ipa
         env:
           NODE_ENV: development
 
@@ -255,7 +359,7 @@ jobs:
         if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-adhoc'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform ios --profile internal --local --non-interactive --output=./ResgridRespond-ios-adhoc.ipa
+          eas build --platform ios --profile internal --local --non-interactive --output=./ResgridDispatch-ios-adhoc.ipa
         env:
           NODE_ENV: production
 
@@ -263,7 +367,7 @@ jobs:
         if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-prod'))
         run: |
           export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
-          eas build --platform ios --profile production --local --non-interactive --output=./ResgridRespond-ios-prod.ipa
+          eas build --platform ios --profile production --local --non-interactive --output=./ResgridDispatch-ios-prod.ipa
         env:
           NODE_ENV: production
 
@@ -272,15 +376,17 @@ jobs:
         with:
           name: app-builds-${{ matrix.platform }}
           path: |
-            ./ResgridRespond-dev.apk
-            ./ResgridRespond-prod.apk
-            ./ResgridRespond-prod.aab
-            ./ResgridRespond-ios-dev.ipa
-            ./ResgridRespond-ios-adhoc.ipa
-            ./ResgridRespond-ios-prod.ipa
+            ./ResgridDispatch-dev.apk
+            ./ResgridDispatch-prod.apk
+            ./ResgridDispatch-prod.aab
+            ./ResgridDispatch-ios-dev.ipa
+            ./ResgridDispatch-ios-adhoc.ipa
+            ./ResgridDispatch-ios-prod.ipa
+            ./ResgridDispatch-web.zip
           retention-days: 7
 
       - name: 📦 Setup Firebase CLI
+        if: matrix.platform == 'android' || matrix.platform == 'ios'
         uses: w9jds/setup-firebase@main
         with:
           tools-version: 11.9.0
@@ -289,26 +395,63 @@ jobs:
       - name: 📦 Upload Android artifact to Firebase App Distribution
         if: (matrix.platform == 'android')
         run: |
-          firebase appdistribution:distribute ./ResgridRespond-prod.apk --app ${{ secrets.FIREBASE_RESP_ANDROID_APP_ID }} --groups "testers"
+          firebase appdistribution:distribute ./ResgridDispatch-prod.apk --app ${{ secrets.FIREBASE_DISPATCH_ANDROID_APP_ID }} --groups "testers"
 
       - name: 📦 Upload iOS artifact to Firebase App Distribution
         if: (matrix.platform == 'ios')
         run: |
-          firebase appdistribution:distribute ./ResgridRespond-ios-adhoc.ipa --app ${{ secrets.FIREBASE_RESP_IOS_APP_ID }} --groups "testers"
+          firebase appdistribution:distribute ./ResgridDispatch-ios-adhoc.ipa --app ${{ secrets.FIREBASE_DISPATCH_IOS_APP_ID }} --groups "testers"
+
+      - name: 📋 Get PR information
+        if: ${{ matrix.platform == 'android' && github.event_name == 'push' }}
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commit = context.sha;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commit
+            });
+            
+            if (prs.length > 0) {
+              const pr = prs[0];
+              core.setOutput('pr_number', pr.number);
+              core.setOutput('pr_title', pr.title);
+              core.setOutput('pr_body', pr.body || '');
+              core.setOutput('pr_url', pr.html_url);
+            } else {
+              core.setOutput('pr_number', '');
+              core.setOutput('pr_title', '');
+              core.setOutput('pr_body', '');
+              core.setOutput('pr_url', '');
+            }
 
       - name: 📋 Prepare Release Notes file
         if: ${{ matrix.platform == 'android' }}
         env:
           RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || steps.pr_info.outputs.pr_body }}
         run: |
           set -eo pipefail
           # Determine source of release notes: workflow input, PR body, or recent commits
           if [ -n "$RELEASE_NOTES_INPUT" ]; then
             NOTES="$RELEASE_NOTES_INPUT"
           elif [ -n "$PR_BODY" ]; then
+            # Try to extract Release Notes section, otherwise use entire PR body
             NOTES="$(printf '%s\n' "$PR_BODY" \
               | awk 'f && /^## /{exit} /^## Release Notes/{f=1; next} f')"
+            # If no Release Notes section found, use the entire PR body
+            if [ -z "$NOTES" ]; then
+              NOTES="$PR_BODY"
+            fi
+            # Remove CodeRabbit auto-generated lines
+            NOTES="$(printf '%s\n' "$NOTES" \
+              | grep -v "Summary by CodeRabbit" \
+              | grep -v "✏️ Tip: You can customize this high-level summary" \
+              | grep -v "<!-- This is an auto-generated comment: release notes by coderabbit.ai -->" \
+              | grep -v "<!-- end of auto-generated comment: release notes by coderabbit.ai -->")"
           else
             NOTES="$(git log -n 5 --pretty=format:'- %s')"
           fi
@@ -319,19 +462,85 @@ jobs:
           fi
           # Write header and notes to file
           {
-            echo "## Version 10.${{ github.run_number }} - $(date +%Y-%m-%d)"
+            echo "## Version 1.${{ github.run_number }} - $(date +%Y-%m-%d)"
             echo
             printf '%s\n' "$NOTES"
           } > RELEASE_NOTES.md
+          
+          # Store release notes for later use
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat RELEASE_NOTES.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: 📦 Download Web Artifacts
+        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: app-builds-web
+          path: ./web-artifacts
+        continue-on-error: true
 
       - name: 📦 Create Release
         if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
         uses: ncipollo/release-action@v1
         with:
-          tag: '10.${{ github.run_number }}'
+          tag: '1.${{ github.run_number }}'
           commit: ${{ github.sha }}
           makeLatest: true
           allowUpdates: true
-          name: '10.${{ github.run_number }}'
-          artifacts: './ResgridRespond-prod.apk'
+          name: '1.${{ github.run_number }}'
+          artifacts: './ResgridDispatch-prod.apk,./web-artifacts/ResgridDispatch-web.zip'
           bodyFile: 'RELEASE_NOTES.md'
+
+      - name: 📡 Send Release Notes to Changerawr
+        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        continue-on-error: true
+        run: |
+          set -eo pipefail
+          
+          # Prepare JSON payload
+          VERSION="1.${{ github.run_number }}"
+          RELEASE_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          
+          # Read release notes content
+          NOTES_CONTENT=$(cat RELEASE_NOTES.md)
+          
+          # Create JSON payload using --arg for proper escaping
+          PAYLOAD=$(jq -n \
+            --arg version "$VERSION" \
+            --arg date "$RELEASE_DATE" \
+            --arg notes "$NOTES_CONTENT" \
+            --arg repo "${{ github.repository }}" \
+            --arg commit "${{ github.sha }}" \
+            --arg actor "${{ github.actor }}" \
+            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              "version": $version,
+              "title": ("Release v" + $version),
+              "content": $notes
+            }')
+          
+          # Debug: Print payload (without sensitive data)
+          echo "Payload preview:"
+          echo "$PAYLOAD" | jq '{version, title, content_length: (.content | length)}'
+          
+          # Send to Changerawr API
+          HTTP_STATUS=$(curl -s -o /tmp/changerawr_response.json -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${CHANGERAWR_API_KEY}" \
+            -d "$PAYLOAD" \
+            "${CHANGERAWR_API_URL}")
+          
+          # Check response
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ Successfully sent release notes to Changerawr (HTTP $HTTP_STATUS)"
+            cat /tmp/changerawr_response.json
+          else
+            echo "⚠️ Failed to send release notes to Changerawr (HTTP $HTTP_STATUS)"
+            cat /tmp/changerawr_response.json
+            echo "Continuing workflow despite Changerawr failure..."
+          fi
+        env:
+          CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
+          CHANGERAWR_API_URL: ${{ secrets.CHANGERAWR_API_URL }}

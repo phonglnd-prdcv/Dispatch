@@ -363,7 +363,7 @@ export default function TabLayout() {
         {Platform.OS === 'web' ? (
           // Web-specific drawer implementation with fixed positioning
           isOpen && (
-            <View 
+            <View
               // @ts-ignore - web specific styles
               style={{
                 position: 'fixed',
@@ -404,7 +404,7 @@ export default function TabLayout() {
                   boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
                 }}
               >
-                <View style={{ flex: 1, overflow: 'auto' }}>
+                <View style={{ flex: 1, overflow: 'scroll' as 'visible' | 'hidden' | 'scroll' }}>
                   <SideMenu onNavigate={handleNavigate} />
                 </View>
                 <View className="border-t border-gray-200 p-4 dark:border-gray-700">

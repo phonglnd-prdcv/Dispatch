@@ -1,4 +1,4 @@
-/* eslint-disable unused-imports/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const tintColorLight = '#2f95dc';
 const tintColorDark = '#fff';
 const white = '#ffffff';

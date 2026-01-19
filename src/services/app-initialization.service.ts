@@ -89,8 +89,6 @@ class AppInitializationService {
     }
 
     try {
-
-
       logger.info({
         message: 'CallKeep initialized successfully',
       });

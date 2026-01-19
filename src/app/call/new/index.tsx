@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { render } from '@testing-library/react-native';
 import axios from 'axios';
 import * as Location from 'expo-location';
-import { router, Stack } from 'expo-router';
+import { type Href, router, Stack } from 'expo-router';
 import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
@@ -220,7 +220,7 @@ export default function NewCall() {
       toast.success(t('calls.create_success'));
 
       // Navigate back to calls list
-      router.push('/calls');
+      router.push('/calls' as Href);
     } catch (error) {
       console.error('Error creating call:', error);
 

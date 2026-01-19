@@ -16,14 +16,14 @@ export const AnimatedRefreshIcon: React.FC<AnimatedRefreshIconProps> = ({ isLoad
   useEffect(() => {
     if (isLoading) {
       startTimeRef.current = performance.now();
-      
+
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTimeRef.current;
         const degrees = (elapsed / 1000) * 360; // Full rotation per second
         setRotation(degrees % 360);
         animationRef.current = requestAnimationFrame(animate);
       };
-      
+
       animationRef.current = requestAnimationFrame(animate);
     } else {
       if (animationRef.current) {

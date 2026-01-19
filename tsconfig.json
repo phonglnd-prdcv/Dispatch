@@ -21,13 +21,24 @@
     },
     "esModuleInterop": true,
     "checkJs": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "customConditions": ["import"]
   },
   "ts-node": {
     "compilerOptions": {
       "module": "commonjs"
     }
   },
-  "exclude": ["docs", "cli", "android", "lib", "ios", "node_modules", "storybookDocsComponents"],
+  "exclude": [
+    "node_modules",
+    "node_modules/**/*",
+    "**/node_modules/*",
+    "docs",
+    "cli",
+    "android",
+    "lib",
+    "ios",
+    "storybookDocsComponents"
+  ],
   "include": ["src/**/*.ts", "src/**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts", "__mocks__/**/*.ts", "app.config.ts", "jest-setup.ts", "jest-platform-setup.ts", "__tests__/**/*.ts", "__tests__/**/*.tsx", "types/**/*.ts"]
 }

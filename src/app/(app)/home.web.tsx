@@ -43,13 +43,7 @@ export default function DispatchConsoleWeb() {
   const { notes, isLoading: notesLoading, fetchNotes } = useNotesStore();
 
   // SignalR store - subscribe to specific event timestamps
-  const {
-    lastEventType,
-    lastPersonnelUpdateTimestamp,
-    lastUnitsUpdateTimestamp,
-    lastCallsUpdateTimestamp,
-    isUpdateHubConnected,
-  } = useSignalRStore();
+  const { lastEventType, lastPersonnelUpdateTimestamp, lastUnitsUpdateTimestamp, lastCallsUpdateTimestamp, isUpdateHubConnected } = useSignalRStore();
 
   // Dispatch console store
   const {
@@ -467,11 +461,7 @@ export default function DispatchConsoleWeb() {
         <HStack className="flex-1" space="sm">
           {/* Left Column - Calls & Units */}
           <VStack className="flex-1" space="sm" style={styles.column}>
-            <ActiveCallsPanel
-              selectedCallId={selectedCallId ?? undefined}
-              onSelectCall={handleSelectCall}
-              isFilterActive={isCallFilterActive}
-            />
+            <ActiveCallsPanel selectedCallId={selectedCallId ?? undefined} onSelectCall={handleSelectCall} isFilterActive={isCallFilterActive} />
             <UnitsPanel
               units={units}
               isLoading={unitsLoading}
@@ -540,11 +530,7 @@ export default function DispatchConsoleWeb() {
         <HStack className="flex-1" space="sm">
           {/* Left Column */}
           <VStack className="flex-1" space="sm" style={styles.column}>
-            <ActiveCallsPanel
-              selectedCallId={selectedCallId ?? undefined}
-              onSelectCall={handleSelectCall}
-              isFilterActive={isCallFilterActive}
-            />
+            <ActiveCallsPanel selectedCallId={selectedCallId ?? undefined} onSelectCall={handleSelectCall} isFilterActive={isCallFilterActive} />
             <UnitsPanel
               units={units}
               isLoading={unitsLoading}
@@ -607,11 +593,7 @@ export default function DispatchConsoleWeb() {
     return (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <VStack space="sm">
-          <ActiveCallsPanel
-            selectedCallId={selectedCallId ?? undefined}
-            onSelectCall={handleSelectCall}
-            isFilterActive={isCallFilterActive}
-          />
+          <ActiveCallsPanel selectedCallId={selectedCallId ?? undefined} onSelectCall={handleSelectCall} isFilterActive={isCallFilterActive} />
 
           <MapWidget onExpandMap={handleExpandMap} />
 

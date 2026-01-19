@@ -5,7 +5,7 @@ import { renderHook, act } from '@testing-library/react-native';
 // Mock Platform
 const mockPlatform = Platform as jest.Mocked<typeof Platform>;
 
-// Mock the CallKeep service module
+// Mock the CallKeep service module (module may not exist in all environments)
 jest.mock('../../../../services/callkeep.service.ios', () => ({
   callKeepService: {
     setup: jest.fn(),
@@ -16,7 +16,7 @@ jest.mock('../../../../services/callkeep.service.ios', () => ({
     cleanup: jest.fn(),
     setMuteStateCallback: jest.fn(),
   },
-}));
+}), { virtual: true });
 
 // Mock logger
 jest.mock('../../../../lib/logging', () => ({

@@ -1,5 +1,6 @@
-import { logger } from '@/lib/logging';
 import { Asset } from 'expo-asset';
+
+import { logger } from '@/lib/logging';
 
 class AudioService {
   private static instance: AudioService;
@@ -65,7 +66,7 @@ class AudioService {
           try {
             const asset = Asset.fromModule(file.asset);
             await asset.downloadAsync();
-            
+
             if (asset.localUri || asset.uri) {
               const response = await fetch(asset.localUri || asset.uri);
               const arrayBuffer = await response.arrayBuffer();

@@ -13,7 +13,8 @@ jest.mock('@/stores/app/core-store');
 jest.mock('@/stores/app/location-store');
 jest.mock('@/stores/roles/store');
 jest.mock('@/api/units/unitStatuses');
-jest.mock('@/services/offline-event-manager.service');
+// Mock offline event manager service (module may not exist in all environments)
+jest.mock('@/services/offline-event-manager.service', () => ({}), { virtual: true });
 
 // Mock translations
 jest.mock('react-i18next', () => ({

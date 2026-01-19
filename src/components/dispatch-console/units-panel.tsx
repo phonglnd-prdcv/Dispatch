@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
-import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
@@ -13,6 +12,7 @@ import { VStack } from '@/components/ui/vstack';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 
+import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
 
 interface UnitsPanelProps {
@@ -126,7 +126,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
   // Filter units based on call dispatches when filter is active and search query
   const displayedUnits = useMemo(() => {
     let filtered = units;
-    
+
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
       // Get unit names from dispatches (dispatches contain unit info by name)
       const dispatchedUnitNames = callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase());
@@ -134,7 +134,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
       // Also check units whose CurrentDestinationId matches the call
       filtered = units.filter((u) => dispatchedUnitNames.includes(u.Name.toLowerCase()) || (selectedCallId && u.CurrentDestinationId === selectedCallId));
     }
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -147,7 +147,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
         return name.includes(query) || type.includes(query) || groupName.includes(query) || status.includes(query) || note.includes(query);
       });
     }
-    
+
     return filtered;
   }, [units, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
 
@@ -212,23 +212,23 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
             ) : null}
           </View>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {displayedUnits.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Icon as={Truck} size="lg" className="text-gray-300 dark:text-gray-600" />
-              <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{isCallFilterActive ? t('dispatch.no_units_on_call') : t('dispatch.no_units')}</Text>
-            </View>
-          ) : (
-            displayedUnits.map((unit) => (
-              <UnitItem
-                key={unit.UnitId}
-                unit={unit}
-                isSelected={selectedUnitId === unit.UnitId}
-                isOnCall={dispatchedUnitNames.has(unit.Name.toLowerCase()) || Boolean(selectedCallId && unit.CurrentDestinationId === selectedCallId)}
-                onPress={() => onSelectUnit?.(unit.UnitId)}
-                onSetStatus={isCallFilterActive && onSetUnitStatusForCall ? () => onSetUnitStatusForCall(unit.UnitId, unit.Name) : undefined}
-              />
-            ))
-          )}
+            {displayedUnits.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon as={Truck} size="lg" className="text-gray-300 dark:text-gray-600" />
+                <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{isCallFilterActive ? t('dispatch.no_units_on_call') : t('dispatch.no_units')}</Text>
+              </View>
+            ) : (
+              displayedUnits.map((unit) => (
+                <UnitItem
+                  key={unit.UnitId}
+                  unit={unit}
+                  isSelected={selectedUnitId === unit.UnitId}
+                  isOnCall={dispatchedUnitNames.has(unit.Name.toLowerCase()) || Boolean(selectedCallId && unit.CurrentDestinationId === selectedCallId)}
+                  onPress={() => onSelectUnit?.(unit.UnitId)}
+                  onSetStatus={isCallFilterActive && onSetUnitStatusForCall ? () => onSetUnitStatusForCall(unit.UnitId, unit.Name) : undefined}
+                />
+              ))
+            )}
           </ScrollView>
         </View>
       ) : null}
