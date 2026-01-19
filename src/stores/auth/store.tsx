@@ -1,16 +1,38 @@
 import { jwtDecode } from 'jwt-decode';
 import { Platform } from 'react-native';
+import { MMKV } from 'react-native-mmkv';
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { logger } from '@/lib/logging';
 
 import { loginRequest, refreshTokenRequest } from '../../lib/auth/api';
 import type { AuthResponse, AuthState, LoginCredentials } from '../../lib/auth/types';
 import { type ProfileModel } from '../../lib/auth/types';
-import { getAuth } from '../../lib/auth/utils';
-import { setItem } from '../../lib/storage';
 
-const useAuthStore = create<AuthState>()((set, get) => ({
+// Create MMKV storage instance for auth persistence
+const authStorage = new MMKV({
+  id: 'auth-storage',
+  encryptionKey: Platform.OS === 'web' ? undefined : 'cfef987f-c70f-4fc3-ad9a-b2350d16ee89',
+});
+
+// MMKV storage adapter for Zustand
+const mmkvStorage = {
+  getItem: (name: string) => {
+    const value = authStorage.getString(name);
+    return value ?? null;
+  },
+  setItem: (name: string, value: string) => {
+    authStorage.set(name, value);
+  },
+  removeItem: (name: string) => {
+    authStorage.delete(name);
+  },
+};
+
+const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
       accessToken: null,
       refreshToken: null,
       refreshTokenExpiresOn: null,
@@ -59,15 +81,6 @@ const useAuthStore = create<AuthState>()((set, get) => ({
               });
               throw new Error('Failed to decode authentication token');
             }
-
-            // Save auth response to storage (non-blocking with error handling)
-            setItem<AuthResponse>('authResponse', response.authResponse).catch((storageError) => {
-              logger.error({
-                message: 'Login: Failed to save auth response to storage',
-                context: { error: storageError instanceof Error ? storageError.message : String(storageError) },
-              });
-              // Continue anyway - the state will be set in memory
-            });
 
             const now = new Date();
             const expiresOn = new Date(now.getTime() + response.authResponse.expires_in * 1000).getTime().toString();
@@ -123,12 +136,18 @@ const useAuthStore = create<AuthState>()((set, get) => ({
       },
 
       logout: async () => {
+        logger.info({
+          message: 'Logout: Clearing auth state',
+        });
+
         set({
           accessToken: null,
           refreshToken: null,
+          refreshTokenExpiresOn: null,
           status: 'signedOut',
           error: null,
           profile: null,
+          userId: null,
           isFirstTime: true,
         });
       },
@@ -160,33 +179,6 @@ const useAuthStore = create<AuthState>()((set, get) => ({
           get().logout();
         }
       },
-      hydrate: () => {
-        try {
-          const authResponse = getAuth();
-          if (authResponse !== null) {
-            // Use jwt-decode to safely decode the JWT token
-            const profileData = jwtDecode<ProfileModel>(authResponse!.id_token!);
-
-            set({
-              accessToken: authResponse.access_token,
-              refreshToken: authResponse.refresh_token,
-              status: 'signedIn',
-              error: null,
-              profile: profileData,
-              userId: profileData.sub,
-            });
-          } else {
-            get().logout();
-          }
-        } catch (e) {
-          logger.error({
-            message: 'Failed to hydrate auth state',
-            context: { error: e },
-          });
-          // Sign out user on hydration error
-          get().logout();
-        }
-      },
       isAuthenticated: (): boolean => {
         return get().status === 'signedIn' && get().accessToken !== null;
       },
@@ -199,17 +191,22 @@ const useAuthStore = create<AuthState>()((set, get) => ({
           status: 'onboarding',
         });
       },
-      //getRights: async () => {
-      //  try {
-      //    const response = await getCurrentUsersRights();
-
-      //    set({
-      //      rights: response.Data,
-      //    });
-      //  } catch (error) {
-      //    // If refresh fails, log out the user
-      //  }
-      //},
-    }));
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => mmkvStorage),
+      // Only persist essential auth data
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        refreshTokenExpiresOn: state.refreshTokenExpiresOn,
+        profile: state.profile,
+        userId: state.userId,
+        status: state.status,
+        isFirstTime: state.isFirstTime,
+      }),
+    }
+  )
+);
 
 export default useAuthStore;

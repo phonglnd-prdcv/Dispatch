@@ -7,7 +7,8 @@ export class CallResultData {
   public Address: string = '';
   public Geolocation: string = '';
   public LoggedOn: string = '';
-  public State: string = '';
+  // State: 0 = Active, 1 = Open, 2 = Pending, 3 = Scheduled, 4 = Closed (can be number or string depending on API version)
+  public State: number | string = 0;
   public Number: string = '';
   public NotesCount: number = 0;
   public AudioCount: number = 0;

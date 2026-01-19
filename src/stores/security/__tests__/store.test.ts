@@ -2,6 +2,24 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import { type DepartmentRightsResultData } from '@/models/v4/security/departmentRightsResultData';
 
+// Mock Sentry
+jest.mock('@sentry/react-native', () => ({
+  captureException: jest.fn(),
+  captureMessage: jest.fn(),
+  init: jest.fn(),
+  withScope: jest.fn((callback) => callback({ setExtra: jest.fn() })),
+}));
+
+// Mock logging
+jest.mock('@/lib/logging', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
 // Mock the API
 jest.mock('@/api/security/security', () => ({
   getCurrentUsersRights: jest.fn(),
@@ -42,6 +60,7 @@ import { securityStore, useSecurityStore } from '../store';
 import { getCurrentUsersRights } from '@/api/security/security';
 
 const mockGetCurrentUsersRights = getCurrentUsersRights as jest.MockedFunction<typeof getCurrentUsersRights>;
+
 
 describe('useSecurityStore', () => {
   const mockRightsData: DepartmentRightsResultData = {

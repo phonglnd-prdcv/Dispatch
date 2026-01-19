@@ -94,6 +94,7 @@ const client = z.object({
   COUNTLY_APP_KEY: z.string(),
   COUNTLY_SERVER_URL: z.string(),
   MAINTENANCE_MODE: z.boolean(),
+  INACTIVITY_TIMEOUT_MINUTES: z.number(),
 });
 
 const buildTime = z.object({
@@ -129,6 +130,7 @@ const _clientEnv = {
   COUNTLY_APP_KEY: process.env.DISPATCH_COUNTLY_APP_KEY || '',
   COUNTLY_SERVER_URL: process.env.DISPATCH_COUNTLY_SERVER_URL || '',
   MAINTENANCE_MODE: process.env.DISPATCH_MAINTENANCE_MODE === 'true' || false,
+  INACTIVITY_TIMEOUT_MINUTES: parseInt(process.env.DISPATCH_INACTIVITY_TIMEOUT_MINUTES || '60', 10),
 };
 
 /**

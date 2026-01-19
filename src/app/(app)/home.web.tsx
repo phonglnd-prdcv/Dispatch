@@ -15,6 +15,8 @@ import { HStack } from '@/components/ui/hstack';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
+import { isCallActive, isCallPending, isCallScheduled } from '@/lib/utils';
+import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import useAuthStore from '@/stores/auth/store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
@@ -54,6 +56,7 @@ export default function DispatchConsoleWeb() {
     selectedUnitId,
     selectedPersonnelId,
     activityLog,
+    radioLog,
     isTransmitting,
     currentChannel,
     isCallFilterActive,
@@ -78,6 +81,7 @@ export default function DispatchConsoleWeb() {
   // Local state
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const [selectedPersonnelData, setSelectedPersonnelData] = useState<PersonnelInfoResultData | null>(null);
 
   // Track previous timestamps to detect changes
   const prevPersonnelTimestamp = useRef(0);
@@ -276,9 +280,9 @@ export default function DispatchConsoleWeb() {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const activeCalls = calls.filter((c) => c.State === 'Active' || c.State === 'Open').length;
-    const pendingCalls = calls.filter((c) => c.State === 'Pending').length;
-    const scheduledCalls = calls.filter((c) => c.State === 'Scheduled').length;
+    const activeCalls = calls.filter((c) => isCallActive(c.State)).length;
+    const pendingCalls = calls.filter((c) => isCallPending(c.State)).length;
+    const scheduledCalls = calls.filter((c) => isCallScheduled(c.State)).length;
     const availableUnits = units.filter((u) => !u.CurrentStatusId || u.CurrentStatusId === 'available').length;
     const onSceneUnits = units.filter((u) => u.CurrentStatusId === 'on_scene').length;
     const onDutyPersonnel = personnel.filter((p) => p.Staffing && p.Staffing.toLowerCase() !== 'off duty').length;
@@ -326,33 +330,44 @@ export default function DispatchConsoleWeb() {
     }
   };
 
-  // Handle unit selection
+  // Handle unit selection - toggle if already selected
   const handleSelectUnit = (unitId: string) => {
-    setSelectedUnitId(unitId);
+    const isAlreadySelected = selectedUnitId === unitId;
+    setSelectedUnitId(isAlreadySelected ? null : unitId);
     const unit = units.find((u) => u.UnitId === unitId);
     if (unit) {
       addActivityLogEntry({
         type: 'unit',
-        action: t('dispatch.unit_selected'),
+        action: isAlreadySelected ? t('dispatch.unit_deselected') : t('dispatch.unit_selected'),
         description: unit.Name,
         metadata: { unitId },
       });
     }
   };
 
-  // Handle personnel selection
-  const handleSelectPersonnel = (personnelId: string) => {
-    setSelectedPersonnelId(personnelId);
-    const person = personnel.find((p) => p.UserId === personnelId);
+  // Handle personnel selection - toggle if already selected
+  const handleSelectPersonnel = (personnelId: string, person?: PersonnelInfoResultData) => {
+    const isAlreadySelected = selectedPersonnelId === personnelId;
+    setSelectedPersonnelId(isAlreadySelected ? null : personnelId);
+    setSelectedPersonnelData(isAlreadySelected ? null : (person ?? null));
     if (person) {
       addActivityLogEntry({
         type: 'personnel',
-        action: t('dispatch.personnel_selected'),
+        action: isAlreadySelected ? t('dispatch.personnel_deselected') : t('dispatch.personnel_selected'),
         description: `${person.FirstName} ${person.LastName}`,
         metadata: { personnelId },
       });
     }
   };
+
+  // Handle status/staffing update completion - refresh personnel list
+  const handleStatusUpdated = useCallback(() => {
+    fetchPersonnel();
+  }, [fetchPersonnel]);
+
+  const handleStaffingUpdated = useCallback(() => {
+    fetchPersonnel();
+  }, [fetchPersonnel]);
 
   // Handle expanding map
   const handleExpandMap = () => {
@@ -453,7 +468,20 @@ export default function DispatchConsoleWeb() {
           {/* Center Column - Map */}
           <VStack className="flex-[1.5]" space="sm" style={styles.column}>
             <MapWidget onExpandMap={handleExpandMap} />
-            <ActivityLogPanel entries={activityLog} isLoading={false} isCallFilterActive={isCallFilterActive} selectedCallId={selectedCallId ?? undefined} callActivity={selectedCallExtraData?.Activity} />
+            <ActivityLogPanel
+              debugId="web-tablet-landscape"
+              entries={activityLog}
+              isLoading={false}
+              isCallFilterActive={isCallFilterActive}
+              selectedCallId={selectedCallId ?? undefined}
+              callActivity={selectedCallExtraData?.Activity}
+              radioLog={radioLog}
+              selectedUnitId={selectedUnitId ?? undefined}
+              selectedPersonnelId={selectedPersonnelId ?? undefined}
+              selectedPersonnel={selectedPersonnelData}
+              onStatusUpdated={handleStatusUpdated}
+              onStaffingUpdated={handleStaffingUpdated}
+            />
           </VStack>
 
           {/* Right Column - Personnel, Notes, PTT */}
@@ -532,7 +560,20 @@ export default function DispatchConsoleWeb() {
               isAddingNote={isAddingNote}
             />
             <PTTInterface onPTTPress={handlePTTPress} onPTTRelease={handlePTTRelease} isTransmitting={isTransmitting} currentChannel={currentChannel} />
-            <ActivityLogPanel entries={activityLog} isLoading={false} isCallFilterActive={isCallFilterActive} selectedCallId={selectedCallId ?? undefined} callActivity={selectedCallExtraData?.Activity} />
+            <ActivityLogPanel
+              debugId="web-tablet-portrait"
+              entries={activityLog}
+              isLoading={false}
+              isCallFilterActive={isCallFilterActive}
+              selectedCallId={selectedCallId ?? undefined}
+              callActivity={selectedCallExtraData?.Activity}
+              radioLog={radioLog}
+              selectedUnitId={selectedUnitId ?? undefined}
+              selectedPersonnelId={selectedPersonnelId ?? undefined}
+              selectedPersonnel={selectedPersonnelData}
+              onStatusUpdated={handleStatusUpdated}
+              onStaffingUpdated={handleStaffingUpdated}
+            />
           </VStack>
         </HStack>
       );
@@ -591,7 +632,20 @@ export default function DispatchConsoleWeb() {
             isAddingNote={isAddingNote}
           />
 
-          <ActivityLogPanel entries={activityLog} isLoading={false} isCallFilterActive={isCallFilterActive} selectedCallId={selectedCallId ?? undefined} callActivity={selectedCallExtraData?.Activity} />
+          <ActivityLogPanel
+            debugId="web-phone"
+            entries={activityLog}
+            isLoading={false}
+            isCallFilterActive={isCallFilterActive}
+            selectedCallId={selectedCallId ?? undefined}
+            callActivity={selectedCallExtraData?.Activity}
+            radioLog={radioLog}
+            selectedUnitId={selectedUnitId ?? undefined}
+            selectedPersonnelId={selectedPersonnelId ?? undefined}
+            selectedPersonnel={selectedPersonnelData}
+            onStatusUpdated={handleStatusUpdated}
+            onStaffingUpdated={handleStaffingUpdated}
+          />
         </VStack>
       </ScrollView>
     );

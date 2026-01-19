@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { type StateStorage } from 'zustand/middleware';
 
-// Mock MMKV class for web to satisfy type requirements if needed, 
+// Mock MMKV class for web to satisfy type requirements if needed,
 // but we won't export 'storage' as MMKV type to avoid importing the native library if possible.
 // However, other files might expect 'storage' to be exported.
 // Let's export a dummy object or just 'any'.

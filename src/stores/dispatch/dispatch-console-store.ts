@@ -4,6 +4,17 @@ import { type ActivityLogEntry } from '@/components/dispatch-console/activity-lo
 import { type CallNoteResultData } from '@/models/v4/callNotes/callNoteResultData';
 import { type CallExtraDataResultData } from '@/models/v4/calls/callExtraDataResultData';
 
+// Radio log entry for tracking LiveKit transmissions
+export interface RadioLogEntry {
+  id: string;
+  participantId: string;
+  participantName: string;
+  timestamp: Date;
+  endTimestamp: Date | null;
+  duration: number | null; // duration in seconds
+  isActive: boolean; // true if currently transmitting
+}
+
 interface DispatchConsoleState {
   // Selected items
   selectedCallId: string | null;
@@ -23,6 +34,10 @@ interface DispatchConsoleState {
   // Activity log
   activityLog: ActivityLogEntry[];
   maxLogEntries: number;
+
+  // Radio log - tracks LiveKit transmissions
+  radioLog: RadioLogEntry[];
+  maxRadioLogEntries: number;
 
   // PTT state
   isTransmitting: boolean;
@@ -56,6 +71,10 @@ interface DispatchConsoleState {
   togglePanelVisibility: (panel: keyof DispatchConsoleState['panelVisibility']) => void;
   resetPanelVisibility: () => void;
   getFilteredActivityLog: () => ActivityLogEntry[];
+  // Radio log actions
+  startRadioTransmission: (participantId: string, participantName: string) => void;
+  endRadioTransmission: (participantId: string) => void;
+  clearRadioLog: () => void;
 }
 
 const defaultPanelVisibility = {
@@ -81,6 +100,8 @@ export const useDispatchConsoleStore = create<DispatchConsoleState>((set, get) =
   mapCenterLongitude: null,
   activityLog: [],
   maxLogEntries: 100,
+  radioLog: [],
+  maxRadioLogEntries: 100,
   isTransmitting: false,
   currentChannel: 'Main Dispatch',
   panelVisibility: { ...defaultPanelVisibility },
@@ -163,4 +184,52 @@ export const useDispatchConsoleStore = create<DispatchConsoleState>((set, get) =
     // Filter activity log entries to only show those related to the selected call
     return activityLog.filter((entry) => entry.metadata?.callId === selectedCallId || entry.type === 'system');
   },
+
+  // Radio log actions
+  startRadioTransmission: (participantId, participantName) => {
+    const { radioLog, maxRadioLogEntries } = get();
+
+    // Check if there's already an active transmission for this participant
+    const existingActive = radioLog.find((entry) => entry.participantId === participantId && entry.isActive);
+    if (existingActive) {
+      // Already transmitting, skip
+      return;
+    }
+
+    const newEntry: RadioLogEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      participantId,
+      participantName,
+      timestamp: new Date(),
+      endTimestamp: null,
+      duration: null,
+      isActive: true,
+    };
+
+    // Add to beginning of array and limit to maxRadioLogEntries
+    const updatedLog = [newEntry, ...radioLog].slice(0, maxRadioLogEntries);
+    set({ radioLog: updatedLog });
+  },
+
+  endRadioTransmission: (participantId) => {
+    const { radioLog } = get();
+
+    const updatedLog = radioLog.map((entry) => {
+      if (entry.participantId === participantId && entry.isActive) {
+        const endTimestamp = new Date();
+        const duration = Math.round((endTimestamp.getTime() - entry.timestamp.getTime()) / 1000);
+        return {
+          ...entry,
+          endTimestamp,
+          duration,
+          isActive: false,
+        };
+      }
+      return entry;
+    });
+
+    set({ radioLog: updatedLog });
+  },
+
+  clearRadioLog: () => set({ radioLog: [] }),
 }));

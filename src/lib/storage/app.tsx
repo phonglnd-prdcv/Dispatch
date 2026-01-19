@@ -3,8 +3,6 @@ import { Env } from '@env';
 import { getItem, removeItem, setItem } from '@/lib/storage';
 
 const BASE_URL = 'baseUrl';
-const ACTIVE_UNIT_ID = 'activeUnitId';
-const ACTIVE_CALL_ID = 'activeCallId';
 const DEVICE_UUID = 'unitDeviceUuid';
 
 export const removeBaseApiUrl = () => removeItem(BASE_URL);

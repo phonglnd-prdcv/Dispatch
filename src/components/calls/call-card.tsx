@@ -1,14 +1,11 @@
-import { AlertTriangle, MapPin, Phone } from 'lucide-react-native';
-import React from 'react';
-import { StyleSheet } from 'react-native';
-import WebView from 'react-native-webview';
+import { AlertTriangle, Clock, MapPin } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
-import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { VStack } from '@/components/ui/vstack';
-import { getTimeAgoUtc, invertColor } from '@/lib/utils';
+import { getTimeAgoUtc, invertColor, stripHtmlTags } from '@/lib/utils';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import type { CallResultData } from '@/models/v4/calls/callResultData';
 
@@ -29,118 +26,119 @@ interface CallCardProps {
   priority: CallPriorityResultData | undefined;
 }
 
-export const CallCard: React.FC<CallCardProps> = ({ call, priority }) => {
-  const textColor = invertColor(getColor(call, priority), true);
+export const CallCard: React.FC<CallCardProps> = React.memo(({ call, priority }) => {
+  const bgColor = getColor(call, priority);
+  const textColor = invertColor(bgColor, true);
+
+  // Strip HTML tags from nature for plain text display
+  const natureText = useMemo(() => {
+    if (!call.Nature) return '';
+    return stripHtmlTags(call.Nature).trim();
+  }, [call.Nature]);
 
   return (
-    <Box
-      style={{
-        backgroundColor: getColor(call, priority),
-      }}
-      className={`mb-2 rounded-xl p-2 shadow-sm`}
-    >
-      {/* Header with Call Number and Priority */}
-      <HStack className="mb-4 items-center justify-between">
-        <HStack className="items-center space-x-2">
-          <AlertTriangle size={20} />
-          <Text
-            style={{
-              color: textColor,
-            }}
-            className={`text-lg font-bold`}
-          >
-            #{call.Number}
-          </Text>
-        </HStack>
-        <Text
-          style={{
-            color: textColor,
-          }}
-          className="text-sm text-gray-600"
-        >
-          {getTimeAgoUtc(call.LoggedOnUtc)}
-        </Text>
-      </HStack>
-
-      {/* Call Details */}
-      <VStack className="space-y-3">
-        {/* Name */}
-        <HStack className="items-center space-x-2">
-          <Icon as={Phone} className="text-gray-500" size="md" />
-          <Text
-            style={{
-              color: textColor,
-            }}
-            className="font-medium text-gray-900"
-          >
+    <Box style={[styles.card, { backgroundColor: bgColor }]}>
+      {/* Header Row: Call Number, Name, and Time */}
+      <HStack style={styles.headerRow}>
+        <HStack style={styles.titleGroup}>
+          <AlertTriangle size={14} color={textColor} />
+          <Text style={[styles.callNumber, { color: textColor }]}>#{call.Number}</Text>
+          <Text style={[styles.callName, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
             {call.Name}
           </Text>
         </HStack>
+        <HStack style={styles.timeGroup}>
+          <Clock size={10} color={textColor} style={styles.clockIcon} />
+          <Text style={[styles.timeText, { color: textColor }]}>{getTimeAgoUtc(call.LoggedOnUtc)}</Text>
+        </HStack>
+      </HStack>
 
-        {/* Address */}
-        <HStack className="items-center space-x-2">
-          <Icon as={MapPin} className="text-gray-500" size="md" />
-          <Text
-            style={{
-              color: textColor,
-            }}
-            className="text-gray-700"
-          >
+      {/* Address Row */}
+      {call.Address ? (
+        <HStack style={styles.addressRow}>
+          <MapPin size={12} color={textColor} style={styles.mapIcon} />
+          <Text style={[styles.addressText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
             {call.Address}
           </Text>
         </HStack>
+      ) : null}
 
-        {/* Dispatched Time */}
-        {/* Disabling this for now, ideally a list of disptched items would be ideal here but there is a perf issue getting that data. -SJ
-        <HStack className="items-center space-x-2">
-          <Icon as={Calendar} className="text-gray-500" size="md" />
-          <Text className="text-sm text-gray-600">Dispatched: {format(new Date(call.DispatchedOn), 'PPp')}</Text>
-        </HStack>*/}
-      </VStack>
-
-      {/* Nature of Call */}
-      {call.Nature && (
-        <Box className="mt-4 rounded-lg bg-white/50 p-3">
-          <WebView
-            style={[styles.container, { height: 80 }]}
-            originWhitelist={['*']}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-            source={{
-              html: `
-                <!DOCTYPE html>
-                <html>
-                  <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-                    <style>
-                      body {
-                        color: ${textColor};
-                        font-family: system-ui, -apple-system, sans-serif;
-                        margin: 0;
-                        padding: 0;
-                        font-size: 16px;
-                        line-height: 1.5;
-                      }
-                      * {
-                        max-width: 100%;
-                      }
-                    </style>
-                  </head>
-                  <body>${call.Nature}</body>
-                </html>
-              `,
-            }}
-            androidLayerType="software"
-          />
-        </Box>
-      )}
+      {/* Nature Preview - compact single line */}
+      {natureText ? (
+        <View style={styles.natureContainer}>
+          <Text style={[styles.natureText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
+            {natureText}
+          </Text>
+        </View>
+      ) : null}
     </Box>
   );
-};
+});
+
+CallCard.displayName = 'CallCard';
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    backgroundColor: 'transparent',
+  card: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  titleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 6,
+    marginRight: 8,
+  },
+  callNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  callName: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  timeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clockIcon: {
+    marginRight: 3,
+    opacity: 0.8,
+  },
+  timeText: {
+    fontSize: 11,
+    opacity: 0.9,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  mapIcon: {
+    marginRight: 4,
+    opacity: 0.8,
+  },
+  addressText: {
+    fontSize: 11,
+    flex: 1,
+    opacity: 0.9,
+  },
+  natureContainer: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  natureText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    opacity: 0.85,
   },
 });

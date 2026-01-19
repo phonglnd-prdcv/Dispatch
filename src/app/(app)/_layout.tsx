@@ -111,23 +111,13 @@ export default function TabLayout() {
       const initTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Initialization timeout after 30 seconds')), 30000));
 
       const initPromise = (async () => {
-        // Step 1: Initialize core store (fetches config)
         await useCoreStore.getState().init();
 
         logger.info({
-          message: 'Core store initialized, fetching full config for SignalR',
+          message: 'Core store initialized, initializing calls store',
           context: { platform: Platform.OS },
         });
 
-        // Step 2: Fetch the full config (needed for SignalR EventingUrl)
-        await useCoreStore.getState().fetchConfig();
-
-        logger.info({
-          message: 'Config fetched, initializing calls store',
-          context: { platform: Platform.OS },
-        });
-
-        // Step 3: Initialize calls store
         await useCallsStore.getState().init();
 
         logger.info({
@@ -135,31 +125,26 @@ export default function TabLayout() {
           context: { platform: Platform.OS },
         });
 
-        // Step 4: Get security rights (needed for department ID)
         await securityStore.getState().getRights();
 
         logger.info({
-          message: 'Security rights loaded, connecting SignalR hubs',
+          message: 'Security rights retrieved, connecting SignalR',
           context: { platform: Platform.OS },
         });
 
-        // Step 5: Connect SignalR hubs after all core data is loaded
-        const signalRStore = useSignalRStore.getState();
+        // Connect to SignalR after core initialization is complete
         try {
-          await Promise.all([
-            signalRStore.connectUpdateHub(),
-            signalRStore.connectGeolocationHub(),
-          ]);
+          await useSignalRStore.getState().connectUpdateHub();
           logger.info({
-            message: 'SignalR hubs connected successfully',
+            message: 'SignalR update hub connected successfully',
             context: { platform: Platform.OS },
           });
-        } catch (signalRError) {
-          // Log SignalR connection errors but don't fail initialization
+        } catch (error) {
           logger.error({
-            message: 'Failed to connect SignalR hubs during initialization',
-            context: { error: signalRError, platform: Platform.OS },
+            message: 'Failed to connect SignalR update hub during initialization',
+            context: { error, platform: Platform.OS },
           });
+          // Don't fail initialization if SignalR connection fails
         }
 
         hasInitialized.current = true;
@@ -375,17 +360,77 @@ export default function TabLayout() {
 
       <View className="flex-1" ref={parentRef}>
         {/* Drawer menu - always rendered as modal, closed by default */}
-        <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
-          <DrawerBackdrop onPress={() => setIsOpen(false)} />
-          <DrawerContent className="w-4/5 max-w-xs bg-white p-1 dark:bg-gray-900">
-            <DrawerBody>{coreIsInitialized && rights ? <SideMenu onNavigate={handleNavigate} /> : null}</DrawerBody>
-            <DrawerFooter>
-              <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
-                <ButtonText>Close</ButtonText>
-              </Button>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
+        {Platform.OS === 'web' ? (
+          // Web-specific drawer implementation with fixed positioning
+          isOpen && (
+            <View 
+              // @ts-ignore - web specific styles
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 9999,
+                display: 'flex',
+                flexDirection: 'row',
+              }}
+            >
+              {/* Backdrop */}
+              <Pressable
+                onPress={() => setIsOpen(false)}
+                // @ts-ignore - web specific styles
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                }}
+              />
+              {/* Drawer Content */}
+              <View
+                className="bg-white dark:bg-gray-900"
+                // @ts-ignore - web specific styles
+                style={{
+                  position: 'relative',
+                  width: '80%',
+                  maxWidth: 320,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  zIndex: 1,
+                  boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
+                }}
+              >
+                <View style={{ flex: 1, overflow: 'auto' }}>
+                  <SideMenu onNavigate={handleNavigate} />
+                </View>
+                <View className="border-t border-gray-200 p-4 dark:border-gray-700">
+                  <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
+                    <ButtonText>Close</ButtonText>
+                  </Button>
+                </View>
+              </View>
+            </View>
+          )
+        ) : (
+          // Native drawer implementation
+          <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
+            <DrawerBackdrop onPress={() => setIsOpen(false)} />
+            <DrawerContent className="w-4/5 max-w-xs bg-white p-0 dark:bg-gray-900">
+              <View className="flex-1">
+                <SideMenu onNavigate={handleNavigate} />
+              </View>
+              <DrawerFooter>
+                <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
+                  <ButtonText>Close</ButtonText>
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        )}
 
         {/* Main content area */}
         <View className="w-full flex-1">

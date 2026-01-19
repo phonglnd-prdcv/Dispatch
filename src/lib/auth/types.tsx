@@ -49,7 +49,6 @@ export interface AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
-  hydrate: () => void;
   isFirstTime: boolean;
   isAuthenticated: () => boolean;
   setIsOnboarding: () => void;

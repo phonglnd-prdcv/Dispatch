@@ -1,10 +1,9 @@
 import { Building2, Circle, Filter, Phone, Plus, Search, User, Users, X } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
-import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
@@ -13,6 +12,7 @@ import { VStack } from '@/components/ui/vstack';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 
+import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
 
 interface PersonnelPanelProps {
@@ -20,7 +20,7 @@ interface PersonnelPanelProps {
   isLoading: boolean;
   onRefresh: () => void;
   selectedPersonnelId?: string;
-  onSelectPersonnel?: (personnelId: string) => void;
+  onSelectPersonnel?: (personnelId: string, person: PersonnelInfoResultData) => void;
   // Call filter props
   isCallFilterActive?: boolean;
   selectedCallId?: string;
@@ -121,10 +121,21 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Handle personnel selection - notifies parent to handle actions
+  const handleSelectPersonnel = useCallback(
+    (personnelId: string) => {
+      const person = personnel.find((p) => p.UserId === personnelId);
+      if (person && onSelectPersonnel) {
+        onSelectPersonnel(personnelId, person);
+      }
+    },
+    [personnel, onSelectPersonnel]
+  );
+
   // Filter personnel based on call dispatches when filter is active and search query
   const displayedPersonnel = useMemo(() => {
     let filtered = personnel;
-    
+
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
       // Get personnel names from dispatches (dispatches contain personnel info by name)
       const dispatchedPersonnelNames = callDispatches.filter((d) => d.Type === 'Personnel' || d.Type === 'p').map((d) => d.Name.toLowerCase());
@@ -135,7 +146,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
         return dispatchedPersonnelNames.includes(fullName) || (selectedCallId && p.StatusDestinationId === selectedCallId);
       });
     }
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -148,7 +159,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
         return fullName.includes(query) || groupName.includes(query) || status.includes(query) || staffing.includes(query) || roles.includes(query);
       });
     }
-    
+
     return filtered;
   }, [personnel, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
 
@@ -217,26 +228,26 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
             ) : null}
           </View>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {displayedPersonnel.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Icon as={Users} size="lg" className="text-gray-300 dark:text-gray-600" />
-              <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{isCallFilterActive ? t('dispatch.no_personnel_on_call') : t('dispatch.no_personnel')}</Text>
-            </View>
-          ) : (
-            displayedPersonnel.map((person) => {
-              const fullName = `${person.FirstName} ${person.LastName}`.toLowerCase();
-              return (
-                <PersonnelItem
-                  key={person.UserId}
-                  person={person}
-                  isSelected={selectedPersonnelId === person.UserId}
-                  isOnCall={dispatchedPersonnelNames.has(fullName) || Boolean(selectedCallId && person.StatusDestinationId === selectedCallId)}
-                  onPress={() => onSelectPersonnel?.(person.UserId)}
-                  onSetStatus={isCallFilterActive && onSetPersonnelStatusForCall ? () => onSetPersonnelStatusForCall(person.UserId, `${person.FirstName} ${person.LastName}`) : undefined}
-                />
-              );
-            })
-          )}
+            {displayedPersonnel.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon as={Users} size="lg" className="text-gray-300 dark:text-gray-600" />
+                <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{isCallFilterActive ? t('dispatch.no_personnel_on_call') : t('dispatch.no_personnel')}</Text>
+              </View>
+            ) : (
+              displayedPersonnel.map((person) => {
+                const fullName = `${person.FirstName} ${person.LastName}`.toLowerCase();
+                return (
+                  <PersonnelItem
+                    key={person.UserId}
+                    person={person}
+                    isSelected={selectedPersonnelId === person.UserId}
+                    isOnCall={dispatchedPersonnelNames.has(fullName) || Boolean(selectedCallId && person.StatusDestinationId === selectedCallId)}
+                    onPress={() => handleSelectPersonnel(person.UserId)}
+                    onSetStatus={isCallFilterActive && onSetPersonnelStatusForCall ? () => onSetPersonnelStatusForCall(person.UserId, `${person.FirstName} ${person.LastName}`) : undefined}
+                  />
+                );
+              })
+            )}
           </ScrollView>
         </View>
       ) : null}

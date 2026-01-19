@@ -1,23 +1,79 @@
 import { type Href, router } from 'expo-router';
-import { AlertTriangle, ExternalLink, Plus, Search, X } from 'lucide-react-native';
+import { AlertTriangle, Clock, ExternalLink, MapPin, Plus, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
 
-import { CallCard } from '@/components/calls/call-card';
-import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { Badge } from '@/components/ui/badge';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { invertColor } from '@/lib/utils';
+import { VStack } from '@/components/ui/vstack';
+import { getTimeAgoUtc, invertColor, isCallActive, stripHtmlTags } from '@/lib/utils';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { useCallsStore } from '@/stores/calls/store';
 import { useSecurityStore } from '@/stores/security/store';
 
+import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
+
+// Compact call card optimized for dispatch dashboard
+const DashboardCallCard: React.FC<{
+  call: CallResultData;
+  priority?: CallPriorityResultData;
+}> = React.memo(({ call, priority }) => {
+  const bgColor = priority?.Color || '#6b7280';
+  const textColor = invertColor(bgColor, true);
+
+  const natureText = useMemo(() => {
+    if (!call.Nature) return '';
+    return stripHtmlTags(call.Nature).trim();
+  }, [call.Nature]);
+
+  return (
+    <View style={StyleSheet.flatten([styles.dashboardCard, { backgroundColor: bgColor }])}>
+      {/* Top Row: Priority indicator, Call Number & Time */}
+      <View style={styles.cardTopRow}>
+        <View style={styles.cardIdGroup}>
+          <View style={StyleSheet.flatten([styles.priorityDot, { backgroundColor: textColor }])} />
+          <RNText style={StyleSheet.flatten([styles.cardCallNumber, { color: textColor }])}>#{call.Number}</RNText>
+        </View>
+        <View style={styles.cardTimeGroup}>
+          <Clock size={10} color={textColor} />
+          <RNText style={StyleSheet.flatten([styles.cardTimeText, { color: textColor }])}>{getTimeAgoUtc(call.LoggedOnUtc)}</RNText>
+        </View>
+      </View>
+
+      {/* Call Name - Main Title */}
+      <RNText style={StyleSheet.flatten([styles.cardTitle, { color: textColor }])} numberOfLines={1} ellipsizeMode="tail">
+        {call.Name}
+      </RNText>
+
+      {/* Bottom Row: Location & Nature */}
+      <View style={styles.cardDetailsGroup}>
+        {call.Address ? (
+          <View style={styles.cardDetailRow}>
+            <View style={styles.cardDetailIcon}>
+              <MapPin size={10} color={textColor} />
+            </View>
+            <RNText style={StyleSheet.flatten([styles.cardDetailText, { color: textColor }])} numberOfLines={1} ellipsizeMode="tail">
+              {call.Address}
+            </RNText>
+          </View>
+        ) : null}
+        {natureText ? (
+          <RNText style={StyleSheet.flatten([styles.cardNatureText, { color: textColor }])} numberOfLines={1} ellipsizeMode="tail">
+            {natureText}
+          </RNText>
+        ) : null}
+      </View>
+    </View>
+  );
+});
+
+DashboardCallCard.displayName = 'DashboardCallCard';
 
 interface ActiveCallsPanelProps {
   selectedCallId?: string;
@@ -38,32 +94,35 @@ const CallItemWrapper: React.FC<{
   const bgColor = priority?.Color || '#6b7280';
   const textColor = invertColor(bgColor, true);
 
+  // Build styles safely to avoid passing false/undefined values on web
+  const wrapperStyle = isSelected && isFilterActive ? [styles.callItemWrapper, styles.selectedCall] : styles.callItemWrapper;
+
   return (
     <Pressable onPress={onPress}>
-      <Box style={[styles.callItemWrapper, isSelected && isFilterActive && styles.selectedCall]}>
-        {/* Selection indicator and action buttons */}
-        <HStack className="mb-1 items-center justify-between">
-          <HStack className="items-center" space="xs">
-            {isSelected && isFilterActive ? (
-              <Badge size="sm" style={{ backgroundColor: '#6366f1' }}>
-                <Text className="text-xs font-semibold text-white">{t('dispatch.active_filter')}</Text>
-              </Badge>
-            ) : null}
+      <Box style={wrapperStyle}>
+        {/* Selection indicator */}
+        {isSelected && isFilterActive ? (
+          <HStack style={styles.selectionBadgeRow}>
+            <Badge size="sm" style={{ backgroundColor: '#6366f1' }}>
+              <Text className="text-xs font-semibold text-white">{t('dispatch.active_filter')}</Text>
+            </Badge>
           </HStack>
+        ) : null}
+
+        {/* Dashboard Card with action button overlay */}
+        <View style={styles.cardContainer}>
+          <DashboardCallCard call={call} priority={priority} />
           <Pressable
             onPress={(e) => {
               e.stopPropagation();
               onOpenDetails();
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.detailsButton}
+            style={[styles.detailsButton, { backgroundColor: `${bgColor}dd` }]}
           >
-            <Icon as={ExternalLink} size="xs" color={textColor} />
+            <ExternalLink size={12} color={textColor} />
           </Pressable>
-        </HStack>
-
-        {/* Use the CallCard component */}
-        <CallCard call={call} priority={priority} />
+        </View>
       </Box>
     </Pressable>
   );
@@ -75,8 +134,13 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Get calls and priorities from the store
-  const { calls, callPriorities, isLoading, error, fetchCalls, fetchCallPriorities } = useCallsStore();
+  // Get calls and priorities from the store - use separate selectors for better performance
+  const calls = useCallsStore((state) => state.calls);
+  const callPriorities = useCallsStore((state) => state.callPriorities);
+  const isLoading = useCallsStore((state) => state.isLoadingCalls || state.isLoading);
+  const error = useCallsStore((state) => state.callsError || state.error);
+  const fetchCalls = useCallsStore((state) => state.fetchCalls);
+  const fetchCallPriorities = useCallsStore((state) => state.fetchCallPriorities);
 
   // Fetch calls and priorities on mount
   useEffect(() => {
@@ -84,13 +148,24 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
     fetchCallPriorities();
   }, [fetchCalls, fetchCallPriorities]);
 
-  const activeCalls = useMemo(() => {
-    // Filter for active or open calls (case-insensitive check for robustness)
-    let filtered = calls.filter((c) => {
-      const state = String(c.State ?? '').toLowerCase();
-      return state === 'active' || state === 'open';
+  // Log calls state for debugging
+  useEffect(() => {
+    console.log('[ActiveCallsPanel] Calls updated:', {
+      totalCalls: calls.length,
+      callStates: calls.map((c) => ({ id: c.CallId, name: c.Name, state: c.State })),
     });
-    
+  }, [calls]);
+
+  const activeCalls = useMemo(() => {
+    // Filter for active or open calls using utility function
+    let filtered = calls.filter((c) => isCallActive(c.State));
+
+    console.log('[ActiveCallsPanel] Active calls filtered:', {
+      total: calls.length,
+      active: filtered.length,
+      filteredCalls: filtered.map((c) => ({ id: c.CallId, name: c.Name, state: c.State })),
+    });
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -99,12 +174,12 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
         const nature = (c.Nature || '').toLowerCase();
         const address = (c.Address || '').toLowerCase();
         const type = (c.Type || '').toLowerCase();
-        const state = (c.State || '').toLowerCase();
+        const state = String(c.State ?? '').toLowerCase();
         const callId = (c.Number || '').toLowerCase();
         return name.includes(query) || nature.includes(query) || address.includes(query) || type.includes(query) || state.includes(query) || callId.includes(query);
       });
     }
-    
+
     return filtered;
   }, [calls, searchQuery]);
 
@@ -174,34 +249,34 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
             ) : null}
           </View>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {error ? (
-            <View style={styles.emptyState}>
-              <Icon as={AlertTriangle} size="lg" className="text-red-400" />
-              <Text className="mt-2 text-center text-sm text-red-500">{error}</Text>
-              <Pressable onPress={handleRefresh} style={styles.retryButton}>
-                <Text className="text-sm text-indigo-500">{t('common.retry')}</Text>
-              </Pressable>
-            </View>
-          ) : activeCalls.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Icon as={AlertTriangle} size="lg" className="text-gray-300 dark:text-gray-600" />
-              <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{t('dispatch.no_active_calls')}</Text>
-            </View>
-          ) : (
-            activeCalls.map((call) => (
-              <CallItemWrapper
-                key={call.CallId}
-                call={call}
-                priority={getPriority(call.Priority)}
-                isSelected={selectedCallId === call.CallId}
-                isFilterActive={isFilterActive}
-                onPress={() => {
-                  onSelectCall?.(call.CallId);
-                }}
-                onOpenDetails={() => handleOpenCallDetails(call.CallId)}
-              />
-            ))
-          )}
+            {error ? (
+              <View style={styles.emptyState}>
+                <Icon as={AlertTriangle} size="lg" className="text-red-400" />
+                <Text className="mt-2 text-center text-sm text-red-500">{error}</Text>
+                <Pressable onPress={handleRefresh} style={styles.retryButton}>
+                  <Text className="text-sm text-indigo-500">{t('common.retry')}</Text>
+                </Pressable>
+              </View>
+            ) : activeCalls.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon as={AlertTriangle} size="lg" className="text-gray-300 dark:text-gray-600" />
+                <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{t('dispatch.no_active_calls')}</Text>
+              </View>
+            ) : (
+              activeCalls.map((call) => (
+                <CallItemWrapper
+                  key={call.CallId}
+                  call={call}
+                  priority={getPriority(call.Priority)}
+                  isSelected={selectedCallId === call.CallId}
+                  isFilterActive={isFilterActive}
+                  onPress={() => {
+                    onSelectCall?.(call.CallId);
+                  }}
+                  onOpenDetails={() => handleOpenCallDetails(call.CallId)}
+                />
+              ))
+            )}
           </ScrollView>
         </View>
       ) : null}
@@ -238,8 +313,14 @@ const styles = StyleSheet.create({
   selectedCall: {
     borderWidth: 2,
     borderColor: '#6366f1',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 4,
+  },
+  selectionBadgeRow: {
+    marginBottom: 4,
+  },
+  cardContainer: {
+    position: 'relative',
   },
   emptyState: {
     alignItems: 'center',
@@ -254,8 +335,69 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   detailsButton: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
     padding: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
     borderRadius: 4,
+  },
+  // Dashboard Card Styles
+  dashboardCard: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  cardIdGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  priorityDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  cardCallNumber: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    marginLeft: 6,
+  },
+  cardTimeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 24, // Space for the details button
+  },
+  cardTimeText: {
+    fontSize: 10,
+    marginLeft: 3,
+  },
+  cardTitle: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    marginBottom: 4,
+  },
+  cardDetailsGroup: {
+    marginTop: 2,
+  },
+  cardDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardDetailIcon: {
+    marginRight: 4,
+  },
+  cardDetailText: {
+    fontSize: 10,
+    flex: 1,
+  },
+  cardNatureText: {
+    fontSize: 10,
+    fontStyle: 'italic' as const,
+    paddingLeft: 14,
   },
 });

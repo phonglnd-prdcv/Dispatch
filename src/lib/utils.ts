@@ -4,6 +4,78 @@ import type { StoreApi, UseBoundStore } from 'zustand';
 
 import { Env } from './env';
 
+/**
+ * Call State Constants
+ * API returns numeric state values:
+ * 0 = Active, 1 = Open, 2 = Pending, 3 = Scheduled, 4 = Closed
+ */
+export const CallState = {
+  ACTIVE: 0,
+  OPEN: 1,
+  PENDING: 2,
+  SCHEDULED: 3,
+  CLOSED: 4,
+} as const;
+
+/**
+ * Check if a call state represents an active/open call
+ * Handles both numeric (0, 1) and string ('Active', 'Open', '0', '1') values
+ */
+export function isCallActive(state: number | string | undefined | null): boolean {
+  if (state === null || state === undefined) return false;
+
+  // Check numeric values
+  if (typeof state === 'number') {
+    return state === CallState.ACTIVE || state === CallState.OPEN;
+  }
+
+  // Check string values (case-insensitive)
+  const stateStr = String(state).toLowerCase().trim();
+  return stateStr === 'active' || stateStr === 'open' || stateStr === '0' || stateStr === '1';
+}
+
+/**
+ * Check if a call state represents a pending call
+ */
+export function isCallPending(state: number | string | undefined | null): boolean {
+  if (state === null || state === undefined) return false;
+
+  if (typeof state === 'number') {
+    return state === CallState.PENDING;
+  }
+
+  const stateStr = String(state).toLowerCase().trim();
+  return stateStr === 'pending' || stateStr === '2';
+}
+
+/**
+ * Check if a call state represents a scheduled call
+ */
+export function isCallScheduled(state: number | string | undefined | null): boolean {
+  if (state === null || state === undefined) return false;
+
+  if (typeof state === 'number') {
+    return state === CallState.SCHEDULED;
+  }
+
+  const stateStr = String(state).toLowerCase().trim();
+  return stateStr === 'scheduled' || stateStr === '3';
+}
+
+/**
+ * Check if a call state represents a closed call
+ */
+export function isCallClosed(state: number | string | undefined | null): boolean {
+  if (state === null || state === undefined) return false;
+
+  if (typeof state === 'number') {
+    return state === CallState.CLOSED;
+  }
+
+  const stateStr = String(state).toLowerCase().trim();
+  return stateStr === 'closed' || stateStr === '4';
+}
+
 export function openLinkInBrowser(url: string) {
   Linking.canOpenURL(url).then((canOpen) => canOpen && Linking.openURL(url));
 }

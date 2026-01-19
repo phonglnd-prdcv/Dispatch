@@ -13,7 +13,8 @@ const updateCallApi = createApiEndpoint('/Calls/UpdateCall');
 const closeCallApi = createApiEndpoint('/Calls/CloseCall');
 
 export const getCalls = async () => {
-  const response = await callsApi.get<ActiveCallsResult>();
+  // Add timestamp to prevent any caching
+  const response = await callsApi.get<ActiveCallsResult>({ _t: Date.now() });
   return response.data;
 };
 

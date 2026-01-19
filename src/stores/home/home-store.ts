@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { getPersonnelInfo } from '@/api/personnel/personnel';
 import { getAllPersonnelStatuses } from '@/api/satuses';
+import { isCallActive } from '@/lib/utils';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type GetCurrentStaffingResultData } from '@/models/v4/personnelStaffing/getCurrentStaffingResultData';
 import { type GetCurrentStatusResultData } from '@/models/v4/personnelStatuses/getCurrentStatusResultData';
@@ -67,7 +68,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
     try {
       // Get open calls count
       const calls = useCallsStore.getState().calls;
-      const openCalls = calls.filter((call) => call.State === 'Active').length;
+      const openCalls = calls.filter((call) => isCallActive(call.State)).length;
 
       // Get personnel in service count
       const users = useRolesStore.getState().users;

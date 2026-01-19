@@ -35,6 +35,14 @@ UI and Styling:
 - Ensure responsive design by considering different screen sizes and orientations.
 - Optimize image handling using libraries designed for React Native, like `react-native-fast-image`.
 
+Web Platform Compatibility (React Native Web):
+
+- When combining styles (e.g., `[styles.base, { color: dynamicColor }]`), always use `StyleSheet.flatten()` to merge them into a single object. Passing style arrays directly causes "Failed to set an indexed property on CSSStyleDeclaration" errors on web.
+- For components that need dynamic styles, use: `style={StyleSheet.flatten([styles.myStyle, { color: dynamicValue }])}`
+- Do not pass `style` props directly to lucide-react-native icons. Wrap icons in a `View` and apply styles to the wrapper instead.
+- Avoid using the `gap` property in StyleSheet styles as it has inconsistent support on web. Use `marginLeft`, `marginRight`, `marginTop`, or `marginBottom` on child elements instead.
+- When creating custom components that will render on web, prefer using React Native's core `Text` and `View` components (imported from 'react-native') over gluestack-ui wrappers for better style handling compatibility.
+
 Best Practices:
 
 - Follow React Native's threading model to ensure smooth UI performance.

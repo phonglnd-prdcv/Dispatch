@@ -2,7 +2,7 @@ import { Headphones, Mic, MicOff, Radio, Volume2, VolumeX } from 'lucide-react-n
 import { useColorScheme } from 'nativewind';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
@@ -100,16 +100,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#22c55e',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
-  },
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 3,
+      },
+    }),
+  } as any,
   pttButtonActive: {
     backgroundColor: '#ef4444',
-    transform: [{ scale: 0.95 }],
-  },
+    ...Platform.select({
+      web: {
+        transform: 'scale(0.95)',
+      },
+      default: {
+        transform: [{ scale: 0.95 }],
+      },
+    }),
+  } as any,
   transmittingIndicator: {
     backgroundColor: '#ef4444',
     paddingHorizontal: 6,

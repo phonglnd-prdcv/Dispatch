@@ -1,12 +1,20 @@
 import useLockscreenStore from '../store';
 
+// Mock the Env module
+jest.mock('@/lib/env', () => ({
+  Env: {
+    INACTIVITY_TIMEOUT_MINUTES: 60,
+  },
+}));
+
 describe('useLockscreenStore', () => {
   beforeEach(() => {
     // Reset the store state before each test
     useLockscreenStore.setState({
       isLocked: false,
-      lockTimeout: 5,
+      lockTimeout: 60,
       lastActivityTime: Date.now(),
+      _cachedTimeoutMs: 60 * 60 * 1000,
     });
   });
 
@@ -14,8 +22,9 @@ describe('useLockscreenStore', () => {
     const state = useLockscreenStore.getState();
 
     expect(state.isLocked).toBe(false);
-    expect(state.lockTimeout).toBe(5);
+    expect(state.lockTimeout).toBe(60);
     expect(state.lastActivityTime).toBeDefined();
+    expect(state._cachedTimeoutMs).toBe(60 * 60 * 1000);
   });
 
   it('should lock the screen', () => {
@@ -57,13 +66,14 @@ describe('useLockscreenStore', () => {
     expect(state.lastActivityTime).toBeGreaterThanOrEqual(timeBefore);
   });
 
-  it('should set lock timeout', () => {
+  it('should set lock timeout and update cached value', () => {
     const { setLockTimeout } = useLockscreenStore.getState();
 
     setLockTimeout(10);
 
     const state = useLockscreenStore.getState();
     expect(state.lockTimeout).toBe(10);
+    expect(state._cachedTimeoutMs).toBe(10 * 60 * 1000);
   });
 
   it('should return false for shouldLock when already locked', () => {
@@ -90,7 +100,10 @@ describe('useLockscreenStore', () => {
 
     // Set last activity to 2 minutes ago
     const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
-    useLockscreenStore.setState({ lastActivityTime: twoMinutesAgo });
+    useLockscreenStore.setState({
+      lastActivityTime: twoMinutesAgo,
+      _cachedTimeoutMs: 1 * 60 * 1000,
+    });
 
     expect(shouldLock()).toBe(true);
   });
@@ -107,11 +120,11 @@ describe('useLockscreenStore', () => {
     expect(shouldLock()).toBe(false);
   });
 
-  it('should return false for shouldLock when no lastActivityTime', () => {
-    const { shouldLock } = useLockscreenStore.getState();
+  it('should return the cached timeout in milliseconds', () => {
+    const { setLockTimeout, getTimeoutMs } = useLockscreenStore.getState();
 
-    useLockscreenStore.setState({ lastActivityTime: null });
+    setLockTimeout(30);
 
-    expect(shouldLock()).toBe(false);
+    expect(getTimeoutMs()).toBe(30 * 60 * 1000);
   });
 });

@@ -33,13 +33,22 @@ const mockGetCallTypes = getCallTypes as jest.MockedFunction<typeof getCallTypes
 describe('Calls Store Integration - Call Types', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset store state
+    // Reset store state using the new reset function or setState with all initial values
     useCallsStore.setState({
       calls: [],
       callPriorities: [],
       callTypes: [],
       isLoading: false,
+      isLoadingCalls: false,
+      isLoadingPriorities: false,
+      isLoadingTypes: false,
       error: null,
+      callsError: null,
+      prioritiesError: null,
+      typesError: null,
+      callsLastFetched: 0,
+      prioritiesLastFetched: 0,
+      typesLastFetched: 0,
     });
   });
 
