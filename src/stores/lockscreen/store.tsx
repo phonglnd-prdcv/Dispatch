@@ -51,6 +51,24 @@ const useLockscreenStore = create<LockscreenState>()((set, get) => ({
   },
 
   setLockTimeout: (minutes: number) => {
+    // Validate and sanitize the minutes parameter
+    const originalMinutes = minutes;
+    if (!Number.isFinite(minutes)) {
+      logger.warn({
+        message: 'Invalid lock timeout value provided',
+        context: { providedValue: originalMinutes, sanitizedValue: 0 },
+      });
+      minutes = 0;
+    } else {
+      minutes = Math.max(0, Number(minutes) || 0);
+      if (minutes !== originalMinutes) {
+        logger.warn({
+          message: 'Lock timeout value was clamped to non-negative',
+          context: { providedValue: originalMinutes, sanitizedValue: minutes },
+        });
+      }
+    }
+
     logger.info({
       message: 'Setting lock timeout',
       context: { minutes },

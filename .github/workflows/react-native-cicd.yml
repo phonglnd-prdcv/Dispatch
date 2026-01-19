@@ -451,7 +451,8 @@ jobs:
               | grep -v "Summary by CodeRabbit" \
               | grep -v "✏️ Tip: You can customize this high-level summary" \
               | grep -v "<!-- This is an auto-generated comment: release notes by coderabbit.ai -->" \
-              | grep -v "<!-- end of auto-generated comment: release notes by coderabbit.ai -->")"
+              | grep -v "<!-- end of auto-generated comment: release notes by coderabbit.ai -->" \
+              || true)"
           else
             NOTES="$(git log -n 5 --pretty=format:'- %s')"
           fi
@@ -480,6 +481,20 @@ jobs:
           path: ./web-artifacts
         continue-on-error: true
 
+      - name: � Check Web Artifacts
+        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        id: check-web-artifacts
+        run: |
+          if [ -f "./web-artifacts/ResgridDispatch-web.zip" ]; then
+            echo "WEB_ARTIFACT_EXISTS=true" >> $GITHUB_ENV
+            echo "RELEASE_ARTIFACTS=./ResgridDispatch-prod.apk,./web-artifacts/ResgridDispatch-web.zip" >> $GITHUB_ENV
+            echo "Web artifact found"
+          else
+            echo "WEB_ARTIFACT_EXISTS=false" >> $GITHUB_ENV
+            echo "RELEASE_ARTIFACTS=./ResgridDispatch-prod.apk" >> $GITHUB_ENV
+            echo "Web artifact not found, will only include APK"
+          fi
+
       - name: 📦 Create Release
         if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
         uses: ncipollo/release-action@v1
@@ -489,7 +504,7 @@ jobs:
           makeLatest: true
           allowUpdates: true
           name: '1.${{ github.run_number }}'
-          artifacts: './ResgridDispatch-prod.apk,./web-artifacts/ResgridDispatch-web.zip'
+          artifacts: ${{ env.RELEASE_ARTIFACTS }}
           bodyFile: 'RELEASE_NOTES.md'
 
       - name: 📡 Send Release Notes to Changerawr
