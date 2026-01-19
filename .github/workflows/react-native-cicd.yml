@@ -1,0 +1,337 @@
+name: React Native CI/CD
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'docs/**'
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      buildType:
+        type: choice
+        description: 'Build type to run'
+        options:
+          - dev
+          - prod-apk
+          - prod-aab
+          - ios-dev
+          - ios-adhoc
+          - ios-prod
+          - all
+      platform:
+        type: choice
+        description: 'Platform to build'
+        default: 'all'
+        options:
+          - android
+          - ios
+          - all
+      release_notes:
+        type: string
+        description: 'Manual release notes override'
+        required: false
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  EXPO_APPLE_ID: ${{ secrets.EXPO_APPLE_ID }}
+  EXPO_APPLE_PASSWORD: ${{ secrets.EXPO_APPLE_PASSWORD }}
+  EXPO_TEAM_ID: ${{ secrets.EXPO_TEAM_ID }}
+  CREDENTIALS_JSON_BASE64: ${{ secrets.CREDENTIALS_JSON_BASE64 }}
+  POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  RESPOND_BASE_API_URL: ${{ secrets.RESPOND_BASE_API_URL }}
+  RESPOND_CHANNEL_API_URL: ${{ secrets.RESPOND_CHANNEL_API_URL }}
+  RESPOND_LOGGING_KEY: ${{ secrets.RESPOND_LOGGING_KEY }}
+  RESPOND_MAPBOX_DLKEY: ${{ secrets.RESPOND_MAPBOX_DLKEY }}
+  RESPOND_MAPBOX_PUBKEY: ${{ secrets.RESPOND_MAPBOX_PUBKEY }}
+  RESPOND_SENTRY_DSN: ${{ secrets.RESPOND_SENTRY_DSN }}
+  RESPOND_ANDROID_KS: ${{ secrets.RESPOND_ANDROID_KS }}
+  RESPOND_GOOGLE_SERVICES: ${{ secrets.RESPOND_GOOGLE_SERVICES }}
+  MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+  APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+  APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+  APPLE_APIKEY: ${{ secrets.APPLE_APIKEY }}
+  MATCH_UNIT_BUNDLEID: ${{ secrets.MATCH_UNIT_BUNDLEID }}
+  MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+  MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+  EXPO_ACCOUNT_OWNER: ${{ secrets.EXPO_ACCOUNT_OWNER }}
+  BUNDLE_ID: ${{ secrets.MATCH_UNIT_BUNDLEID }}
+  EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
+  SCHEME: ${{ secrets.SCHEME }}
+  RESPOND_IOS_CERT: ${{ secrets.RESPOND_IOS_CERT }}
+  EXPO_ASC_API_KEY_PATH: ${{ secrets.EXPO_ASC_API_KEY_PATH }}
+  EXPO_ASC_KEY_ID: ${{ secrets.EXPO_ASC_KEY_ID }}
+  EXPO_ASC_ISSUER_ID: ${{ secrets.EXPO_ASC_ISSUER_ID }}
+  EXPO_APPLE_TEAM_ID: ${{ secrets.EXPO_TEAM_ID }}
+  EXPO_APPLE_TEAM_TYPE: ${{ secrets.EXPO_APPLE_TEAM_TYPE }}
+  RESPOND_APTABASE_APP_KEY: ${{ secrets.RESPOND_APTABASE_APP_KEY }}
+  RESPOND_APTABASE_URL: ${{ secrets.RESPOND_APTABASE_URL }}
+  RESPOND_COUNTLY_APP_KEY: ${{ secrets.RESPOND_COUNTLY_APP_KEY }}
+  RESPOND_COUNTLY_URL: ${{ secrets.RESPOND_COUNTLY_URL }}
+  NODE_OPTIONS: --openssl-legacy-provider
+
+jobs:
+  check-skip:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    steps:
+      - name: Skip CI check
+        run: echo "Proceeding with workflow"
+
+  test:
+    needs: check-skip
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: 📦 Setup yarn cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 📦 Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: 🧪 Run Checks and Tests
+        run: yarn check-all
+
+  build-and-deploy:
+    needs: test
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        platform: [android, ios]
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-15' || 'ubuntu-latest' }}
+    environment: RNBuild
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: 🔎 Verify Xcode toolchain
+        if: matrix.platform == 'ios'
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: 🏗 Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 📦 Setup yarn cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/yarn
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: 📦 Install dependencies
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: 📋 Create Google Json File
+        run: |
+          echo $RESPOND_GOOGLE_SERVICES | base64 -d > google-services.json
+
+      - name: 📋 Update package.json Versions
+        run: |
+          # Ensure jq is available on both Linux and macOS
+          if ! command -v jq &> /dev/null; then
+            echo "Installing jq..."
+            if [ "${RUNNER_OS}" = "Linux" ]; then
+              sudo apt-get update && sudo apt-get install -y jq
+            elif [ "${RUNNER_OS}" = "macOS" ]; then
+              brew update || true
+              brew install jq
+            else
+              echo "Unsupported runner OS: ${RUNNER_OS}" >&2
+              exit 1
+            fi
+          fi
+
+          androidVersionCode=$((5080345 + ${{ github.run_number }}))
+          echo "Android Version Code: ${androidVersionCode}"
+
+          # Fix the main entry in package.json
+          if [ -f ./package.json ]; then
+            # Create a backup
+            cp package.json package.json.bak
+            # Update the package.json
+            jq --arg version "10.${{ github.run_number }}" --argjson versionCode "$androidVersionCode" '.version = $version | .versionCode = $versionCode' package.json > package.json.tmp && mv package.json.tmp package.json
+            echo "Updated package.json versions"
+            cat package.json | grep "version"
+            cat package.json | grep "versionCode"
+          else
+            echo "package.json not found"
+            exit 1
+          fi
+
+      - name: 📱 Setup EAS build cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.eas-build-local
+          key: ${{ runner.os }}-eas-build-local-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-eas-build-local-
+
+      - name: 🔄 Verify EAS CLI installation
+        run: |
+          echo "EAS CLI version:"
+          eas --version
+
+      - name: 📋 Create iOS Cert
+        run: |
+          echo $RESPOND_IOS_CERT | base64 -d > AuthKey_HRBP5FNJN6.p8
+
+      - name: 📋 Restore gradle.properties
+        env:
+          GRADLE_PROPERTIES: ${{ secrets.GRADLE_PROPERTIES }}
+        shell: bash
+        run: |
+          mkdir -p ~/.gradle/
+          echo ${GRADLE_PROPERTIES} > ~/.gradle/gradle.properties
+
+      - name: 📱 Build Development APK
+        if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'dev'))
+        run: |
+          # Build with increased memory limit
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile development --local --non-interactive --output=./ResgridRespond-dev.apk
+        env:
+          NODE_ENV: development
+
+      - name: 📱 Build Production APK
+        if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile production-apk --local --non-interactive --output=./ResgridRespond-prod.apk
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build Production AAB
+        if: (matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-aab'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform android --profile production --local --non-interactive --output=./ResgridRespond-prod.aab
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build iOS Development
+        if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-dev'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform ios --profile development --local --non-interactive --output=./ResgridRespond-ios-dev.ipa
+        env:
+          NODE_ENV: development
+
+      - name: 📱 Build iOS Ad-Hoc
+        if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-adhoc'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform ios --profile internal --local --non-interactive --output=./ResgridRespond-ios-adhoc.ipa
+        env:
+          NODE_ENV: production
+
+      - name: 📱 Build iOS Production
+        if: (matrix.platform == 'ios' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'ios-prod'))
+        run: |
+          export NODE_OPTIONS="--openssl-legacy-provider --max_old_space_size=4096"
+          eas build --platform ios --profile production --local --non-interactive --output=./ResgridRespond-ios-prod.ipa
+        env:
+          NODE_ENV: production
+
+      - name: 📦 Upload build artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-builds-${{ matrix.platform }}
+          path: |
+            ./ResgridRespond-dev.apk
+            ./ResgridRespond-prod.apk
+            ./ResgridRespond-prod.aab
+            ./ResgridRespond-ios-dev.ipa
+            ./ResgridRespond-ios-adhoc.ipa
+            ./ResgridRespond-ios-prod.ipa
+          retention-days: 7
+
+      - name: 📦 Setup Firebase CLI
+        uses: w9jds/setup-firebase@main
+        with:
+          tools-version: 11.9.0
+          firebase_token: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: 📦 Upload Android artifact to Firebase App Distribution
+        if: (matrix.platform == 'android')
+        run: |
+          firebase appdistribution:distribute ./ResgridRespond-prod.apk --app ${{ secrets.FIREBASE_RESP_ANDROID_APP_ID }} --groups "testers"
+
+      - name: 📦 Upload iOS artifact to Firebase App Distribution
+        if: (matrix.platform == 'ios')
+        run: |
+          firebase appdistribution:distribute ./ResgridRespond-ios-adhoc.ipa --app ${{ secrets.FIREBASE_RESP_IOS_APP_ID }} --groups "testers"
+
+      - name: 📋 Prepare Release Notes file
+        if: ${{ matrix.platform == 'android' }}
+        env:
+          RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -eo pipefail
+          # Determine source of release notes: workflow input, PR body, or recent commits
+          if [ -n "$RELEASE_NOTES_INPUT" ]; then
+            NOTES="$RELEASE_NOTES_INPUT"
+          elif [ -n "$PR_BODY" ]; then
+            NOTES="$(printf '%s\n' "$PR_BODY" \
+              | awk 'f && /^## /{exit} /^## Release Notes/{f=1; next} f')"
+          else
+            NOTES="$(git log -n 5 --pretty=format:'- %s')"
+          fi
+          # Fail if no notes extracted
+          if [ -z "$NOTES" ]; then
+            echo "Error: No release notes extracted" >&2
+            exit 1
+          fi
+          # Write header and notes to file
+          {
+            echo "## Version 10.${{ github.run_number }} - $(date +%Y-%m-%d)"
+            echo
+            printf '%s\n' "$NOTES"
+          } > RELEASE_NOTES.md
+
+      - name: 📦 Create Release
+        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+        uses: ncipollo/release-action@v1
+        with:
+          tag: '10.${{ github.run_number }}'
+          commit: ${{ github.sha }}
+          makeLatest: true
+          allowUpdates: true
+          name: '10.${{ github.run_number }}'
+          artifacts: './ResgridRespond-prod.apk'
+          bodyFile: 'RELEASE_NOTES.md'

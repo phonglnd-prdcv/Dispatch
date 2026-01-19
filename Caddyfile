@@ -1,3 +1,0 @@
-localhost
-encode zstd gzip
-root * /usr/share/caddy/html
