@@ -1,4 +1,5 @@
-.eslintignorenode_modules
+node_modules/
+**/node_modules/**
 __tests__/
 .vscode/
 android/
@@ -8,3 +9,9 @@ ios/
 .expo-shared
 docs/
 cli/
+assets/
+scripts/
+types/
+*.config.js
+*.config.ts
+env.js

@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 
-// Create the mock before any imports
-const mockCoreStoreGetState = jest.fn(() => ({
+// Create the mock before any imports - use `any` to allow flexibility in test scenarios
+const mockCoreStoreGetState = jest.fn((): any => ({
   config: {
     EventingUrl: 'https://eventing.example.com/',
   },
@@ -141,7 +141,7 @@ describe('useSignalRStore', () => {
     it('should handle missing EventingUrl when config fetch fails', async () => {
       // Mock core store without EventingUrl - this triggers config fetch which we mock to fail
       mockCoreStoreGetState.mockReturnValue({
-        config: null,
+        config: undefined as any,
         isInitialized: false,
         isInitializing: false,
         fetchConfig: jest.fn().mockRejectedValue(new Error('Config fetch failed')),
@@ -167,7 +167,7 @@ describe('useSignalRStore', () => {
     it('should handle timeout when config is initializing', async () => {
       // Mock core store that is initializing but never completes
       mockCoreStoreGetState.mockReturnValue({
-        config: null,
+        config: undefined as any,
         isInitialized: false,
         isInitializing: true,
       });
@@ -229,7 +229,7 @@ describe('useSignalRStore', () => {
     it('should handle missing EventingUrl when config fetch fails', async () => {
       // Mock core store without EventingUrl - triggers config fetch
       mockCoreStoreGetState.mockReturnValue({
-        config: null,
+        config: undefined as any,
         isInitialized: false,
         isInitializing: false,
         fetchConfig: jest.fn().mockRejectedValue(new Error('Config fetch failed')),

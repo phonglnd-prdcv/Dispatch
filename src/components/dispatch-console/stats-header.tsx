@@ -53,17 +53,7 @@ interface StatsHeaderProps {
   weatherLongitude?: number | null;
 }
 
-export const StatsHeader: React.FC<StatsHeaderProps> = ({
-  activeCalls,
-  pendingCalls,
-  scheduledCalls,
-  unitsAvailable,
-  unitsOnScene,
-  personnelOnDuty,
-  currentTime,
-  weatherLatitude,
-  weatherLongitude,
-}) => {
+export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCalls, scheduledCalls, unitsAvailable, unitsOnScene, personnelOnDuty, currentTime, weatherLatitude, weatherLongitude }) => {
   const { t } = useTranslation();
 
   return (

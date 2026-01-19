@@ -37,3 +37,6 @@ export const getUnitsFilterOptions = async () => {
   const response = await ugetPersonnelFilterOptionsApi.get<GetPersonnelFilterOptionsResult>();
   return response.data;
 };
+
+// Alias for backwards compatibility
+export const getPersonnelFilterOptions = getUnitsFilterOptions;

@@ -23,62 +23,80 @@ export interface LockscreenState {
 }
 
 const useLockscreenStore = create<LockscreenState>()((set, get) => ({
+  isLocked: false,
+  lockTimeout: DEFAULT_INACTIVITY_TIMEOUT_MINUTES,
+  lastActivityTime: Date.now(),
+  _cachedTimeoutMs: DEFAULT_INACTIVITY_TIMEOUT_MINUTES * 60 * 1000,
+
+  lock: () => {
+    logger.info({
+      message: 'Locking screen',
+    });
+    set({ isLocked: true });
+  },
+
+  unlock: () => {
+    logger.info({
+      message: 'Unlocking screen',
+    });
+    set({
       isLocked: false,
-      lockTimeout: DEFAULT_INACTIVITY_TIMEOUT_MINUTES,
       lastActivityTime: Date.now(),
-      _cachedTimeoutMs: DEFAULT_INACTIVITY_TIMEOUT_MINUTES * 60 * 1000,
+    });
+  },
 
-      lock: () => {
-        logger.info({
-          message: 'Locking screen',
+  updateActivity: () => {
+    const now = Date.now();
+    set({ lastActivityTime: now });
+  },
+
+  setLockTimeout: (minutes: number) => {
+    // Validate and sanitize the minutes parameter
+    const originalMinutes = minutes;
+    if (!Number.isFinite(minutes)) {
+      logger.warn({
+        message: 'Invalid lock timeout value provided',
+        context: { providedValue: originalMinutes, sanitizedValue: 0 },
+      });
+      minutes = 0;
+    } else {
+      minutes = Math.max(0, Number(minutes) || 0);
+      if (minutes !== originalMinutes) {
+        logger.warn({
+          message: 'Lock timeout value was clamped to non-negative',
+          context: { providedValue: originalMinutes, sanitizedValue: minutes },
         });
-        set({ isLocked: true });
-      },
+      }
+    }
 
-      unlock: () => {
-        logger.info({
-          message: 'Unlocking screen',
-        });
-        set({
-          isLocked: false,
-          lastActivityTime: Date.now(),
-        });
-      },
+    logger.info({
+      message: 'Setting lock timeout',
+      context: { minutes },
+    });
+    set({
+      lockTimeout: minutes,
+      _cachedTimeoutMs: minutes * 60 * 1000,
+    });
+  },
 
-      updateActivity: () => {
-        const now = Date.now();
-        set({ lastActivityTime: now });
-      },
+  shouldLock: (): boolean => {
+    const { lastActivityTime, _cachedTimeoutMs, isLocked, lockTimeout } = get();
 
-      setLockTimeout: (minutes: number) => {
-        logger.info({
-          message: 'Setting lock timeout',
-          context: { minutes },
-        });
-        set({
-          lockTimeout: minutes,
-          _cachedTimeoutMs: minutes * 60 * 1000,
-        });
-      },
+    // If already locked, no need to check
+    if (isLocked) return false;
 
-      shouldLock: (): boolean => {
-        const { lastActivityTime, _cachedTimeoutMs, isLocked, lockTimeout } = get();
+    // If lockTimeout is 0, disable auto-lock
+    if (lockTimeout === 0) return false;
 
-        // If already locked, no need to check
-        if (isLocked) return false;
+    const now = Date.now();
+    const inactiveTimeMs = now - lastActivityTime;
 
-        // If lockTimeout is 0, disable auto-lock
-        if (lockTimeout === 0) return false;
+    return inactiveTimeMs >= _cachedTimeoutMs;
+  },
 
-        const now = Date.now();
-        const inactiveTimeMs = now - lastActivityTime;
-
-        return inactiveTimeMs >= _cachedTimeoutMs;
-      },
-
-      getTimeoutMs: (): number => {
-        return get()._cachedTimeoutMs;
-      },
-    }));
+  getTimeoutMs: (): number => {
+    return get()._cachedTimeoutMs;
+  },
+}));
 
 export default useLockscreenStore;

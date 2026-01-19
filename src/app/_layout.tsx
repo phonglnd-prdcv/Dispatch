@@ -4,7 +4,7 @@ import '../lib/i18n';
 
 import { Env } from '@env';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { FloatingDevTools } from "@react-buoy/core";
+import { FloatingDevTools } from '@react-buoy/core';
 import { createNavigationContainerRef, DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import * as Sentry from '@sentry/react-native';
 import { isRunningInExpoGo } from 'expo';
@@ -91,7 +91,7 @@ if (Env.SENTRY_DSN) {
       if (Platform.OS === 'web') {
         event.tags = {
           ...event.tags,
-          'user_agent': typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
         };
       }
       return event;

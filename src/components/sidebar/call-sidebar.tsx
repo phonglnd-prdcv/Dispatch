@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { Check, CircleX, Eye, MapPin } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
@@ -20,11 +20,14 @@ import { HStack } from '../ui/hstack';
 
 export const SidebarCallCard = () => {
   const { colorScheme } = useColorScheme();
-  const { activeCall, activePriority, setActiveCall } = useCoreStore((state) => ({
+  const { activeCall, activePriorityId, setActiveCall } = useCoreStore((state) => ({
     activeCall: state.activeCall,
-    activePriority: state.activePriority,
+    activePriorityId: state.activePriority,
     setActiveCall: state.setActiveCall,
   }));
+
+  // Get the actual priority object from the calls store
+  const activePriority = useCallsStore((state) => (activePriorityId ? state.getPriorityById(activePriorityId) : undefined));
 
   const [isBottomSheetOpen, setIsBottomSheetOpen] = React.useState(false);
   const { t } = useTranslation();
@@ -116,7 +119,7 @@ export const SidebarCallCard = () => {
             size="sm"
             action="primary"
             onPress={() => {
-              router.push(`/call/${activeCall.CallId}`);
+              router.push(`/call/${activeCall.CallId}` as Href);
             }}
           >
             <ButtonIcon as={Eye} />

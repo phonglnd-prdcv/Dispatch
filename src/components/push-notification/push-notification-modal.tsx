@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { AlertCircle, Bell, MailIcon, MessageCircle, Phone, Users } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,7 +62,7 @@ export const PushNotificationModal: React.FC = () => {
       });
 
       hideNotificationModal();
-      router.push(`/call/${notification.id}`);
+      router.push(`/call/${notification.id}` as Href);
     }
   };
 

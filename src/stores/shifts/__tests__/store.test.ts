@@ -265,7 +265,7 @@ describe('useShiftsStore', () => {
 
 	describe('signup functionality', () => {
 		it('should sign up for shift successfully', async () => {
-			mockedShiftsApi.signupForShiftDay.mockResolvedValue(mockSignupResult);
+			mockedShiftsApi.signupForShiftDay.mockResolvedValue(undefined);
 			mockedShiftsApi.getTodaysShifts.mockResolvedValue(mockTodaysShiftsResult);
 			mockedShiftsApi.getShiftDay.mockResolvedValue(mockShiftDayResult);
 

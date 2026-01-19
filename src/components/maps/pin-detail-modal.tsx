@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { MapPinIcon, PhoneIcon, RouteIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
@@ -58,7 +58,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
 
   const handleViewCallDetails = () => {
     if (isCallPin && pin.Id) {
-      router.push(`/call/${pin.Id}`);
+      router.push(`/call/${pin.Id}` as Href);
       onClose();
     }
   };

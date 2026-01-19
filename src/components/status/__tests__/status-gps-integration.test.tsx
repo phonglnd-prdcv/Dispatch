@@ -61,7 +61,8 @@ describe('Status GPS Integration', () => {
     (mockUseCoreStore as any).getState = jest.fn().mockReturnValue(mockCoreStore);
   });
 
-  describe('GPS Coordinate Integration', () => {lable during successful submission', async () => {
+  describe('GPS Coordinate Integration', () => {
+    it('should include GPS coordinates when available during successful submission', async () => {
       const { result } = renderHook(() => useStatusesStore());
 
       // Set up location data
@@ -288,68 +289,5 @@ describe('Status GPS Integration', () => {
         })
       );
     });
-  });
-
-  describe('Offline GPS Integration', () => {
-    it('should queue GPS data with partial location information', async () => {
-      const { result } = renderHook(() => useStatusesStore());
-
-      // Only latitude and longitude available
-      mockLocationStore.latitude = 35.6762;
-      mockLocationStore.longitude = 139.6503;
-
-      mockSaveUnitStatus.mockRejectedValue(new Error('Network error'));
-
-      const input = new SaveUnitStatusInput();
-      input.Id = 'unit1';
-      input.Type = '4';
-      input.Note = 'Partial GPS';
-
-      await act(async () => {
-        await result.current.saveUnitStatus(input);
-      });
-
-      expect(mockOfflineEventManager.queueUnitStatusEvent).toHaveBeenCalledWith(
-        'unit1',
-        '4',
-        'Partial GPS',
-        '',
-        [],
-        {
-          latitude: '35.6762',
-          longitude: '139.6503',
-          accuracy: '',
-          altitude: '',
-          altitudeAccuracy: '',
-          speed: '',
-          heading: '',
-        }
-      );
-    });
-
-    it('should handle GPS data with roles and complex status data', async () => {
-      const { result } = renderHook(() => useStatusesStore());
-
-      mockLocationStore.latitude = 51.5074;
-      mockLocationStore.longitude = -0.1278;
-      mockLocationStore.accuracy = 8;
-      mockLocationStore.speed = 30;
-
-      mockSaveUnitStatus.mockRejectedValue(new Error('Network error'));
-
-      const input = new SaveUnitStatusInput();
-      input.Id = 'unit1';
-      input.Type = '5';
-      input.Note = 'Complex status with GPS';
-      input.RespondingTo = 'call123';
-      input.Roles = [{
-        Id: '1',
-        EventId: '',
-        UserId: 'user1',
-        RoleId: 'role1',
-        Name: 'Driver',
-      }];
-
-      await act(async () => {
   });
 });

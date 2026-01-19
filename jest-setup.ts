@@ -193,21 +193,33 @@ jest.mock('nativewind', () => ({
   __esModule: true,
 }));
 
-// Mock zod globally to avoid validation schema issues in tests
-jest.mock('zod', () => ({
-  z: {
-    object: jest.fn(() => ({
-      parse: jest.fn((data) => data),
-      safeParse: jest.fn((data) => ({ success: true, data })),
-    })),
-    string: jest.fn(() => ({
-      min: jest.fn(() => ({
-        parse: jest.fn((data) => data),
-        safeParse: jest.fn((data) => ({ success: true, data })),
-      })),
-      parse: jest.fn((data) => data),
-      safeParse: jest.fn((data) => ({ success: true, data })),
-    })),
+// Mock @dev-plugins/react-query to avoid ESM issues in tests
+jest.mock('@dev-plugins/react-query', () => ({
+  useReactQueryDevTools: jest.fn(),
+  __esModule: true,
+}));
+
+// Mock @sentry/react-native to avoid native module issues in tests
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  wrap: jest.fn((component) => component),
+  captureException: jest.fn(),
+  captureMessage: jest.fn(),
+  setUser: jest.fn(),
+  setTag: jest.fn(),
+  setTags: jest.fn(),
+  setExtra: jest.fn(),
+  setExtras: jest.fn(),
+  setContext: jest.fn(),
+  addBreadcrumb: jest.fn(),
+  configureScope: jest.fn(),
+  withScope: jest.fn(),
+  Severity: {
+    Fatal: 'fatal',
+    Error: 'error',
+    Warning: 'warning',
+    Info: 'info',
+    Debug: 'debug',
   },
   __esModule: true,
 }));

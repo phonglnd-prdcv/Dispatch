@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
-import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
@@ -14,6 +13,7 @@ import { formatDateForDisplay, parseDateISOString, stripHtmlTags } from '@/lib/u
 import { type CallNoteResultData } from '@/models/v4/callNotes/callNoteResultData';
 import { type NoteResultData } from '@/models/v4/notes/noteResultData';
 
+import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
 
 interface NotesPanelProps {
@@ -91,7 +91,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
 
   // Determine which notes to display and apply search filter
   const displayNotes = isCallFilterActive && callNotes;
-  
+
   // Filter notes based on search query
   const filteredNotes = useMemo(() => {
     if (!searchQuery.trim()) return notes;
@@ -103,7 +103,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
       return title.includes(query) || body.includes(query) || category.includes(query);
     });
   }, [notes, searchQuery]);
-  
+
   const filteredCallNotes = useMemo(() => {
     if (!callNotes || !searchQuery.trim()) return callNotes;
     const query = searchQuery.toLowerCase().trim();
@@ -113,7 +113,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
       return note.includes(query) || fullName.includes(query);
     });
   }, [callNotes, searchQuery]);
-  
+
   const notesCount = displayNotes ? filteredCallNotes?.length || 0 : filteredNotes.length;
 
   return (
@@ -182,11 +182,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
                 maxLength={500}
                 editable={!isAddingNote}
               />
-              <Pressable
-                onPress={handleAddNote}
-                disabled={!newNoteText.trim() || isAddingNote}
-                style={StyleSheet.flatten([styles.sendButton, (!newNoteText.trim() || isAddingNote) && styles.sendButtonDisabled])}
-              >
+              <Pressable onPress={handleAddNote} disabled={!newNoteText.trim() || isAddingNote} style={StyleSheet.flatten([styles.sendButton, (!newNoteText.trim() || isAddingNote) && styles.sendButtonDisabled])}>
                 <Icon as={Send} size="sm" className={newNoteText.trim() && !isAddingNote ? 'text-indigo-500' : 'text-gray-400'} />
               </Pressable>
             </HStack>

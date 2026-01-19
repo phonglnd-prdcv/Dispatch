@@ -16,6 +16,5 @@ export const useAuth = () => {
     login: store.login,
     logout: store.logout,
     status: store.status,
-    hydrate: store.hydrate,
   };
 };

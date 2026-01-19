@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
 import Maintenance from '../maintenance';
@@ -29,6 +30,10 @@ jest.mock('@/lib/env', () => ({
   },
 }));
 
+const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return <NavigationContainer>{children}</NavigationContainer>;
+};
+
 describe('Maintenance', () => {
   const mockReplace = jest.fn();
 
@@ -40,7 +45,11 @@ describe('Maintenance', () => {
   });
 
   it('should render maintenance page correctly', () => {
-    render(<Maintenance />);
+    render(
+      <TestWrapper>
+        <Maintenance />
+      </TestWrapper>
+    );
 
     expect(screen.getByText('maintenance.title')).toBeTruthy();
     expect(screen.getByText('maintenance.message')).toBeTruthy();
@@ -50,15 +59,24 @@ describe('Maintenance', () => {
   });
 
   it('should display all info cards', () => {
-    render(<Maintenance />);
+    render(
+      <TestWrapper>
+        <Maintenance />
+      </TestWrapper>
+    );
 
     expect(screen.getByText('maintenance.why_down_message')).toBeTruthy();
     expect(screen.getByText('maintenance.downtime_message')).toBeTruthy();
-    expect(screen.getByText('maintenance.support_message')).toBeTruthy();
+    // Support message contains nested text with email, so use getByText with options
+    expect(screen.getByText(/maintenance.support_message/)).toBeTruthy();
   });
 
   it('should display support email', () => {
-    render(<Maintenance />);
+    render(
+      <TestWrapper>
+        <Maintenance />
+      </TestWrapper>
+    );
 
     expect(screen.getByText('support@resgrid.com')).toBeTruthy();
   });
@@ -66,7 +84,11 @@ describe('Maintenance', () => {
   it('should redirect to login if maintenance mode is disabled', () => {
     (Env as any).MAINTENANCE_MODE = false;
 
-    render(<Maintenance />);
+    render(
+      <TestWrapper>
+        <Maintenance />
+      </TestWrapper>
+    );
 
     waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/login');
@@ -74,7 +96,11 @@ describe('Maintenance', () => {
   });
 
   it('should display copyright and version info', () => {
-    render(<Maintenance />);
+    render(
+      <TestWrapper>
+        <Maintenance />
+      </TestWrapper>
+    );
 
     const currentYear = new Date().getFullYear();
     expect(screen.getByText(new RegExp(`${currentYear}`))).toBeTruthy();

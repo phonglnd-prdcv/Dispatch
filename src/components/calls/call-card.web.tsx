@@ -128,4 +128,3 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority }) => {
     </Box>
   );
 };
-

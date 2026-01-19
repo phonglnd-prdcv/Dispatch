@@ -327,7 +327,7 @@ describe('StatusBottomSheet', () => {
     activeUnitStatusType: null,
     activeStatuses: {
       UnitType: '0',
-      Statuses: [
+      Data: [
         { Id: 1, Type: 1, StateId: 1, Text: 'Available', BColor: '#28a745', Color: '#fff', Gps: false, Note: 0, Detail: 1 },
         { Id: 2, Type: 2, StateId: 2, Text: 'Responding', BColor: '#ffc107', Color: '#000', Gps: true, Note: 1, Detail: 2 },
         { Id: 3, Type: 3, StateId: 3, Text: 'On Scene', BColor: '#dc3545', Color: '#fff', Gps: true, Note: 2, Detail: 3 },
@@ -2276,7 +2276,7 @@ describe('StatusBottomSheet', () => {
       ...defaultCoreStore,
       activeStatuses: {
         UnitType: '0',
-        Statuses: [
+        Data: [
           { Id: 1, Type: 1, StateId: 1, Text: 'Available', BColor: '#28a745', Color: '#fff', Gps: false, Note: 1, Detail: 0 },
           { Id: 4, Type: 4, StateId: 4, Text: 'Busy', BColor: '#dc3545', Color: '#fff', Gps: false, Note: 0, Detail: 0 },
         ],
@@ -2322,7 +2322,7 @@ describe('StatusBottomSheet', () => {
       ...defaultCoreStore,
       activeStatuses: {
         UnitType: '0',
-        Statuses: [],
+        Data: [],
       },
     };
 
@@ -2500,7 +2500,7 @@ describe('StatusBottomSheet', () => {
       ...defaultCoreStore,
       activeStatuses: {
         UnitType: '0',
-        Statuses: manyStatuses,
+        Data: manyStatuses,
       },
     };
 
@@ -2974,7 +2974,7 @@ describe('StatusBottomSheet', () => {
       ...defaultCoreStore,
       activeStatuses: {
         UnitType: '0',
-        Statuses: [statusWithBColor],
+        Data: [statusWithBColor],
       },
     };
 
@@ -3045,7 +3045,7 @@ describe('StatusBottomSheet', () => {
       ...defaultCoreStore,
       activeStatuses: {
         UnitType: '0',
-        Statuses: [statusWithoutBColor],
+        Data: [statusWithoutBColor],
       },
     };
 

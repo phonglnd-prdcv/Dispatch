@@ -121,8 +121,8 @@ export const api = axiosInstance;
 export const createApiEndpoint = (endpoint: string) => {
   return {
     get: <T,>(params?: Record<string, unknown>, signal?: AbortSignal) => api.get<T>(endpoint, { params, signal }),
-    post: <T,>(data: Record<string, unknown>, signal?: AbortSignal) => api.post<T>(endpoint, data, { signal }),
-    put: <T,>(data: Record<string, unknown>, signal?: AbortSignal) => api.put<T>(endpoint, data, { signal }),
+    post: <T,>(data: object, signal?: AbortSignal) => api.post<T>(endpoint, data, { signal }),
+    put: <T,>(data: object, signal?: AbortSignal) => api.put<T>(endpoint, data, { signal }),
     delete: <T,>(params?: Record<string, unknown>, signal?: AbortSignal) => api.delete<T>(endpoint, { params, signal }),
   };
 };

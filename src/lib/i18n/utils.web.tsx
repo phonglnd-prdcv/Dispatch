@@ -50,14 +50,11 @@ export const useSelectedLanguage = () => {
     }
   }, []);
 
-  const setLanguage = useCallback(
-    (lang: Language) => {
-      setLangState(lang);
-      localStorage.setItem(LOCAL, lang);
-      if (lang !== undefined) changeLanguage(lang as Language);
-    },
-    []
-  );
+  const setLanguage = useCallback((lang: Language) => {
+    setLangState(lang);
+    localStorage.setItem(LOCAL, lang);
+    if (lang !== undefined) changeLanguage(lang as Language);
+  }, []);
 
   return { language: language as Language, setLanguage };
 };

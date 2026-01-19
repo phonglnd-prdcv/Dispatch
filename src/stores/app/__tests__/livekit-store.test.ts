@@ -29,7 +29,7 @@ jest.mock('../../../services/audio.service', () => ({
   },
 }));
 
-// Mock CallKeep service
+// Mock CallKeep service (module may not exist in all environments)
 jest.mock('../../../services/callkeep.service.ios', () => ({
   callKeepService: {
     setup: jest.fn(),
@@ -40,7 +40,7 @@ jest.mock('../../../services/callkeep.service.ios', () => ({
     cleanup: jest.fn(),
     setMuteStateCallback: jest.fn(),
   },
-}));
+}), { virtual: true });
 
 import { Platform } from 'react-native';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';

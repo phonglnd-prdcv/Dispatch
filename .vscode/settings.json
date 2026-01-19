@@ -26,5 +26,8 @@
         "titleBar.inactiveBackground": "#8ab9ab99",
         "titleBar.inactiveForeground": "#15202b99"
     },
-    "peacock.color": "#8ab9ab"
+    "peacock.color": "#8ab9ab",
+    "cSpell.words": [
+        "Resgrid"
+    ]
 }

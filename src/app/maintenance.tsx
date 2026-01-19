@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { AlertCircle, Clock, Mail } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,7 @@ export default function Maintenance() {
       logger.info({
         message: 'Maintenance mode disabled, redirecting to login',
       });
-      router.replace('/login');
+      router.replace('/login' as Href);
     }
   }, [router]);
 

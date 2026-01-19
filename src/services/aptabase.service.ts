@@ -6,5 +6,4 @@
  * during the migration from Aptabase to Countly.
  */
 
-export { countlyService, countlyService as aptabaseService } from './analytics.service';
-
+export { countlyService as aptabaseService, countlyService } from './analytics.service';

@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
@@ -89,7 +89,7 @@ export default function CallDetail() {
   };
 
   const handleEditCall = () => {
-    router.push(`/call/${callId}/edit`);
+    router.push(`/call/${callId}/edit` as Href);
   };
 
   const handleCloseCall = () => {

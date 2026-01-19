@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { AlertTriangle, EyeIcon, EyeOffIcon, LockKeyhole } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useState } from 'react';
@@ -71,7 +71,7 @@ export default function Lockscreen() {
       // For now, we'll just unlock without verification
       // In production, you should verify the password matches
       unlock();
-      router.replace('/(app)');
+      router.replace('/(app)' as Href);
     } catch (err) {
       logger.error({
         message: 'Failed to unlock screen',
@@ -89,7 +89,7 @@ export default function Lockscreen() {
     });
     unlock();
     await logout();
-    router.replace('/login');
+    router.replace('/login' as Href);
   };
 
   const handleState = () => {

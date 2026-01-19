@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
@@ -134,7 +134,7 @@ export default function Onboarding() {
             <Pressable
               onPress={() => {
                 setIsFirstTime(false);
-                router.replace('/login');
+                router.replace('/login' as Href);
               }}
             >
               <Text className="text-gray-500">Skip</Text>
@@ -154,7 +154,7 @@ export default function Onboarding() {
               className="w-full bg-primary-500"
               onPress={() => {
                 setIsFirstTime(false);
-                router.replace('/login');
+                router.replace('/login' as Href);
               }}
             >
               <ButtonText>Let's Get Started</ButtonText>

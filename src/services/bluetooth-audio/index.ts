@@ -8,3 +8,7 @@ export * from './base.service';
 export * from './factory.service';
 export * from './native.service';
 export * from './web.service';
+
+// Export a singleton instance for convenience
+import { createBluetoothAudioService } from './factory.service';
+export const bluetoothAudioService = createBluetoothAudioService();

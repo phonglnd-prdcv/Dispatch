@@ -8,10 +8,16 @@ import { signalRService } from '@/services/signalr.service';
 import { useCoreStore } from '../app/core-store';
 import { securityStore, useSecurityStore } from '../security/store';
 
+export type SignalREventType = 'personnelStatusUpdated' | 'personnelStaffingUpdated' | 'unitStatusUpdated' | 'callsUpdated' | 'callAdded' | 'callClosed' | null;
+
 interface SignalRState {
   isUpdateHubConnected: boolean;
   lastUpdateMessage: unknown;
   lastUpdateTimestamp: number;
+  lastEventType: SignalREventType;
+  lastPersonnelUpdateTimestamp: number;
+  lastUnitsUpdateTimestamp: number;
+  lastCallsUpdateTimestamp: number;
   isGeolocationHubConnected: boolean;
   lastGeolocationMessage: unknown;
   lastGeolocationTimestamp: number;
@@ -54,15 +60,7 @@ let updateHubHandlers: EventHandlers = {
  * Helper function to unregister all update hub event handlers
  */
 function unregisterUpdateHubHandlers(): void {
-  const events: (keyof EventHandlers)[] = [
-    'personnelStatusUpdated',
-    'personnelStaffingUpdated',
-    'unitStatusUpdated',
-    'callsUpdated',
-    'callAdded',
-    'callClosed',
-    'onConnected',
-  ];
+  const events: (keyof EventHandlers)[] = ['personnelStatusUpdated', 'personnelStaffingUpdated', 'unitStatusUpdated', 'callsUpdated', 'callAdded', 'callClosed', 'onConnected'];
 
   events.forEach((event) => {
     const handler = updateHubHandlers[event];
@@ -80,6 +78,10 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
   isUpdateHubConnected: false,
   lastUpdateMessage: null,
   lastUpdateTimestamp: 0,
+  lastEventType: null,
+  lastPersonnelUpdateTimestamp: 0,
+  lastUnitsUpdateTimestamp: 0,
+  lastCallsUpdateTimestamp: 0,
   isGeolocationHubConnected: false,
   lastGeolocationMessage: null,
   lastGeolocationTimestamp: 0,
@@ -175,7 +177,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'personnelStatusUpdated',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'personnelStatusUpdated', lastPersonnelUpdateTimestamp: Date.now() });
       };
       signalRService.on('personnelStatusUpdated', updateHubHandlers.personnelStatusUpdated);
 
@@ -184,7 +186,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'personnelStaffingUpdated',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'personnelStaffingUpdated', lastPersonnelUpdateTimestamp: Date.now() });
       };
       signalRService.on('personnelStaffingUpdated', updateHubHandlers.personnelStaffingUpdated);
 
@@ -193,7 +195,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'unitStatusUpdated',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'unitStatusUpdated', lastUnitsUpdateTimestamp: Date.now() });
       };
       signalRService.on('unitStatusUpdated', updateHubHandlers.unitStatusUpdated);
 
@@ -203,7 +205,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'callsUpdated',
           context: { message, now },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: now });
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: now, lastEventType: 'callsUpdated', lastCallsUpdateTimestamp: now });
       };
       signalRService.on('callsUpdated', updateHubHandlers.callsUpdated);
 
@@ -212,7 +214,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'callAdded',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'callAdded', lastCallsUpdateTimestamp: Date.now() });
       };
       signalRService.on('callAdded', updateHubHandlers.callAdded);
 
@@ -221,7 +223,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'callClosed',
           context: { message },
         });
-        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now() });
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'callClosed', lastCallsUpdateTimestamp: Date.now() });
       };
       signalRService.on('callClosed', updateHubHandlers.callClosed);
 

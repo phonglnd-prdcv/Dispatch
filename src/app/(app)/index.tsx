@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { type Href, Redirect } from 'expo-router';
 import React from 'react';
 
 /**
@@ -6,5 +6,5 @@ import React from 'react';
  * Redirects to the home page which serves as the main dashboard.
  */
 export default function AppIndex() {
-  return <Redirect href="/home" />;
+  return <Redirect href={'/home' as Href} />;
 }

@@ -104,8 +104,8 @@ describe('useCallsStore', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.error).toBe('Failed to fetch call types');
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.typesError).toBe('API Error');
+        expect(result.current.isLoadingTypes).toBe(false);
         expect(result.current.callTypes).toEqual([]);
       });
 
@@ -149,8 +149,8 @@ describe('useCallsStore', () => {
       });
 
       await waitFor(() => {
-        expect(result.current.error).toBe('Failed to fetch call priorities');
-        expect(result.current.isLoading).toBe(false);
+        expect(result.current.prioritiesError).toBe('API Error');
+        expect(result.current.isLoadingPriorities).toBe(false);
         expect(result.current.callPriorities).toEqual([]);
       });
 

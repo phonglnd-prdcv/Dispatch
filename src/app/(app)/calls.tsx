@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { PlusIcon, RefreshCcwDotIcon, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -51,7 +51,7 @@ export default function Calls() {
   };
 
   const handleNewCall = () => {
-    router.push('/call/new/');
+    router.push('/call/new/' as Href);
   };
 
   // Filter calls based on search query
@@ -72,7 +72,8 @@ export default function Calls() {
         testID="calls-list"
         data={filteredCalls}
         renderItem={({ item }: { item: CallResultData }) => (
-          <Pressable onPress={() => router.push(`/call/${item.CallId}`)}>
+          <Pressable onPress={() => router.push(`/call/${item.CallId}` as Href)}>
+            <CallCard call={item} priority={useCallsStore.getState().callPriorities.find((p: { Id: number }) => p.Id === item.Priority)} />
             <CallCard call={item} priority={useCallsStore.getState().callPriorities.find((p: { Id: number }) => p.Id === item.Priority)} />
           </Pressable>
         )}

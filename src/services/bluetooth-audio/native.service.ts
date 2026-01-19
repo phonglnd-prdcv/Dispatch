@@ -44,8 +44,8 @@ const BUTTON_CONTROL_UUIDS = [
  */
 export class BluetoothAudioServiceNative extends BluetoothAudioServiceBase {
   private connectedDevice: Device | null = null;
-  private scanTimeout: number | null = null;
-  private connectionTimeout: NodeJS.Timeout | null = null;
+  private scanTimeout: ReturnType<typeof setTimeout> | null = null;
+  private connectionTimeout: ReturnType<typeof setTimeout> | null = null;
   private eventListeners: { remove: () => void }[] = [];
 
   getPlatform(): 'native' {
