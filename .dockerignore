@@ -17,7 +17,7 @@ coverage/
 *.test.js
 *.spec.js
 __tests__/
-__mocks__/
+# Note: __mocks__/ is NOT excluded because metro.config.js uses these mocks for web builds
 
 # IDE and editors
 .idea/
