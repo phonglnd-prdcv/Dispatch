@@ -185,7 +185,6 @@
     "@expo/config": "^11.0.0",
     "@testing-library/jest-dom": "~6.5.0",
     "@testing-library/react-native": "~12.9.0",
-    "@types/dompurify": "^3.2.0",
     "@types/geojson": "~7946.0.16",
     "@types/he": "^1.2.3",
     "@types/i18n-js": "~3.8.9",
