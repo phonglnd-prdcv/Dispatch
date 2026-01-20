@@ -109,12 +109,20 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
   const isDark = colorScheme === 'dark';
 
   const inputStyles = StyleSheet.flatten([
-    styles.webInput,
+    webStyles.webInput as any,
     isDark ? styles.webInputDark : styles.webInputLight,
     error ? styles.webInputError : {},
-    disabled ? styles.webInputDisabled : {},
+    disabled ? (webStyles.webInputDisabled as any) : {},
     multiline ? { minHeight: rows * 24 + 16 } : {},
   ]);
+
+  // Add accessible focus styles for keyboard navigation
+  const accessibleInputStyles = {
+    ...inputStyles,
+    outline: 'none',
+  } as React.CSSProperties & {
+    '&:focus-visible'?: React.CSSProperties;
+  };
 
   return (
     <View style={styles.webInputContainer}>
@@ -125,7 +133,8 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
       <View style={styles.inputWrapper}>
         {multiline ? (
           <textarea
-            style={inputStyles as React.CSSProperties}
+            className="web-input-accessible"
+            style={accessibleInputStyles as React.CSSProperties}
             placeholder={placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -138,7 +147,8 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
         ) : (
           <input
             type="text"
-            style={inputStyles as React.CSSProperties}
+            className="web-input-accessible"
+            style={accessibleInputStyles as React.CSSProperties}
             placeholder={placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -171,17 +181,21 @@ const WebSelect: React.FC<WebSelectProps> = ({ label, placeholder, value, onChan
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  const selectStyles = StyleSheet.flatten([webStyles.webSelect as any, isDark ? styles.webSelectDark : styles.webSelectLight, error ? styles.webInputError : {}]);
+
+  // Add accessible focus styles for keyboard navigation
+  const accessibleSelectStyles = {
+    ...selectStyles,
+    outline: 'none',
+  } as React.CSSProperties;
+
   return (
     <View style={styles.webInputContainer}>
       <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight])}>
         {label}
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
-      <select
-        style={StyleSheet.flatten([styles.webSelect, isDark ? styles.webSelectDark : styles.webSelectLight, error ? styles.webInputError : {}]) as React.CSSProperties}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
+      <select className="web-input-accessible" style={accessibleSelectStyles} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option.id} value={option.name}>
@@ -279,6 +293,61 @@ export default function NewCallWeb() {
     });
   }, [trackEvent, callPriorities.length, callTypes.length]);
 
+  const onSubmit = useCallback(
+    async (data: FormValues) => {
+      try {
+        setIsSubmitting(true);
+
+        if (selectedLocation?.latitude && selectedLocation?.longitude) {
+          data.latitude = selectedLocation.latitude;
+          data.longitude = selectedLocation.longitude;
+        }
+
+        const priority = callPriorities.find((p) => p.Name === data.priority);
+        const type = callTypes.find((t) => t.Name === data.type);
+
+        if (!priority) {
+          setIsSubmitting(false);
+          toast.error(t('calls.invalid_priority'));
+          return;
+        }
+
+        if (!type) {
+          setIsSubmitting(false);
+          toast.error(t('calls.invalid_type'));
+          return;
+        }
+
+        await createCall({
+          name: data.name,
+          nature: data.nature,
+          priority: priority.Id,
+          type: type.Id,
+          note: data.note,
+          address: data.address,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          what3words: data.what3words,
+          plusCode: data.plusCode,
+          dispatchUsers: data.dispatchSelection?.users,
+          dispatchGroups: data.dispatchSelection?.groups,
+          dispatchRoles: data.dispatchSelection?.roles,
+          dispatchUnits: data.dispatchSelection?.units,
+          dispatchEveryone: data.dispatchSelection?.everyone,
+        });
+
+        toast.success(t('calls.create_success'));
+        router.push('/calls' as Href);
+      } catch (err) {
+        console.error('Error creating call:', err);
+        toast.error(t('calls.create_error'));
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [selectedLocation, callPriorities, callTypes, toast, t, router]
+  );
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -303,57 +372,8 @@ export default function NewCallWeb() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showLocationPicker, showAddressSelection, showDispatchModal, handleSubmit, onSubmit, router]);
-
-  const onSubmit = async (data: FormValues) => {
-    try {
-      setIsSubmitting(true);
-
-      if (selectedLocation?.latitude && selectedLocation?.longitude) {
-        data.latitude = selectedLocation.latitude;
-        data.longitude = selectedLocation.longitude;
-      }
-
-      const priority = callPriorities.find((p) => p.Name === data.priority);
-      const type = callTypes.find((t) => t.Name === data.type);
-
-      if (!priority) {
-        toast.error(t('calls.invalid_priority'));
-        return;
-      }
-
-      if (!type) {
-        toast.error(t('calls.invalid_type'));
-        return;
-      }
-
-      await createCall({
-        name: data.name,
-        nature: data.nature,
-        priority: priority.Id,
-        type: type.Id,
-        note: data.note,
-        address: data.address,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        what3words: data.what3words,
-        plusCode: data.plusCode,
-        dispatchUsers: data.dispatchSelection?.users,
-        dispatchGroups: data.dispatchSelection?.groups,
-        dispatchRoles: data.dispatchSelection?.roles,
-        dispatchUnits: data.dispatchSelection?.units,
-        dispatchEveryone: data.dispatchSelection?.everyone,
-      });
-
-      toast.success(t('calls.create_success'));
-      router.push('/calls' as Href);
-    } catch (err) {
-      console.error('Error creating call:', err);
-      toast.error(t('calls.create_error'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLocationPicker, showAddressSelection, showDispatchModal, handleSubmit, onSubmit]);
 
   const handleLocationSelected = useCallback(
     (location: { latitude: number; longitude: number; address?: string }) => {
@@ -1019,15 +1039,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  webInput: {
-    width: '100%',
-    padding: 10,
-    paddingRight: 40,
-    fontSize: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    outline: 'none',
-  } as const,
   webInputDark: {
     backgroundColor: '#262626',
     borderColor: '#404040',
@@ -1041,22 +1052,9 @@ const styles = StyleSheet.create({
   webInputError: {
     borderColor: '#ef4444',
   },
-  webInputDisabled: {
-    opacity: 0.6,
-    cursor: 'not-allowed',
-  },
   rightElement: {
     position: 'absolute',
     right: 8,
-  },
-  webSelect: {
-    width: '100%',
-    padding: 10,
-    fontSize: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    outline: 'none',
-    cursor: 'pointer',
   },
   webSelectDark: {
     backgroundColor: '#262626',
@@ -1311,3 +1309,27 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
 });
+
+// Web-specific styles that use CSS-only properties
+const webStyles: { [key: string]: React.CSSProperties } = {
+  webInput: {
+    width: '100%',
+    padding: 10,
+    paddingRight: 40,
+    fontSize: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  webInputDisabled: {
+    opacity: 0.6,
+    cursor: 'not-allowed',
+  },
+  webSelect: {
+    width: '100%',
+    padding: 10,
+    fontSize: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    cursor: 'pointer',
+  },
+};
