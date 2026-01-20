@@ -112,9 +112,17 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
     webStyles.webInput as any,
     isDark ? styles.webInputDark : styles.webInputLight,
     error ? styles.webInputError : {},
-    disabled ? webStyles.webInputDisabled as any : {},
+    disabled ? (webStyles.webInputDisabled as any) : {},
     multiline ? { minHeight: rows * 24 + 16 } : {},
   ]);
+
+  // Add accessible focus styles for keyboard navigation
+  const accessibleInputStyles = {
+    ...inputStyles,
+    outline: 'none',
+  } as React.CSSProperties & {
+    '&:focus-visible'?: React.CSSProperties;
+  };
 
   return (
     <View style={styles.webInputContainer}>
@@ -125,7 +133,8 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
       <View style={styles.inputWrapper}>
         {multiline ? (
           <textarea
-            style={inputStyles as React.CSSProperties}
+            className="web-input-accessible"
+            style={accessibleInputStyles as React.CSSProperties}
             placeholder={placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -138,7 +147,8 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
         ) : (
           <input
             type="text"
-            style={inputStyles as React.CSSProperties}
+            className="web-input-accessible"
+            style={accessibleInputStyles as React.CSSProperties}
             placeholder={placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -171,17 +181,21 @@ const WebSelect: React.FC<WebSelectProps> = ({ label, placeholder, value, onChan
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  const selectStyles = StyleSheet.flatten([webStyles.webSelect as any, isDark ? styles.webSelectDark : styles.webSelectLight, error ? styles.webInputError : {}]);
+
+  // Add accessible focus styles for keyboard navigation
+  const accessibleSelectStyles = {
+    ...selectStyles,
+    outline: 'none',
+  } as React.CSSProperties;
+
   return (
     <View style={styles.webInputContainer}>
       <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight])}>
         {label}
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
-      <select
-        style={StyleSheet.flatten([webStyles.webSelect as any, isDark ? styles.webSelectDark : styles.webSelectLight, error ? styles.webInputError : {}]) as React.CSSProperties}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
+      <select className="web-input-accessible" style={accessibleSelectStyles} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option.id} value={option.name}>
@@ -279,55 +293,58 @@ export default function NewCallWeb() {
     });
   }, [trackEvent, callPriorities.length, callTypes.length]);
 
-  const onSubmit = useCallback(async (data: FormValues) => {
-    try {
-      setIsSubmitting(true);
+  const onSubmit = useCallback(
+    async (data: FormValues) => {
+      try {
+        setIsSubmitting(true);
 
-      if (selectedLocation?.latitude && selectedLocation?.longitude) {
-        data.latitude = selectedLocation.latitude;
-        data.longitude = selectedLocation.longitude;
+        if (selectedLocation?.latitude && selectedLocation?.longitude) {
+          data.latitude = selectedLocation.latitude;
+          data.longitude = selectedLocation.longitude;
+        }
+
+        const priority = callPriorities.find((p) => p.Name === data.priority);
+        const type = callTypes.find((t) => t.Name === data.type);
+
+        if (!priority) {
+          toast.error(t('calls.invalid_priority'));
+          return;
+        }
+
+        if (!type) {
+          toast.error(t('calls.invalid_type'));
+          return;
+        }
+
+        await createCall({
+          name: data.name,
+          nature: data.nature,
+          priority: priority.Id,
+          type: type.Id,
+          note: data.note,
+          address: data.address,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          what3words: data.what3words,
+          plusCode: data.plusCode,
+          dispatchUsers: data.dispatchSelection?.users,
+          dispatchGroups: data.dispatchSelection?.groups,
+          dispatchRoles: data.dispatchSelection?.roles,
+          dispatchUnits: data.dispatchSelection?.units,
+          dispatchEveryone: data.dispatchSelection?.everyone,
+        });
+
+        toast.success(t('calls.create_success'));
+        router.push('/calls' as Href);
+      } catch (err) {
+        console.error('Error creating call:', err);
+        toast.error(t('calls.create_error'));
+      } finally {
+        setIsSubmitting(false);
       }
-
-      const priority = callPriorities.find((p) => p.Name === data.priority);
-      const type = callTypes.find((t) => t.Name === data.type);
-
-      if (!priority) {
-        toast.error(t('calls.invalid_priority'));
-        return;
-      }
-
-      if (!type) {
-        toast.error(t('calls.invalid_type'));
-        return;
-      }
-
-      await createCall({
-        name: data.name,
-        nature: data.nature,
-        priority: priority.Id,
-        type: type.Id,
-        note: data.note,
-        address: data.address,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        what3words: data.what3words,
-        plusCode: data.plusCode,
-        dispatchUsers: data.dispatchSelection?.users,
-        dispatchGroups: data.dispatchSelection?.groups,
-        dispatchRoles: data.dispatchSelection?.roles,
-        dispatchUnits: data.dispatchSelection?.units,
-        dispatchEveryone: data.dispatchSelection?.everyone,
-      });
-
-      toast.success(t('calls.create_success'));
-      router.push('/calls' as Href);
-    } catch (err) {
-      console.error('Error creating call:', err);
-      toast.error(t('calls.create_error'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [selectedLocation, callPriorities, callTypes, toast, t, router]);
+    },
+    [selectedLocation, callPriorities, callTypes, toast, t, router]
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1300,7 +1317,6 @@ const webStyles: { [key: string]: React.CSSProperties } = {
     fontSize: 14,
     borderRadius: 8,
     borderWidth: 1,
-    outline: 'none',
   },
   webInputDisabled: {
     opacity: 0.6,
@@ -1312,7 +1328,6 @@ const webStyles: { [key: string]: React.CSSProperties } = {
     fontSize: 14,
     borderRadius: 8,
     borderWidth: 1,
-    outline: 'none',
     cursor: 'pointer',
   },
 };

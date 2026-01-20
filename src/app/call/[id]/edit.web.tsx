@@ -86,7 +86,7 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
     webStyles.webInput as any,
     isDark ? styles.webInputDark : styles.webInputLight,
     error ? styles.webInputError : {},
-    disabled ? webStyles.webInputDisabled as any : {},
+    disabled ? (webStyles.webInputDisabled as any) : {},
     multiline ? { minHeight: rows * 24 + 16 } : {},
   ]);
 
