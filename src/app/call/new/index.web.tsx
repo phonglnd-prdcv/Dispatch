@@ -109,10 +109,10 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
   const isDark = colorScheme === 'dark';
 
   const inputStyles = StyleSheet.flatten([
-    styles.webInput,
+    webStyles.webInput as any,
     isDark ? styles.webInputDark : styles.webInputLight,
     error ? styles.webInputError : {},
-    disabled ? styles.webInputDisabled : {},
+    disabled ? webStyles.webInputDisabled as any : {},
     multiline ? { minHeight: rows * 24 + 16 } : {},
   ]);
 
@@ -178,7 +178,7 @@ const WebSelect: React.FC<WebSelectProps> = ({ label, placeholder, value, onChan
         {required ? <Text style={styles.required}> *</Text> : null}
       </Text>
       <select
-        style={StyleSheet.flatten([styles.webSelect, isDark ? styles.webSelectDark : styles.webSelectLight, error ? styles.webInputError : {}]) as React.CSSProperties}
+        style={StyleSheet.flatten([webStyles.webSelect as any, isDark ? styles.webSelectDark : styles.webSelectLight, error ? styles.webInputError : {}]) as React.CSSProperties}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -279,33 +279,7 @@ export default function NewCallWeb() {
     });
   }, [trackEvent, callPriorities.length, callTypes.length]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + Enter to submit
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        handleSubmit(onSubmit)();
-      }
-      // Escape to cancel
-      if (e.key === 'Escape') {
-        if (showLocationPicker) {
-          setShowLocationPicker(false);
-        } else if (showAddressSelection) {
-          setShowAddressSelection(false);
-        } else if (showDispatchModal) {
-          setShowDispatchModal(false);
-        } else {
-          router.back();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showLocationPicker, showAddressSelection, showDispatchModal, handleSubmit, onSubmit, router]);
-
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = useCallback(async (data: FormValues) => {
     try {
       setIsSubmitting(true);
 
@@ -353,7 +327,34 @@ export default function NewCallWeb() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [selectedLocation, callPriorities, callTypes, toast, t, router]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + Enter to submit
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit(onSubmit)();
+      }
+      // Escape to cancel
+      if (e.key === 'Escape') {
+        if (showLocationPicker) {
+          setShowLocationPicker(false);
+        } else if (showAddressSelection) {
+          setShowAddressSelection(false);
+        } else if (showDispatchModal) {
+          setShowDispatchModal(false);
+        } else {
+          router.back();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLocationPicker, showAddressSelection, showDispatchModal, handleSubmit, onSubmit]);
 
   const handleLocationSelected = useCallback(
     (location: { latitude: number; longitude: number; address?: string }) => {
@@ -1019,15 +1020,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  webInput: {
-    width: '100%',
-    padding: 10,
-    paddingRight: 40,
-    fontSize: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    outline: 'none',
-  } as const,
   webInputDark: {
     backgroundColor: '#262626',
     borderColor: '#404040',
@@ -1041,22 +1033,9 @@ const styles = StyleSheet.create({
   webInputError: {
     borderColor: '#ef4444',
   },
-  webInputDisabled: {
-    opacity: 0.6,
-    cursor: 'not-allowed',
-  },
   rightElement: {
     position: 'absolute',
     right: 8,
-  },
-  webSelect: {
-    width: '100%',
-    padding: 10,
-    fontSize: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    outline: 'none',
-    cursor: 'pointer',
   },
   webSelectDark: {
     backgroundColor: '#262626',
@@ -1311,3 +1290,29 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
 });
+
+// Web-specific styles that use CSS-only properties
+const webStyles: { [key: string]: React.CSSProperties } = {
+  webInput: {
+    width: '100%',
+    padding: 10,
+    paddingRight: 40,
+    fontSize: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    outline: 'none',
+  },
+  webInputDisabled: {
+    opacity: 0.6,
+    cursor: 'not-allowed',
+  },
+  webSelect: {
+    width: '100%',
+    padding: 10,
+    fontSize: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    outline: 'none',
+    cursor: 'pointer',
+  },
+};
