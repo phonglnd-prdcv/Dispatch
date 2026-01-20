@@ -307,11 +307,13 @@ export default function NewCallWeb() {
         const type = callTypes.find((t) => t.Name === data.type);
 
         if (!priority) {
+          setIsSubmitting(false);
           toast.error(t('calls.invalid_priority'));
           return;
         }
 
         if (!type) {
+          setIsSubmitting(false);
           toast.error(t('calls.invalid_type'));
           return;
         }
