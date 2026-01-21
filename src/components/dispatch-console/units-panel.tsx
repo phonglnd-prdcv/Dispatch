@@ -1,4 +1,5 @@
 import { Building2, Circle, Filter, MapPin, Phone, Plus, Search, Truck, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -193,7 +194,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
       {!isCollapsed ? (
         <View style={styles.contentWrapper}>
           {/* Search Input */}
-          <View style={styles.searchContainer}>
+          <HStack className="items-center border-b border-gray-200 px-2 py-1.5 dark:border-gray-700" space="sm">
             <Icon as={Search} size="xs" className="text-gray-400" />
             <TextInput
               style={styles.searchInput}
@@ -210,7 +211,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
                 <Icon as={X} size="xs" className="text-gray-400" />
               </Pressable>
             ) : null}
-          </View>
+          </HStack>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {displayedUnits.length === 0 ? (
               <View style={styles.emptyState}>
@@ -239,15 +240,6 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
 const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    gap: 8,
   },
   searchInput: {
     flex: 1,

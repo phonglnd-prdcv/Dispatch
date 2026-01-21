@@ -1,4 +1,5 @@
 import { Building2, Circle, Filter, Phone, Plus, Search, User, Users, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -209,7 +210,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
       {!isCollapsed ? (
         <View className="flex-1">
           {/* Search Input */}
-          <View style={styles.searchContainer}>
+          <HStack className="items-center border-b border-gray-200 px-2 py-1.5 dark:border-gray-700" space="sm">
             <Icon as={Search} size="xs" className="text-gray-400" />
             <TextInput
               style={styles.searchInput}
@@ -226,7 +227,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
                 <Icon as={X} size="xs" className="text-gray-400" />
               </Pressable>
             ) : null}
-          </View>
+          </HStack>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {displayedPersonnel.length === 0 ? (
               <View style={styles.emptyState}>
@@ -256,15 +257,6 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
 };
 
 const styles = StyleSheet.create({
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    gap: 8,
-  },
   searchInput: {
     flex: 1,
     paddingVertical: 4,

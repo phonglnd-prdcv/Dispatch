@@ -62,12 +62,12 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
         {/* Compact Controls */}
         <HStack className="items-center" space="sm">
           {/* Audio Streams Button */}
-          <Pressable onPress={handleOpenAudioStreams} style={styles.compactControlButton}>
+          <Pressable onPress={handleOpenAudioStreams} style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }])}>
             <Icon as={Headphones} size="sm" color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
           </Pressable>
 
           {/* Mute Button */}
-          <Pressable onPress={() => setIsMuted(!isMuted)} style={StyleSheet.flatten([styles.compactControlButton, isMuted && styles.mutedButton])}>
+          <Pressable onPress={() => setIsMuted(!isMuted)} style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }, isMuted && styles.mutedButton])}>
             <Icon as={isMuted ? MicOff : Mic} size="sm" color={isMuted ? '#ef4444' : colorScheme === 'dark' ? '#fff' : '#374151'} />
           </Pressable>
 
@@ -86,7 +86,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
   },

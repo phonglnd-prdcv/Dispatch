@@ -1,4 +1,5 @@
 import { AlertTriangle, FileText, Filter, Plus, Search, Send, X } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -150,7 +151,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
       {!isCollapsed ? (
         <VStack className="flex-1">
           {/* Search Input */}
-          <View style={styles.searchContainer}>
+          <HStack className="items-center border-b border-gray-200 px-2 py-1.5 dark:border-gray-700" space="sm">
             <Icon as={Search} size="xs" className="text-gray-400" />
             <TextInput
               style={styles.searchInput}
@@ -167,7 +168,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
                 <Icon as={X} size="xs" className="text-gray-400" />
               </Pressable>
             ) : null}
-          </View>
+          </HStack>
           {/* Add note input for call notes */}
           {isCallFilterActive && onAddCallNote ? (
             <HStack className="border-b border-gray-200 p-2 dark:border-gray-700" space="sm">
@@ -216,15 +217,6 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
 };
 
 const styles = StyleSheet.create({
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    gap: 8,
-  },
   searchInput: {
     flex: 1,
     paddingVertical: 4,

@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { type Href, router } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -30,6 +31,7 @@ import { useUnitsStore } from '@/stores/units/store';
 export default function DispatchConsoleWeb() {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { colorScheme } = useColorScheme();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const isTablet = Math.min(width, height) >= 600;
@@ -659,8 +661,10 @@ export default function DispatchConsoleWeb() {
     );
   };
 
+  const containerStyle = colorScheme === 'dark' ? [styles.container, styles.containerDark] : [styles.container, styles.containerLight];
+
   return (
-    <View style={styles.container} testID="dispatch-console-container">
+    <View style={StyleSheet.flatten(containerStyle)} testID="dispatch-console-container">
       <FocusAwareStatusBar />
 
       {/* Stats Header */}
@@ -691,7 +695,12 @@ export default function DispatchConsoleWeb() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  containerLight: {
     backgroundColor: '#f3f4f6',
+  },
+  containerDark: {
+    backgroundColor: '#030712',
   },
   column: {
     minWidth: 0,

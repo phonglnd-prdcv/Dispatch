@@ -55,6 +55,8 @@ interface StatsHeaderProps {
 
 export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCalls, scheduledCalls, unitsAvailable, unitsOnScene, personnelOnDuty, currentTime, weatherLatitude, weatherLongitude }) => {
   const { t } = useTranslation();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   return (
     <Box className="border-b border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900">
@@ -83,7 +85,7 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCa
             <Clock size={14} className="text-gray-600 dark:text-gray-300" />
             <Text className="text-sm font-bold text-gray-800 dark:text-gray-100">{currentTime}</Text>
           </HStack>
-          <View style={styles.divider} />
+          <View style={StyleSheet.flatten([styles.divider, { backgroundColor: isDark ? '#4b5563' : '#d1d5db' }])} />
           <WeatherWidget latitude={weatherLatitude} longitude={weatherLongitude} compact />
         </HStack>
       </HStack>

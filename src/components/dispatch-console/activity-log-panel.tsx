@@ -1,4 +1,5 @@
 import { AlertTriangle, ArrowRight, Clock, Filter, Info, Mic, Phone, Plus, Radio, Settings, Truck, User, Zap } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -476,10 +477,10 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
 
         {/* Context hint */}
         {!hasSelectedCall && !hasSelectedUnit && !hasSelectedPersonnel ? (
-          <View style={styles.contextHint}>
+          <Box className="mt-2 flex-row items-center rounded-lg bg-amber-50 p-3 dark:bg-amber-900/20">
             <Icon as={Info} size="sm" className="text-amber-500" />
             <Text className="ml-2 flex-1 text-xs text-gray-500 dark:text-gray-400">{t('dispatch.select_items_for_actions')}</Text>
-          </View>
+          </Box>
         ) : null}
       </View>
     );
@@ -620,13 +621,5 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  contextHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    borderRadius: 8,
-    marginTop: 8,
   },
 });

@@ -26,7 +26,7 @@ export const useSelectedTheme = () => {
     [setColorScheme, _setTheme]
   );
 
-  const selectedTheme = (theme ?? 'system') as ColorSchemeType;
+  const selectedTheme = (theme ?? 'dark') as ColorSchemeType;
   return { selectedTheme, setSelectedTheme } as const;
 };
 // to be used in the root file to load the selected theme from MMKV
@@ -34,7 +34,7 @@ export const loadSelectedTheme = () => {
   try {
     // On web, skip theme loading as it causes issues with NativeWind
     if (Platform.OS === 'web') {
-      console.log('Skipping theme loading on web platform - using system default');
+      console.log('Skipping theme loading on web platform - defaulting to dark mode');
       return;
     }
 
@@ -43,7 +43,8 @@ export const loadSelectedTheme = () => {
       console.log('Loading selected theme:', theme);
       colorScheme.set(theme as ColorSchemeType);
     } else {
-      console.log('No custom theme found, using system default');
+      console.log('No custom theme found, defaulting to dark mode');
+      colorScheme.set('dark');
     }
   } catch (error) {
     console.error('Failed to load selected theme:', error);

@@ -23,7 +23,7 @@ type OnboardingItemProps = {
 
 const onboardingData: OnboardingItemProps[] = [
   {
-    title: 'Command Your Operations',
+    title: 'Resgrid Dispatch',
     description: 'Create, dispatch, and manage emergency calls with a powerful mobile command center at your fingertips',
     icon: <MapPin size={80} color="#FF7B1A" />,
   },

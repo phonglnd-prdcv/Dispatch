@@ -574,8 +574,10 @@ export default function DispatchConsole() {
     );
   };
 
+  const containerStyle = colorScheme === 'dark' ? [styles.container, styles.containerDark] : [styles.container, styles.containerLight];
+
   return (
-    <View style={styles.container} testID="dispatch-console-container">
+    <View style={StyleSheet.flatten(containerStyle)} testID="dispatch-console-container">
       <FocusAwareStatusBar />
 
       {/* Stats Header */}
@@ -606,7 +608,12 @@ export default function DispatchConsole() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  containerLight: {
     backgroundColor: '#f3f4f6',
+  },
+  containerDark: {
+    backgroundColor: '#030712',
   },
   column: {
     minWidth: 0,
