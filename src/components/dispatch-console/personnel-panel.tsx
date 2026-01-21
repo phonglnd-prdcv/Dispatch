@@ -174,7 +174,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
   const onDutyCount = displayedPersonnel.filter((p) => p.Staffing && p.Staffing.toLowerCase() !== 'off duty').length;
 
   return (
-    <Box className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
       <PanelHeader
         title={isCallFilterActive ? t('dispatch.personnel_on_call') : t('dispatch.personnel')}
         icon={Users}

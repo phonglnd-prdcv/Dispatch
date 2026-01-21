@@ -46,14 +46,14 @@ interface StatsHeaderProps {
   pendingCalls: number;
   scheduledCalls: number;
   unitsAvailable: number;
-  unitsOnScene: number;
+  personnelAvailable: number;
   personnelOnDuty: number;
   currentTime: string;
   weatherLatitude?: number | null;
   weatherLongitude?: number | null;
 }
 
-export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCalls, scheduledCalls, unitsAvailable, unitsOnScene, personnelOnDuty, currentTime, weatherLatitude, weatherLongitude }) => {
+export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCalls, scheduledCalls, unitsAvailable, personnelAvailable, personnelOnDuty, currentTime, weatherLatitude, weatherLongitude }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -73,8 +73,8 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCa
         {/* Units Available */}
         <StatItem icon={Truck} label={t('dispatch.units_available')} value={unitsAvailable} color="#22c55e" darkColor="#4ade80" bgClassName="bg-success-50 dark:bg-success-950" />
 
-        {/* Units On Scene */}
-        <StatItem icon={Radio} label={t('dispatch.units_on_scene')} value={unitsOnScene} color="#3b82f6" darkColor="#60a5fa" bgClassName="bg-primary-50 dark:bg-primary-950" />
+        {/* Personnel Available */}
+        <StatItem icon={Radio} label={t('dispatch.personnel_available')} value={personnelAvailable} color="#3b82f6" darkColor="#60a5fa" bgClassName="bg-primary-50 dark:bg-primary-950" />
 
         {/* Personnel On Duty */}
         <StatItem icon={Users} label={t('dispatch.personnel_on_duty')} value={personnelOnDuty} color="#8b5cf6" darkColor="#a78bfa" bgClassName="bg-tertiary-50 dark:bg-tertiary-950" />

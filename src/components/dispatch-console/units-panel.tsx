@@ -162,7 +162,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
   const availableUnits = displayedUnits.filter((u) => !u.CurrentStatusId || u.CurrentStatusId === 'available').length;
 
   return (
-    <Box className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
       <PanelHeader
         title={isCallFilterActive ? t('dispatch.units_on_call') : t('dispatch.units')}
         icon={Truck}

@@ -118,7 +118,7 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({ notes, isLoading, onRefr
   const notesCount = displayNotes ? filteredCallNotes?.length || 0 : filteredNotes.length;
 
   return (
-    <Box className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
       <PanelHeader
         title={isCallFilterActive ? t('dispatch.call_notes') : t('dispatch.notes')}
         icon={FileText}

@@ -94,7 +94,7 @@ export const MapWidget: React.FC<MapWidgetProps> = ({ pins, onExpandMap, onRefre
 
   return (
     <>
-      <Box className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+      <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
         <PanelHeader
           title={t('dispatch.map')}
           icon={MapIcon}
