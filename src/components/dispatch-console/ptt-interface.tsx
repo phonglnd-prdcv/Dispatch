@@ -1,6 +1,6 @@
-import { Headphones, Mic, MicOff, Radio, Volume2, VolumeX } from 'lucide-react-native';
+import { Headphones, Mic, MicOff, PhoneOff, Radio, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -9,28 +9,179 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { usePTT } from '@/hooks/use-ptt';
 import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 
+import { PTTChannelSelector } from './ptt-channel-selector';
+
 interface PTTInterfaceProps {
+  /** Optional callback when PTT press starts (for activity logging) */
   onPTTPress?: () => void;
+  /** Optional callback when PTT press ends (for activity logging) */
   onPTTRelease?: () => void;
+  /** Optional callback to open audio streams panel */
   onOpenAudioStreams?: () => void;
+  /** External transmitting state (for activity logging only, actual state managed by hook) */
   isTransmitting?: boolean;
+  /** Display name for current channel (fallback only, actual channel from hook) */
   currentChannel?: string;
 }
 
-export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRelease, onOpenAudioStreams, isTransmitting = false, currentChannel = 'Main Channel' }) => {
+export const PTTInterface: React.FC<PTTInterfaceProps> = ({
+  onPTTPress,
+  onPTTRelease,
+  onOpenAudioStreams,
+  isTransmitting: externalTransmitting = false,
+  currentChannel: externalChannel = 'Main Channel',
+}) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const [isMuted, setIsMuted] = useState(false);
   const { isPlaying, currentStream, setIsBottomSheetVisible } = useAudioStreamStore();
 
-  const handleOpenAudioStreams = () => {
+  // PTT hook for LiveKit integration
+  const {
+    isConnected,
+    isConnecting,
+    isTransmitting: pttTransmitting,
+    isMuted,
+    currentChannel: pttChannel,
+    availableChannels,
+    isVoiceEnabled,
+    error,
+    connect,
+    disconnect,
+    startTransmitting,
+    stopTransmitting,
+    toggleMute,
+    selectChannel,
+    refreshVoiceSettings,
+  } = usePTT({
+    onTransmittingChange: (transmitting) => {
+      if (transmitting) {
+        onPTTPress?.();
+      } else {
+        onPTTRelease?.();
+      }
+    },
+  });
+
+  // Local state for channel selector
+  const [isChannelSelectorOpen, setIsChannelSelectorOpen] = useState(false);
+
+  // Use actual PTT state or fallback to external props
+  const isTransmitting = isConnected ? pttTransmitting : externalTransmitting;
+  const displayChannel = pttChannel?.Name || externalChannel;
+
+  // Fetch voice settings on mount
+  useEffect(() => {
+    refreshVoiceSettings();
+  }, [refreshVoiceSettings]);
+
+  const handleOpenAudioStreams = useCallback(() => {
     if (onOpenAudioStreams) {
       onOpenAudioStreams();
     } else {
       setIsBottomSheetVisible(true);
     }
+  }, [onOpenAudioStreams, setIsBottomSheetVisible]);
+
+  const handlePTTPress = useCallback(async () => {
+    if (!isConnected) {
+      // If not connected, try to connect first
+      if (availableChannels.length > 0 && !pttChannel) {
+        // Auto-select default channel or first available
+        const defaultChannel = availableChannels.find((c) => c.IsDefault) || availableChannels[0];
+        selectChannel(defaultChannel);
+        await connect(defaultChannel);
+      } else if (pttChannel) {
+        await connect();
+      }
+      return;
+    }
+
+    await startTransmitting();
+  }, [isConnected, availableChannels, pttChannel, selectChannel, connect, startTransmitting]);
+
+  const handlePTTRelease = useCallback(async () => {
+    if (isConnected && pttTransmitting) {
+      await stopTransmitting();
+    }
+  }, [isConnected, pttTransmitting, stopTransmitting]);
+
+  const handleMuteToggle = useCallback(async () => {
+    await toggleMute();
+  }, [toggleMute]);
+
+  const handleChannelPress = useCallback(() => {
+    if (isVoiceEnabled && availableChannels.length > 0) {
+      setIsChannelSelectorOpen(true);
+    }
+  }, [isVoiceEnabled, availableChannels]);
+
+  const handleChannelSelect = useCallback(
+    async (channelId: string) => {
+      const channel = availableChannels.find((c) => c.Id === channelId);
+      if (channel) {
+        // Disconnect from current channel if connected
+        if (isConnected) {
+          await disconnect();
+        }
+        selectChannel(channel);
+        setIsChannelSelectorOpen(false);
+      }
+    },
+    [availableChannels, isConnected, disconnect, selectChannel]
+  );
+
+  const handleDisconnect = useCallback(async () => {
+    await disconnect();
+  }, [disconnect]);
+
+  // Get connection status indicator
+  const getConnectionIndicator = () => {
+    if (isConnecting) {
+      return (
+        <View style={styles.connectingIndicator}>
+          <Text className="text-xs font-bold text-white">...</Text>
+        </View>
+      );
+    }
+    if (isConnected) {
+      if (isTransmitting) {
+        return (
+          <View style={styles.transmittingIndicator}>
+            <Text className="text-xs font-bold text-white">TX</Text>
+          </View>
+        );
+      }
+      return (
+        <View style={styles.connectedIndicator}>
+          <Text className="text-xs font-bold text-white">RX</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.disconnectedIndicator}>
+        <Text className="text-xs font-bold text-white">OFF</Text>
+      </View>
+    );
+  };
+
+  // Determine PTT button state
+  const getPTTButtonStyle = () => {
+    if (!isVoiceEnabled) {
+      return [styles.pttButtonCompact, styles.pttButtonDisabled];
+    }
+    if (isConnecting) {
+      return [styles.pttButtonCompact, styles.pttButtonConnecting];
+    }
+    if (isTransmitting) {
+      return [styles.pttButtonCompact, styles.pttButtonActive];
+    }
+    if (isConnected) {
+      return [styles.pttButtonCompact, styles.pttButtonConnected];
+    }
+    return [styles.pttButtonCompact];
   };
 
   return (
@@ -38,19 +189,29 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
       <HStack className="items-center justify-between p-2" space="sm">
         {/* Channel & Stream Info */}
         <HStack className="flex-1 items-center" space="sm">
-          {/* TX/RX Indicator */}
-          <View style={isTransmitting ? styles.transmittingIndicator : styles.readyIndicator}>
-            <Text className="text-xs font-bold text-white">{isTransmitting ? 'TX' : 'RX'}</Text>
-          </View>
+          {/* Connection Status Indicator */}
+          {getConnectionIndicator()}
 
           {/* Channel Info */}
           <VStack className="flex-1">
-            <Text className="text-xs text-gray-500 dark:text-gray-400" numberOfLines={1}>
-              {currentChannel}
-            </Text>
+            <Pressable onPress={handleChannelPress} disabled={!isVoiceEnabled}>
+              <HStack className="items-center" space="xs">
+                <Icon
+                  as={isConnected ? Wifi : WifiOff}
+                  size="2xs"
+                  color={isConnected ? '#22c55e' : colorScheme === 'dark' ? '#6b7280' : '#9ca3af'}
+                />
+                <Text
+                  className={`text-xs ${isConnected ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}
+                  numberOfLines={1}
+                >
+                  {isVoiceEnabled ? displayChannel : t('dispatch.voice_disabled')}
+                </Text>
+              </HStack>
+            </Pressable>
             <Pressable onPress={handleOpenAudioStreams}>
               <HStack className="items-center" space="xs">
-                <Icon as={isPlaying ? Volume2 : VolumeX} size="2xs" className={isPlaying ? 'text-blue-500' : 'text-gray-400'} />
+                <Icon as={isPlaying ? Volume2 : VolumeX} size="2xs" color={isPlaying ? '#3b82f6' : colorScheme === 'dark' ? '#6b7280' : '#9ca3af'} />
                 <Text className="text-xs text-gray-600 dark:text-gray-300" numberOfLines={1}>
                   {currentStream ? currentStream.Name : t('dispatch.no_stream')}
                 </Text>
@@ -62,21 +223,68 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
         {/* Compact Controls */}
         <HStack className="items-center" space="sm">
           {/* Audio Streams Button */}
-          <Pressable onPress={handleOpenAudioStreams} style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }])}>
+          <Pressable
+            onPress={handleOpenAudioStreams}
+            style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }])}
+          >
             <Icon as={Headphones} size="sm" color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
           </Pressable>
 
+          {/* Disconnect Button (only shown when connected) */}
+          {isConnected ? (
+            <Pressable
+              onPress={handleDisconnect}
+              style={StyleSheet.flatten([styles.compactControlButton, styles.disconnectButton])}
+            >
+              <Icon as={PhoneOff} size="sm" color="#fff" />
+            </Pressable>
+          ) : null}
+
           {/* Mute Button */}
-          <Pressable onPress={() => setIsMuted(!isMuted)} style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }, isMuted && styles.mutedButton])}>
-            <Icon as={isMuted ? MicOff : Mic} size="sm" color={isMuted ? '#ef4444' : colorScheme === 'dark' ? '#fff' : '#374151'} />
+          <Pressable
+            onPress={handleMuteToggle}
+            style={StyleSheet.flatten([
+              styles.compactControlButton,
+              { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' },
+              isMuted && styles.mutedButton,
+            ])}
+            disabled={!isConnected}
+          >
+            <Icon
+              as={isMuted ? MicOff : Mic}
+              size="sm"
+              color={isMuted ? '#ef4444' : !isConnected ? '#9ca3af' : colorScheme === 'dark' ? '#fff' : '#374151'}
+            />
           </Pressable>
 
           {/* PTT Button */}
-          <Pressable onPressIn={onPTTPress} onPressOut={onPTTRelease} style={StyleSheet.flatten([styles.pttButtonCompact, isTransmitting && styles.pttButtonActive])} disabled={isMuted}>
+          <Pressable
+            onPressIn={handlePTTPress}
+            onPressOut={handlePTTRelease}
+            style={StyleSheet.flatten(getPTTButtonStyle())}
+            disabled={!isVoiceEnabled || isMuted}
+          >
             <Icon as={Radio} size="sm" color="#fff" />
           </Pressable>
         </HStack>
       </HStack>
+
+      {/* Error display */}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Text className="text-xs text-red-100">{error}</Text>
+        </View>
+      ) : null}
+
+      {/* Channel Selector Bottom Sheet */}
+      <PTTChannelSelector
+        isOpen={isChannelSelectorOpen}
+        onClose={() => setIsChannelSelectorOpen(false)}
+        channels={availableChannels}
+        selectedChannelId={pttChannel?.Id}
+        onSelectChannel={handleChannelSelect}
+        isConnected={isConnected}
+      />
     </Box>
   );
 };
@@ -91,6 +299,9 @@ const styles = StyleSheet.create({
   },
   mutedButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  disconnectButton: {
+    backgroundColor: '#ef4444',
   },
   pttButtonCompact: {
     width: 44,
@@ -123,6 +334,15 @@ const styles = StyleSheet.create({
       },
     }),
   } as any,
+  pttButtonConnected: {
+    backgroundColor: '#3b82f6',
+  },
+  pttButtonConnecting: {
+    backgroundColor: '#f59e0b',
+  },
+  pttButtonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
   transmittingIndicator: {
     backgroundColor: '#ef4444',
     paddingHorizontal: 6,
@@ -131,12 +351,33 @@ const styles = StyleSheet.create({
     minWidth: 28,
     alignItems: 'center',
   },
-  readyIndicator: {
+  connectedIndicator: {
     backgroundColor: '#22c55e',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     minWidth: 28,
     alignItems: 'center',
+  },
+  connectingIndicator: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  disconnectedIndicator: {
+    backgroundColor: '#6b7280',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  errorBanner: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
 });

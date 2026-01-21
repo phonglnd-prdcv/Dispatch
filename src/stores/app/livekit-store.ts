@@ -86,7 +86,7 @@ interface LiveKitState {
 
   // Room operations
   connectToRoom: (roomInfo: DepartmentVoiceChannelResultData, token: string) => Promise<void>;
-  disconnectFromRoom: () => void;
+  disconnectFromRoom: () => Promise<void>;
   fetchVoiceSettings: () => Promise<void>;
   fetchCanConnectToVoice: () => Promise<void>;
   requestPermissions: () => Promise<void>;
@@ -206,35 +206,38 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       await audioService.playConnectToAudioRoomSound();
 
-      try {
-        const startForegroundService = async () => {
-          notifee.registerForegroundService(async () => {
-            // Minimal function with no interval or tasks to reduce strain on the main thread
-            return new Promise(() => {
-              logger.debug({
-                message: 'Foreground service registered',
+      // Start foreground service only on Android
+      if (Platform.OS === 'android') {
+        try {
+          const startForegroundService = async () => {
+            notifee.registerForegroundService(async () => {
+              // Minimal function with no interval or tasks to reduce strain on the main thread
+              return new Promise(() => {
+                logger.debug({
+                  message: 'Foreground service registered',
+                });
               });
             });
-          });
 
-          // Step 3: Display the notification as a foreground service
-          await notifee.displayNotification({
-            title: 'Active PTT Call',
-            body: 'There is an active PTT call in progress.',
-            android: {
-              channelId: 'notif',
-              asForegroundService: true,
-              smallIcon: 'ic_launcher', // Ensure this icon exists in res/drawable
-            },
-          });
-        };
+            // Step 3: Display the notification as a foreground service
+            await notifee.displayNotification({
+              title: 'Active PTT Call',
+              body: 'There is an active PTT call in progress.',
+              android: {
+                channelId: 'notif',
+                asForegroundService: true,
+                smallIcon: 'ic_launcher', // Ensure this icon exists in res/drawable
+              },
+            });
+          };
 
-        await startForegroundService();
-      } catch (error) {
-        logger.error({
-          message: 'Failed to register foreground service',
-          context: { error },
-        });
+          await startForegroundService();
+        } catch (error) {
+          logger.error({
+            message: 'Failed to register foreground service',
+            context: { error },
+          });
+        }
       }
       set({
         currentRoom: room,
@@ -257,13 +260,16 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       await currentRoom.disconnect();
       await audioService.playDisconnectedFromAudioRoomSound();
 
-      try {
-        await notifee.stopForegroundService();
-      } catch (error) {
-        logger.error({
-          message: 'Failed to stop foreground service',
-          context: { error },
-        });
+      // Stop foreground service only on Android
+      if (Platform.OS === 'android') {
+        try {
+          await notifee.stopForegroundService();
+        } catch (error) {
+          logger.error({
+            message: 'Failed to stop foreground service',
+            context: { error },
+          });
+        }
       }
       set({
         currentRoom: null,

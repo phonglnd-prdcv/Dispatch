@@ -9,6 +9,7 @@ export { NotesPanel } from './notes-panel';
 export { PanelHeader } from './panel-header';
 export { PersonnelActionsPanel } from './personnel-actions-panel';
 export { PersonnelPanel } from './personnel-panel';
+export { PTTChannelSelector } from './ptt-channel-selector';
 export { PTTInterface } from './ptt-interface';
 export { StatsHeader } from './stats-header';
 export { UnitActionsPanel } from './unit-actions-panel';
