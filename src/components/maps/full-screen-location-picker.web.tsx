@@ -215,20 +215,19 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{t('common.loading')}</Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* Map */}
+      {/* Map - Always rendered to keep Mapbox instance mounted */}
       <div ref={mapContainer} style={{ height: '100%', width: '100%' }} />
+
+      {/* Loading overlay */}
+      {isLoading ? (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>{t('common.loading')}</Text>
+          </View>
+        </View>
+      ) : null}
 
       {/* Close button */}
       <Pressable style={styles.closeButton} onPress={onClose}>
@@ -265,6 +264,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     position: 'relative',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
   },
   loadingContainer: {
     flex: 1,
