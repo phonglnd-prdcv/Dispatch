@@ -9,36 +9,14 @@ import { logger } from '@/lib/logging';
 import { type NoteCategoryResultData } from '@/models/v4/notes/noteCategoryResultData';
 import { SaveNoteInput } from '@/models/v4/notes/saveNoteInput';
 
-import {
-  Actionsheet,
-  ActionsheetBackdrop,
-  ActionsheetContent,
-  ActionsheetDragIndicator,
-  ActionsheetDragIndicatorWrapper,
-} from '../ui/actionsheet';
+import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '../ui/actionsheet';
 import { Button, ButtonSpinner, ButtonText } from '../ui/button';
-import {
-  FormControl,
-  FormControlError,
-  FormControlErrorText,
-  FormControlLabel,
-  FormControlLabelText,
-} from '../ui/form-control';
+import { FormControl, FormControlError, FormControlErrorText, FormControlLabel, FormControlLabelText } from '../ui/form-control';
 import { HStack } from '../ui/hstack';
 import { Input, InputField } from '../ui/input';
-import {
-  Select,
-  SelectBackdrop,
-  SelectContent,
-  SelectDragIndicator,
-  SelectDragIndicatorWrapper,
-  SelectInput,
-  SelectItem,
-  SelectPortal,
-  SelectTrigger,
-} from '../ui/select';
-import { Textarea, TextareaInput } from '../ui/textarea';
+import { Select, SelectBackdrop, SelectContent, SelectDragIndicator, SelectDragIndicatorWrapper, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '../ui/select';
 import { Text } from '../ui/text';
+import { Textarea, TextareaInput } from '../ui/textarea';
 import { VStack } from '../ui/vstack';
 
 interface AddNoteForm {
@@ -142,35 +120,20 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
   return (
     <Actionsheet isOpen={isOpen} onClose={handleClose} snapPoints={[85]}>
       <ActionsheetBackdrop />
-      <ActionsheetContent
-        className={`rounded-t-3xl px-4 pb-6 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-white'}`}
-      >
+      <ActionsheetContent className={`rounded-t-3xl px-4 pb-6 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-white'}`}>
         <ActionsheetDragIndicatorWrapper>
           <ActionsheetDragIndicator />
         </ActionsheetDragIndicatorWrapper>
 
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-        >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}>
           <VStack space="lg" className="mt-4 w-full">
             {/* Header */}
-            <Text
-              className={`text-xl font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}
-            >
-              {t('dispatch.add_note_title')}
-            </Text>
+            <Text className={`text-xl font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{t('dispatch.add_note_title')}</Text>
 
             {/* Title Field */}
             <FormControl isRequired isInvalid={!!errors.title}>
               <FormControlLabel>
-                <FormControlLabelText
-                  className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}
-                >
-                  {t('dispatch.note_title_label')}
-                </FormControlLabelText>
+                <FormControlLabelText className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{t('dispatch.note_title_label')}</FormControlLabelText>
               </FormControlLabel>
               <Controller
                 control={control}
@@ -183,18 +146,8 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
                   },
                 }}
                 render={({ field: { onChange, value } }) => (
-                  <Input
-                    className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}
-                  >
-                    <InputField
-                      value={value}
-                      onChangeText={onChange}
-                      placeholder={t('dispatch.note_title_placeholder')}
-                      autoCapitalize="sentences"
-                      autoCorrect={true}
-                      returnKeyType="next"
-                      editable={!isLoading}
-                    />
+                  <Input className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}>
+                    <InputField value={value} onChangeText={onChange} placeholder={t('dispatch.note_title_placeholder')} autoCapitalize="sentences" autoCorrect={true} returnKeyType="next" editable={!isLoading} />
                   </Input>
                 )}
               />
@@ -208,29 +161,15 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
             {/* Category Field */}
             <FormControl>
               <FormControlLabel>
-                <FormControlLabelText
-                  className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}
-                >
-                  {t('dispatch.note_category_label')}
-                </FormControlLabelText>
+                <FormControlLabelText className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{t('dispatch.note_category_label')}</FormControlLabelText>
               </FormControlLabel>
               <Controller
                 control={control}
                 name="category"
                 render={({ field: { onChange, value } }) => (
-                  <Select
-                    selectedValue={value}
-                    onValueChange={onChange}
-                    isDisabled={isLoading || isCategoriesLoading}
-                  >
-                    <SelectTrigger
-                      variant="outline"
-                      className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}
-                    >
-                      <SelectInput
-                        placeholder={t('dispatch.note_category_placeholder')}
-                        className={colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}
-                      />
+                  <Select selectedValue={value} onValueChange={onChange} isDisabled={isLoading || isCategoriesLoading}>
+                    <SelectTrigger variant="outline" className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}>
+                      <SelectInput placeholder={t('dispatch.note_category_placeholder')} className={colorScheme === 'dark' ? 'text-white' : 'text-gray-900'} />
                     </SelectTrigger>
                     <SelectPortal>
                       <SelectBackdrop />
@@ -240,11 +179,7 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
                         </SelectDragIndicatorWrapper>
                         <SelectItem label={t('dispatch.note_no_category')} value="" />
                         {categories.map((category) => (
-                          <SelectItem
-                            key={category.NoteCategoryId}
-                            label={category.Category}
-                            value={category.Category}
-                          />
+                          <SelectItem key={category.NoteCategoryId} label={category.Category} value={category.Category} />
                         ))}
                       </SelectContent>
                     </SelectPortal>
@@ -256,11 +191,7 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
             {/* Body Field */}
             <FormControl isRequired isInvalid={!!errors.body}>
               <FormControlLabel>
-                <FormControlLabelText
-                  className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}
-                >
-                  {t('dispatch.note_body_label')}
-                </FormControlLabelText>
+                <FormControlLabelText className={`text-sm font-medium ${colorScheme === 'dark' ? 'text-neutral-200' : 'text-neutral-700'}`}>{t('dispatch.note_body_label')}</FormControlLabelText>
               </FormControlLabel>
               <Controller
                 control={control}
@@ -273,10 +204,7 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
                   },
                 }}
                 render={({ field: { onChange, value } }) => (
-                  <Textarea
-                    className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`}
-                    size="md"
-                  >
+                  <Textarea className={`rounded-lg border ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-800' : 'border-neutral-200 bg-neutral-50'}`} size="md">
                     <TextareaInput
                       value={value}
                       onChangeText={onChange}
@@ -298,19 +226,10 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
 
             {/* Action Buttons */}
             <HStack space="md" className="mt-4">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onPress={handleClose}
-                disabled={isLoading}
-              >
+              <Button variant="outline" className="flex-1" onPress={handleClose} disabled={isLoading}>
                 <ButtonText>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button
-                className="flex-1 bg-primary-600"
-                onPress={handleSubmit(onFormSubmit)}
-                disabled={isLoading}
-              >
+              <Button className="flex-1 bg-primary-600" onPress={handleSubmit(onFormSubmit)} disabled={isLoading}>
                 {isLoading ? <ButtonSpinner /> : <ButtonText>{t('common.save')}</ButtonText>}
               </Button>
             </HStack>

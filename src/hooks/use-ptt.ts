@@ -86,20 +86,38 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
   const wasConnectedBeforeBackground = useRef(false);
   const selectedChannelRef = useRef<DepartmentVoiceChannelResultData | null>(null);
 
+  // Refs for callbacks to prevent effect re-runs when callback references change
+  const onConnectionChangeRef = useRef(onConnectionChange);
+  const onErrorRef = useRef(onError);
+  const onTransmittingChangeRef = useRef(onTransmittingChange);
+
   // Keep ref in sync with state
   useEffect(() => {
     selectedChannelRef.current = selectedChannel;
   }, [selectedChannel]);
 
-  // Handle connection state changes
+  // Keep callback refs in sync with latest options
   useEffect(() => {
-    onConnectionChange?.(storeConnected);
-  }, [storeConnected, onConnectionChange]);
+    onConnectionChangeRef.current = onConnectionChange;
+  }, [onConnectionChange]);
 
-  // Handle transmitting state changes
   useEffect(() => {
-    onTransmittingChange?.(isTransmitting);
-  }, [isTransmitting, onTransmittingChange]);
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  useEffect(() => {
+    onTransmittingChangeRef.current = onTransmittingChange;
+  }, [onTransmittingChange]);
+
+  // Handle connection state changes - use ref to avoid infinite loops
+  useEffect(() => {
+    onConnectionChangeRef.current?.(storeConnected);
+  }, [storeConnected]);
+
+  // Handle transmitting state changes - use ref to avoid infinite loops
+  useEffect(() => {
+    onTransmittingChangeRef.current?.(isTransmitting);
+  }, [isTransmitting]);
 
   // Handle app state changes for iOS background audio
   useEffect(() => {
@@ -292,13 +310,13 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch voice settings';
       setError(errorMsg);
-      onError?.(errorMsg);
+      onErrorRef.current?.(errorMsg);
       logger.error({
         message: 'PTT: Failed to refresh voice settings',
         context: { error: err },
       });
     }
-  }, [fetchVoiceSettings, onError]);
+  }, [fetchVoiceSettings]);
 
   /**
    * Connect to a voice channel
@@ -310,14 +328,14 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
       if (!targetChannel) {
         const errorMsg = 'No channel selected';
         setError(errorMsg);
-        onError?.(errorMsg);
+        onErrorRef.current?.(errorMsg);
         return;
       }
 
       if (!isVoiceEnabled) {
         const errorMsg = 'Voice is not enabled for this department';
         setError(errorMsg);
-        onError?.(errorMsg);
+        onErrorRef.current?.(errorMsg);
         return;
       }
 
@@ -357,14 +375,14 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to connect';
         setError(errorMsg);
-        onError?.(errorMsg);
+        onErrorRef.current?.(errorMsg);
         logger.error({
           message: 'PTT: Connection failed',
           context: { error: err, channelId: targetChannel.Id },
         });
       }
     },
-    [selectedChannel, isVoiceEnabled, storeConnecting, storeConnected, configureAudioMode, connectToRoom, startCallKeepSession, startAndroidForegroundService, onError]
+    [selectedChannel, isVoiceEnabled, storeConnecting, storeConnected, configureAudioMode, connectToRoom, startCallKeepSession, startAndroidForegroundService]
   );
 
   /**
@@ -404,13 +422,13 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to disconnect';
       setError(errorMsg);
-      onError?.(errorMsg);
+      onErrorRef.current?.(errorMsg);
       logger.error({
         message: 'PTT: Disconnect failed',
         context: { error: err },
       });
     }
-  }, [currentRoom, disconnectFromRoom, endCallKeepSession, stopAndroidForegroundService, onError]);
+  }, [currentRoom, disconnectFromRoom, endCallKeepSession, stopAndroidForegroundService]);
 
   /**
    * Start transmitting (unmute and enable PTT)
@@ -431,13 +449,13 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to start transmitting';
       setError(errorMsg);
-      onError?.(errorMsg);
+      onErrorRef.current?.(errorMsg);
       logger.error({
         message: 'PTT: Failed to start transmitting',
         context: { error: err },
       });
     }
-  }, [storeConnected, currentRoom, onError]);
+  }, [storeConnected, currentRoom]);
 
   /**
    * Stop transmitting (mute and disable PTT)
@@ -457,13 +475,13 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to stop transmitting';
       setError(errorMsg);
-      onError?.(errorMsg);
+      onErrorRef.current?.(errorMsg);
       logger.error({
         message: 'PTT: Failed to stop transmitting',
         context: { error: err },
       });
     }
-  }, [currentRoom, onError]);
+  }, [currentRoom]);
 
   /**
    * Toggle mute state

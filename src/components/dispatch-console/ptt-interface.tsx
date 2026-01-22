@@ -1,6 +1,6 @@
 import { Headphones, Mic, MicOff, PhoneOff, Radio, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
@@ -27,16 +27,32 @@ interface PTTInterfaceProps {
   currentChannel?: string;
 }
 
-export const PTTInterface: React.FC<PTTInterfaceProps> = ({
-  onPTTPress,
-  onPTTRelease,
-  onOpenAudioStreams,
-  isTransmitting: externalTransmitting = false,
-  currentChannel: externalChannel = 'Main Channel',
-}) => {
+export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRelease, onOpenAudioStreams, isTransmitting: externalTransmitting = false, currentChannel: externalChannel = 'Main Channel' }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const { isPlaying, currentStream, setIsBottomSheetVisible } = useAudioStreamStore();
+
+  // Use refs to store callback functions to avoid re-creating onTransmittingChange
+  const onPTTPressRef = useRef(onPTTPress);
+  const onPTTReleaseRef = useRef(onPTTRelease);
+
+  // Keep refs in sync with props
+  useEffect(() => {
+    onPTTPressRef.current = onPTTPress;
+  }, [onPTTPress]);
+
+  useEffect(() => {
+    onPTTReleaseRef.current = onPTTRelease;
+  }, [onPTTRelease]);
+
+  // Memoize the callback to prevent infinite loops - use refs to access latest props
+  const handleTransmittingChange = useCallback((transmitting: boolean) => {
+    if (transmitting) {
+      onPTTPressRef.current?.();
+    } else {
+      onPTTReleaseRef.current?.();
+    }
+  }, []);
 
   // PTT hook for LiveKit integration
   const {
@@ -56,13 +72,7 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({
     selectChannel,
     refreshVoiceSettings,
   } = usePTT({
-    onTransmittingChange: (transmitting) => {
-      if (transmitting) {
-        onPTTPress?.();
-      } else {
-        onPTTRelease?.();
-      }
-    },
+    onTransmittingChange: handleTransmittingChange,
   });
 
   // Local state for channel selector
@@ -196,15 +206,8 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({
           <VStack className="flex-1">
             <Pressable onPress={handleChannelPress} disabled={!isVoiceEnabled}>
               <HStack className="items-center" space="xs">
-                <Icon
-                  as={isConnected ? Wifi : WifiOff}
-                  size="2xs"
-                  color={isConnected ? '#22c55e' : colorScheme === 'dark' ? '#6b7280' : '#9ca3af'}
-                />
-                <Text
-                  className={`text-xs ${isConnected ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}
-                  numberOfLines={1}
-                >
+                <Icon as={isConnected ? Wifi : WifiOff} size="2xs" color={isConnected ? '#22c55e' : colorScheme === 'dark' ? '#6b7280' : '#9ca3af'} />
+                <Text className={`text-xs ${isConnected ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`} numberOfLines={1}>
                   {isVoiceEnabled ? displayChannel : t('dispatch.voice_disabled')}
                 </Text>
               </HStack>
@@ -223,19 +226,13 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({
         {/* Compact Controls */}
         <HStack className="items-center" space="sm">
           {/* Audio Streams Button */}
-          <Pressable
-            onPress={handleOpenAudioStreams}
-            style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }])}
-          >
+          <Pressable onPress={handleOpenAudioStreams} style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }])}>
             <Icon as={Headphones} size="sm" color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
           </Pressable>
 
           {/* Disconnect Button (only shown when connected) */}
           {isConnected ? (
-            <Pressable
-              onPress={handleDisconnect}
-              style={StyleSheet.flatten([styles.compactControlButton, styles.disconnectButton])}
-            >
+            <Pressable onPress={handleDisconnect} style={StyleSheet.flatten([styles.compactControlButton, styles.disconnectButton])}>
               <Icon as={PhoneOff} size="sm" color="#fff" />
             </Pressable>
           ) : null}
@@ -243,27 +240,14 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({
           {/* Mute Button */}
           <Pressable
             onPress={handleMuteToggle}
-            style={StyleSheet.flatten([
-              styles.compactControlButton,
-              { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' },
-              isMuted && styles.mutedButton,
-            ])}
+            style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }, isMuted && styles.mutedButton])}
             disabled={!isConnected}
           >
-            <Icon
-              as={isMuted ? MicOff : Mic}
-              size="sm"
-              color={isMuted ? '#ef4444' : !isConnected ? '#9ca3af' : colorScheme === 'dark' ? '#fff' : '#374151'}
-            />
+            <Icon as={isMuted ? MicOff : Mic} size="sm" color={isMuted ? '#ef4444' : !isConnected ? '#9ca3af' : colorScheme === 'dark' ? '#fff' : '#374151'} />
           </Pressable>
 
           {/* PTT Button */}
-          <Pressable
-            onPressIn={handlePTTPress}
-            onPressOut={handlePTTRelease}
-            style={StyleSheet.flatten(getPTTButtonStyle())}
-            disabled={!isVoiceEnabled || isMuted}
-          >
+          <Pressable onPressIn={handlePTTPress} onPressOut={handlePTTRelease} style={StyleSheet.flatten(getPTTButtonStyle())} disabled={!isVoiceEnabled || isMuted}>
             <Icon as={Radio} size="sm" color="#fff" />
           </Pressable>
         </HStack>

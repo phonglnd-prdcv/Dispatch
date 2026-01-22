@@ -1,8 +1,8 @@
 // Dispatch Console Components
 export { ActiveCallFilterBanner } from './active-call-filter-banner';
 export { ActiveCallsPanel } from './active-calls-panel';
-export { AddNoteBottomSheet } from './add-note-bottom-sheet';
 export { type ActivityLogEntry, ActivityLogPanel } from './activity-log-panel';
+export { AddNoteBottomSheet } from './add-note-bottom-sheet';
 export { AnimatedRefreshIcon } from './animated-refresh-icon';
 export { MapWidget } from './map-widget';
 export { NotesPanel } from './notes-panel';

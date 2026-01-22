@@ -7,7 +7,14 @@ import { Redirect, Slot } from 'expo-router';
 import { Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text as RNText,
+  TouchableOpacity,
+  View as RNView,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationButton } from '@/components/notifications/NotificationButton';
@@ -348,75 +355,47 @@ export default function TabLayout() {
     },
   });
 
-  const content = (
-    <View style={styles.container}>
+  const content = Platform.OS === 'web' ? (
+    <RNView style={styles.container}>
       {/* Top Navigation Bar */}
-      <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
+      <RNView style={[layoutStyles.navBar, { paddingTop: insets.top }]}>
         <CreateDrawerMenuButton setIsOpen={setIsOpen} />
-        <View className="flex-1 items-center">
-          <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
-        </View>
-      </View>
+        <RNView style={layoutStyles.navBarTitle}>
+          <RNText style={layoutStyles.navBarTitleText}>{t('app.title', 'Resgrid Responder')}</RNText>
+        </RNView>
+      </RNView>
 
-      <View className="flex-1" ref={parentRef}>
-        {/* Drawer menu - always rendered as modal, closed by default */}
-        {Platform.OS === 'web' ? (
-          // Web-specific drawer implementation with fixed positioning
-          isOpen && (
-            <View
-              // @ts-ignore - web specific styles
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 9999,
-                display: 'flex',
-                flexDirection: 'row',
-              }}
-            >
-              {/* Backdrop */}
-              <Pressable
-                onPress={() => setIsOpen(false)}
-                // @ts-ignore - web specific styles
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                }}
-              />
-              {/* Drawer Content */}
-              <View
-                className="bg-white dark:bg-gray-900"
-                // @ts-ignore - web specific styles
-                style={{
-                  position: 'relative',
-                  width: '80%',
-                  maxWidth: 320,
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  zIndex: 1,
-                  boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
-                }}
-              >
-                <View style={{ flex: 1, overflow: 'scroll' as 'visible' | 'hidden' | 'scroll' }}>
-                  <SideMenu onNavigate={handleNavigate} />
-                </View>
-                <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-                  <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
-                    <ButtonText>Close</ButtonText>
-                  </Button>
-                </View>
-              </View>
-            </View>
-          )
-        ) : (
-          // Native drawer implementation
+      <RNView style={{ flex: 1, flexDirection: 'row' }} ref={parentRef}>
+        {/* Sidebar - simple show/hide */}
+        {isOpen ? (
+          <RNView style={{ width: 280, backgroundColor: '#ffffff', borderRightWidth: 1, borderRightColor: '#e5e7eb' }}>
+            <SideMenu onNavigate={handleNavigate} />
+            <RNView style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', padding: 16 }}>
+              <TouchableOpacity onPress={() => setIsOpen(false)} style={layoutStyles.closeButton}>
+                <RNText style={layoutStyles.closeButtonText}>Close</RNText>
+              </TouchableOpacity>
+            </RNView>
+          </RNView>
+        ) : null}
+
+        {/* Main content area */}
+        <RNView style={{ flex: 1 }}>
+          <Slot />
+        </RNView>
+      </RNView>
+    </RNView>
+  ) : (
+      <View style={styles.container}>
+        {/* Top Navigation Bar */}
+        <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
+          <CreateDrawerMenuButton setIsOpen={setIsOpen} />
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
+          </View>
+        </View>
+
+        <View className="flex-1" ref={parentRef}>
+          {/* Native drawer implementation */}
           <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
             <DrawerBackdrop onPress={() => setIsOpen(false)} />
             <DrawerContent className="w-4/5 max-w-xs bg-white p-0 dark:bg-gray-900">
@@ -430,15 +409,14 @@ export default function TabLayout() {
               </DrawerFooter>
             </DrawerContent>
           </Drawer>
-        )}
 
-        {/* Main content area */}
-        <View className="w-full flex-1">
-          <Slot />
+          {/* Main content area */}
+          <View className="w-full flex-1">
+            <Slot />
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
 
   // On web, skip Novu integration as it may cause rendering issues
   if (Platform.OS === 'web') {
@@ -468,6 +446,19 @@ interface CreateDrawerMenuButtonProps {
 }
 
 const CreateDrawerMenuButton = ({ setIsOpen }: CreateDrawerMenuButtonProps) => {
+  // Use React Native primitives on web to avoid infinite render loops from gluestack-ui/lucide
+  if (Platform.OS === 'web') {
+    return (
+      <TouchableOpacity
+        onPress={() => setIsOpen(true)}
+        testID="drawer-menu-button"
+        style={layoutStyles.menuButton}
+      >
+        <RNText style={layoutStyles.menuIcon}>☰</RNText>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <Pressable
       className="p-2"
@@ -504,5 +495,50 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+});
+
+const layoutStyles = StyleSheet.create({
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0066cc',
+    paddingHorizontal: 16,
+  },
+  navBarTitle: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  navBarTitleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+  },
+  menuButton: {
+    padding: 8,
+  },
+  menuIcon: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  closeButton: {
+    backgroundColor: '#0066cc',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });

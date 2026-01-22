@@ -717,11 +717,7 @@ export default function DispatchConsoleWeb() {
       <AudioStreamBottomSheet />
 
       {/* Add Note Bottom Sheet */}
-      <AddNoteBottomSheet
-        isOpen={isAddNoteSheetOpen}
-        onClose={() => setIsAddNoteSheetOpen(false)}
-        onNoteAdded={handleNoteAdded}
-      />
+      <AddNoteBottomSheet isOpen={isAddNoteSheetOpen} onClose={() => setIsAddNoteSheetOpen(false)} onNoteAdded={handleNoteAdded} />
     </View>
   );
 }
