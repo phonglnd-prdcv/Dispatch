@@ -9,7 +9,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Env } from '@/lib/env';
 
 // Mapbox GL CSS needs to be injected for web
-const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css';
+const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css';
 
 interface FullScreenLocationPickerProps {
   initialLocation?: {
@@ -48,6 +48,14 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     setIsReverseGeocoding(true);
     try {
       const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${Env.MAPBOX_PUBKEY}`);
+      
+      if (!response.ok) {
+        const body = await response.text();
+        console.error('Reverse geocoding failed:', { status: response.status, body });
+        setAddress(undefined);
+        return;
+      }
+
       const data = await response.json();
 
       if (data.features && data.features.length > 0) {

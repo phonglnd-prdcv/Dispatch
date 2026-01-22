@@ -13,7 +13,7 @@ import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultDat
 import { useLocationStore } from '@/stores/app/location-store';
 
 // Mapbox GL CSS needs to be injected for web
-const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css';
+const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css';
 
 type MapIconKey = keyof typeof MAP_ICONS;
 

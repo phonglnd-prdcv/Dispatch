@@ -505,6 +505,20 @@
     "search": "Buscar notas...",
     "title": "Notas"
   },
+  "menu": {
+    "calls": "Llamadas",
+    "calls_list": "Lista de Llamadas",
+    "contacts": "Contactos",
+    "home": "Inicio",
+    "map": "Mapa",
+    "menu": "Menú",
+    "messages": "Mensajes",
+    "new_call": "Nueva Llamada",
+    "personnel": "Personal",
+    "protocols": "Protocolos",
+    "settings": "Configuración",
+    "units": "Unidades"
+  },
   "onboarding": {
     "screen1": {
       "title": "Resgrid Dispatch",

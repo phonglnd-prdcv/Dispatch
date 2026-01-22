@@ -8,7 +8,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Env } from '@/lib/env';
 
 // Mapbox GL CSS needs to be injected for web
-const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css';
+const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css';
 
 interface LocationPickerProps {
   initialLocation?: {
@@ -156,23 +156,20 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
 
   return (
     <View style={StyleSheet.flatten([styles.container, { height }])}>
-      {currentLocation ? (
-        <>
-          <div ref={mapContainer} style={{ height: '100%', width: '100%' }} />
-          <View style={styles.buttonContainer}>
-            <Button onPress={handleConfirmLocation} disabled={!currentLocation}>
-              <ButtonText>{t('common.confirm_location')}</ButtonText>
-            </Button>
-          </View>
-        </>
-      ) : (
+      <div ref={mapContainer} style={{ height: '100%', width: '100%' }} />
+      {!currentLocation ? (
         <View style={styles.noLocationContainer}>
           <Text style={styles.noLocationText}>{t('common.no_location')}</Text>
           <Pressable onPress={getUserLocation}>
             <Text style={styles.getLocationText}>{t('common.get_my_location')}</Text>
           </Pressable>
         </View>
-      )}
+      ) : null}
+      <View style={styles.buttonContainer}>
+        <Button onPress={handleConfirmLocation} disabled={!currentLocation}>
+          <ButtonText>{t('common.confirm_location')}</ButtonText>
+        </Button>
+      </View>
     </View>
   );
 };
@@ -194,10 +191,14 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   noLocationContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#e5e7eb',
+    backgroundColor: 'rgba(229, 231, 235, 0.9)',
   },
   noLocationText: {
     color: '#6b7280',

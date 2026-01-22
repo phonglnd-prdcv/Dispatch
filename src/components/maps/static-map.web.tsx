@@ -27,7 +27,7 @@ const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoo
     if (!document.getElementById('mapbox-gl-css')) {
       const link = document.createElement('link');
       link.id = 'mapbox-gl-css';
-      link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css';
+      link.href = 'https://api.mapbox.com/mapbox-gl-js/v3.15.0/mapbox-gl.css';
       link.rel = 'stylesheet';
       document.head.appendChild(link);
     }
