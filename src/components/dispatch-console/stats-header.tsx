@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, Clock, Phone, Radio, Truck, Users } from 'lucide-react-native';
+import { AlertTriangle, CalendarClock, Clock, Phone, Truck, User, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,7 +74,7 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCa
         <StatItem icon={Truck} label={t('dispatch.units_available')} value={unitsAvailable} color="#22c55e" darkColor="#4ade80" bgClassName="bg-success-50 dark:bg-success-950" />
 
         {/* Personnel Available */}
-        <StatItem icon={Radio} label={t('dispatch.personnel_available')} value={personnelAvailable} color="#3b82f6" darkColor="#60a5fa" bgClassName="bg-primary-50 dark:bg-primary-950" />
+        <StatItem icon={User} label={t('dispatch.personnel_available')} value={personnelAvailable} color="#6366f1" darkColor="#818cf8" bgClassName="bg-indigo-50 dark:bg-indigo-950" />
 
         {/* Personnel On Duty */}
         <StatItem icon={Users} label={t('dispatch.personnel_on_duty')} value={personnelOnDuty} color="#8b5cf6" darkColor="#a78bfa" bgClassName="bg-tertiary-50 dark:bg-tertiary-950" />

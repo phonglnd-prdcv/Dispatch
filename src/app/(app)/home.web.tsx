@@ -292,7 +292,10 @@ export default function DispatchConsoleWeb() {
       const status = (p.Status || '').toLowerCase();
       return status === 'available' || status === 'standing by';
     }).length;
-    const onDutyPersonnel = personnel.filter((p) => p.Staffing && p.Staffing.toLowerCase() !== 'off duty').length;
+    const onDutyPersonnel = personnel.filter((p) => {
+      const staffing = (p.Staffing || '').toLowerCase();
+      return staffing && staffing !== 'off duty' && staffing !== 'unavailable';
+    }).length;
 
     return {
       activeCalls,

@@ -189,17 +189,20 @@ export default function DispatchConsole() {
     const activeCalls = calls.filter((c) => isCallActive(c.State)).length;
     const pendingCalls = calls.filter((c) => isCallPending(c.State)).length;
     const scheduledCalls = calls.filter((c) => isCallScheduled(c.State)).length;
-    // Check CurrentStatus (human-readable name) for availability - case insensitive
+    // Only count units/personnel with explicit 'available' or 'standing by' status (case-insensitive)
+    // Missing or null statuses are NOT considered available for safety in dispatch scenarios
     const availableUnits = units.filter((u) => {
       const status = (u.CurrentStatus || '').toLowerCase();
-      return !u.CurrentStatus || status === 'available' || status === 'standing by';
+      return status === 'available' || status === 'standing by';
     }).length;
-    // Personnel with Available or Standing By status
     const availablePersonnel = personnel.filter((p) => {
       const status = (p.Status || '').toLowerCase();
       return status === 'available' || status === 'standing by';
     }).length;
-    const onDutyPersonnel = personnel.filter((p) => p.Staffing && p.Staffing.toLowerCase() !== 'off duty').length;
+    const onDutyPersonnel = personnel.filter((p) => {
+      const staffing = (p.Staffing || '').toLowerCase();
+      return staffing && staffing !== 'off duty' && staffing !== 'unavailable';
+    }).length;
 
     return {
       activeCalls,
