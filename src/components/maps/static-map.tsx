@@ -25,14 +25,14 @@ const StaticMap: React.FC<StaticMapProps> = ({ latitude, longitude, address, zoo
 
   if (!latitude || !longitude) {
     return (
-      <Box style={[styles.container, { height }]} className="items-center justify-center bg-gray-200">
+      <Box style={StyleSheet.flatten([styles.container, { height }])} className="items-center justify-center bg-gray-200">
         <Text className="text-gray-500">{t('call_detail.no_location')}</Text>
       </Box>
     );
   }
 
   return (
-    <Box style={[styles.container, { height }]}>
+    <Box style={StyleSheet.flatten([styles.container, { height }])}>
       <Mapbox.MapView style={styles.map} styleURL={mapStyle} logoEnabled={false} attributionEnabled={false} compassEnabled={true} zoomEnabled={true} rotateEnabled={true}>
         <Mapbox.Camera zoomLevel={zoom} centerCoordinate={[longitude, latitude]} animationMode="flyTo" animationDuration={1000} />
         {/* Marker for the location */}

@@ -381,7 +381,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   }, [visibleLayers, isMapReady]);
 
   return (
-    <View style={[styles.container, style]} testID={testID}>
+    <View style={StyleSheet.flatten([styles.container, style])} testID={testID}>
       <div ref={mapContainer} style={{ height: '100%', width: '100%' }} />
     </View>
   );

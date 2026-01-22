@@ -24,8 +24,8 @@ const PinMarker: React.FC<PinMarkerProps> = ({ imagePath, title, size = 32, onPr
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <Image fadeDuration={0} source={icon.uri} style={[styles.image, { width: size, height: size }]} />
-      <Text style={[styles.title, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]} numberOfLines={2}>
+      <Image fadeDuration={0} source={icon.uri} style={StyleSheet.flatten([styles.image, { width: size, height: size }])} />
+      <Text style={StyleSheet.flatten([styles.title, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }])} numberOfLines={2}>
         {title}
       </Text>
     </TouchableOpacity>

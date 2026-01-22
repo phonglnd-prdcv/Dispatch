@@ -248,6 +248,8 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
   const refreshVoiceSettings = useCallback(async () => {
     try {
       await fetchVoiceSettings();
+      setError(null);
+      onErrorRef.current?.(null);
       logger.info({ message: 'PTT: Voice settings refreshed' });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch voice settings';

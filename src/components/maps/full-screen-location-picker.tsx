@@ -173,12 +173,12 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
       )}
 
       {/* Close button */}
-      <TouchableOpacity style={[styles.closeButton, { top: insets.top + 10 }]} onPress={onClose}>
+      <TouchableOpacity style={StyleSheet.flatten([styles.closeButton, { top: insets.top + 10 }])} onPress={onClose}>
         <XIcon size={24} color="#000000" />
       </TouchableOpacity>
 
       {/* Location info and confirm button */}
-      <Box style={[styles.bottomPanel, { paddingBottom: insets.bottom + 16 }]} className="bg-white p-4 shadow-lg">
+      <Box style={StyleSheet.flatten([styles.bottomPanel, { paddingBottom: insets.bottom + 16 }])} className="bg-white p-4 shadow-lg">
         {isReverseGeocoding ? (
           <Text className="mb-2 text-gray-500">{t('common.loading_address')}</Text>
         ) : address ? (
