@@ -162,6 +162,7 @@
     "no_timeline": "No timeline events available",
     "not_available": "N/A",
     "not_found": "Call not found",
+    "missing_call_id": "Call ID is missing",
     "note": "Note",
     "notes": "Notes",
     "priority": "Priority",
@@ -287,12 +288,21 @@
     "what3words_invalid_format": "Invalid what3words format. Please use format: word.word.word",
     "what3words_not_found": "what3words address not found, please try a different address",
     "what3words_placeholder": "Enter what3words address (e.g., filled.count.soap)",
-    "what3words_required": "Please enter a what3words address to search"
+    "what3words_required": "Please enter a what3words address to search",
+    "expand_map": "Expand Map",
+    "contact_information": "Contact Information",
+    "new_call_web_hint": "Fill in the call details below. Press Ctrl+Enter to create.",
+    "edit_call_web_hint": "Update the call details below. Press Ctrl+S to save.",
+    "keyboard_shortcuts": "Tip: Press Ctrl+Enter to create, Escape to cancel",
+    "edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel"
   },
   "common": {
     "add": "Add",
     "back": "Back",
     "cancel": "Cancel",
+    "creating": "Creating...",
+    "saving": "Saving...",
+    "unsaved_changes": "Unsaved changes",
     "close": "Close",
     "confirm": "Confirm",
     "confirm_location": "Confirm Location",
@@ -487,6 +497,20 @@
     "why_down_message": "We are performing scheduled maintenance to improve your experience. We apologize for any inconvenience.",
     "why_down_title": "Why is the Site Down?"
   },
+  "menu": {
+    "calls": "Calls",
+    "calls_list": "Calls List",
+    "contacts": "Contacts",
+    "home": "Home",
+    "map": "Map",
+    "menu": "Menu",
+    "messages": "Messages",
+    "new_call": "New Call",
+    "personnel": "Personnel",
+    "protocols": "Protocols",
+    "settings": "Settings",
+    "units": "Units"
+  },
   "map": {
     "call_set_as_current": "Call set as current call",
     "failed_to_open_maps": "Failed to open maps application",
@@ -521,7 +545,21 @@
     "title": "Notes"
   },
   "onboarding": {
-    "message": "Welcome to obytes app site"
+    "screen1": {
+      "title": "Resgrid Dispatch",
+      "description": "Create, dispatch, and manage emergency calls with a powerful mobile command center at your fingertips"
+    },
+    "screen2": {
+      "title": "Real-Time Situational Awareness",
+      "description": "Track all units, personnel, and resources on an interactive map with live status updates and AVL"
+    },
+    "screen3": {
+      "title": "Seamless Coordination",
+      "description": "Communicate instantly with field units, update call statuses, and coordinate response efforts from anywhere"
+    },
+    "skip": "Skip",
+    "next": "Next",
+    "getStarted": "Let's Get Started"
   },
   "protocols": {
     "details": {
@@ -668,7 +706,7 @@
     "pending_calls": "Pending",
     "scheduled_calls": "Scheduled",
     "units_available": "Available",
-    "units_on_scene": "On Scene",
+    "personnel_available": "Available",
     "personnel_on_duty": "On Duty",
     "units": "Units",
     "personnel": "Personnel",
@@ -689,6 +727,12 @@
     "ptt_end": "PTT End",
     "transmitting_on": "Transmitting on {{channel}}",
     "transmission_ended": "Transmission ended",
+    "voice_disabled": "Voice disabled",
+    "select_channel": "Select Channel",
+    "select_channel_description": "Choose a voice channel to connect to",
+    "change_channel_warning": "Selecting a new channel will disconnect from the current one",
+    "default_channel": "Default",
+    "no_channels_available": "No voice channels available",
     "system_update": "System Update",
     "data_refreshed": "Data refreshed from server",
     "call_selected": "Call Selected",
@@ -707,6 +751,17 @@
     "no_call_notes": "No call notes",
     "add_call_note_placeholder": "Add a note...",
     "note_added": "Note Added",
+    "note_added_to_console": "A new note has been added to the console",
+    "add_note_title": "Add New Note",
+    "note_title_label": "Title",
+    "note_title_placeholder": "Enter note title...",
+    "note_category_label": "Category",
+    "note_category_placeholder": "Select a category",
+    "note_no_category": "No Category",
+    "note_body_label": "Note Content",
+    "note_body_placeholder": "Enter note content...",
+    "note_save_error": "Failed to save note: {{error}}",
+    "note_created": "Note Created",
     "units_on_call": "Units on Call",
     "no_units_on_call": "No units on call",
     "personnel_on_call": "Personnel on Call",

@@ -218,7 +218,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   const initialCenter: [number, number] = location.longitude && location.latitude ? [location.longitude, location.latitude] : [-98.5795, 39.8283];
 
   return (
-    <View style={[styles.container, style]} testID={testID}>
+    <View style={StyleSheet.flatten([styles.container, style])} testID={testID}>
       <Mapbox.MapView
         ref={mapRef}
         styleURL={styleURL.styleURL}

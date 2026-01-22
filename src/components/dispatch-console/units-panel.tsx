@@ -161,7 +161,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
   const availableUnits = displayedUnits.filter((u) => !u.CurrentStatusId || u.CurrentStatusId === 'available').length;
 
   return (
-    <Box className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
       <PanelHeader
         title={isCallFilterActive ? t('dispatch.units_on_call') : t('dispatch.units')}
         icon={Truck}
@@ -193,7 +193,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
       {!isCollapsed ? (
         <View style={styles.contentWrapper}>
           {/* Search Input */}
-          <View style={styles.searchContainer}>
+          <HStack className="items-center border-b border-gray-200 px-2 py-1.5 dark:border-gray-700" space="sm">
             <Icon as={Search} size="xs" className="text-gray-400" />
             <TextInput
               style={styles.searchInput}
@@ -210,7 +210,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
                 <Icon as={X} size="xs" className="text-gray-400" />
               </Pressable>
             ) : null}
-          </View>
+          </HStack>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {displayedUnits.length === 0 ? (
               <View style={styles.emptyState}>
@@ -239,15 +239,6 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
 const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    gap: 8,
   },
   searchInput: {
     flex: 1,

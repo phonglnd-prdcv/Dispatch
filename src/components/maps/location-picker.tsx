@@ -84,14 +84,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ initialLocation, onLoca
 
   if (isLoading) {
     return (
-      <Box style={[styles.container, { height }]} className="items-center justify-center bg-gray-200">
+      <Box style={StyleSheet.flatten([styles.container, { height }])} className="items-center justify-center bg-gray-200">
         <Text className="text-gray-500">{t('common.loading')}</Text>
       </Box>
     );
   }
 
   return (
-    <Box style={[styles.container, { height }]}>
+    <Box style={StyleSheet.flatten([styles.container, { height }])}>
       {currentLocation ? (
         <Mapbox.MapView ref={mapRef} style={styles.map} logoEnabled={false} attributionEnabled={false} compassEnabled={true} zoomEnabled={true} rotateEnabled={true} onPress={handleMapPress}>
           <Mapbox.Camera ref={cameraRef} zoomLevel={15} centerCoordinate={[currentLocation.longitude, currentLocation.latitude]} animationMode="flyTo" animationDuration={1000} />

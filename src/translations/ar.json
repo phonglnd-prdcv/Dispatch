@@ -162,6 +162,7 @@
     "no_timeline": "لا توجد أحداث زمنية متاحة",
     "not_available": "غير متوفر",
     "not_found": "لم يتم العثور على المكالمة",
+    "missing_call_id": "معرّف المكالمة مفقود",
     "note": "ملاحظة",
     "notes": "ملاحظات",
     "priority": "الأولوية",
@@ -287,12 +288,21 @@
     "what3words_invalid_format": "تنسيق what3words غير صحيح. استخدم التنسيق: كلمة.كلمة.كلمة",
     "what3words_not_found": "لم يتم العثور على عنوان what3words، جرب عنوان آخر",
     "what3words_placeholder": "أدخل عنوان what3words (مثال: filled.count.soap)",
-    "what3words_required": "يرجى إدخال عنوان what3words للبحث"
+    "what3words_required": "يرجى إدخال عنوان what3words للبحث",
+    "expand_map": "توسيع الخريطة",
+    "contact_information": "معلومات الاتصال",
+    "new_call_web_hint": "أكمل تفاصيل المكالمة أدناه. اضغط Ctrl+Enter للإنشاء.",
+    "edit_call_web_hint": "حدّث تفاصيل المكالمة أدناه. اضغط Ctrl+S للحفظ.",
+    "keyboard_shortcuts": "نصيحة: اضغط Ctrl+Enter للإنشاء، Escape للإلغاء",
+    "edit_keyboard_shortcuts": "نصيحة: اضغط Ctrl+S للحفظ، Escape للإلغاء"
   },
   "common": {
     "add": "إضافة",
     "back": "رجوع",
     "cancel": "إلغاء",
+    "creating": "جاري الإنشاء...",
+    "saving": "جاري الحفظ...",
+    "unsaved_changes": "تغييرات غير محفوظة",
     "close": "إغلاق",
     "confirm": "تأكيد",
     "confirm_location": "تأكيد الموقع",
@@ -487,6 +497,20 @@
     "why_down_message": "نحن نقوم بصيانة مجدولة لتحسين تجربتك. نعتذر عن أي إزعاج.",
     "why_down_title": "لماذا الموقع معطل؟"
   },
+  "menu": {
+    "calls": "المكالمات",
+    "calls_list": "قائمة المكالمات",
+    "contacts": "جهات الاتصال",
+    "home": "الرئيسية",
+    "map": "الخريطة",
+    "menu": "القائمة",
+    "messages": "الرسائل",
+    "new_call": "مكالمة جديدة",
+    "personnel": "الموظفون",
+    "protocols": "البروتوكولات",
+    "settings": "الإعدادات",
+    "units": "الوحدات"
+  },
   "map": {
     "call_set_as_current": "تم تعيين المكالمة كمكالمة حالية",
     "failed_to_open_maps": "فشل في فتح تطبيق الخرائط",
@@ -518,7 +542,21 @@
     "title": "الملاحظات"
   },
   "onboarding": {
-    "message": "مرحبًا بك في تطبيق obytes"
+    "screen1": {
+      "title": "Resgrid Dispatch",
+      "description": "إنشاء وإرسال وإدارة مكالمات الطوارئ مع مركز قيادة متنقل قوي في متناول يدك"
+    },
+    "screen2": {
+      "title": "الوعي الظرفي في الوقت الفعلي",
+      "description": "تتبع جميع الوحدات والأفراد والموارد على خريطة تفاعلية مع تحديثات الحالة المباشرة وAVL"
+    },
+    "screen3": {
+      "title": "التنسيق السلس",
+      "description": "تواصل فورًا مع الوحدات الميدانية، وقم بتحديث حالات المكالمات، وتنسيق جهود الاستجابة من أي مكان"
+    },
+    "skip": "تخطي",
+    "next": "التالي",
+    "getStarted": "لنبدأ"
   },
   "protocols": {
     "details": {
@@ -677,7 +715,7 @@
     "pending_calls": "معلقة",
     "scheduled_calls": "مجدولة",
     "units_available": "متاحة",
-    "units_on_scene": "في الموقع",
+    "personnel_available": "متاحين",
     "personnel_on_duty": "في الخدمة",
     "units": "الوحدات",
     "personnel": "الموظفين",
@@ -698,6 +736,12 @@
     "ptt_end": "انتهاء الإرسال",
     "transmitting_on": "جاري الإرسال على {{channel}}",
     "transmission_ended": "انتهى الإرسال",
+    "voice_disabled": "تم تعطيل الصوت",
+    "select_channel": "اختر القناة",
+    "select_channel_description": "اختر قناة صوتية للاتصال بها",
+    "change_channel_warning": "اختيار قناة جديدة سيؤدي إلى قطع الاتصال من القناة الحالية",
+    "default_channel": "افتراضي",
+    "no_channels_available": "لا توجد قنوات صوتية متاحة",
     "system_update": "تحديث النظام",
     "data_refreshed": "تم تحديث البيانات من الخادم",
     "call_selected": "تم تحديد المكالمة",
@@ -716,6 +760,17 @@
     "no_call_notes": "لا توجد ملاحظات للمكالمة",
     "add_call_note_placeholder": "أضف ملاحظة...",
     "note_added": "تمت إضافة الملاحظة",
+    "note_added_to_console": "تمت إضافة ملاحظة جديدة إلى وحدة التحكم",
+    "add_note_title": "إضافة ملاحظة جديدة",
+    "note_title_label": "العنوان",
+    "note_title_placeholder": "أدخل عنوان الملاحظة...",
+    "note_category_label": "الفئة",
+    "note_category_placeholder": "اختر فئة",
+    "note_no_category": "بدون فئة",
+    "note_body_label": "محتوى الملاحظة",
+    "note_body_placeholder": "أدخل محتوى الملاحظة...",
+    "note_save_error": "فشل حفظ الملاحظة: {{error}}",
+    "note_created": "تم إنشاء الملاحظة",
     "units_on_call": "الوحدات في المكالمة",
     "no_units_on_call": "لا توجد وحدات في المكالمة",
     "personnel_on_call": "الموظفين في المكالمة",

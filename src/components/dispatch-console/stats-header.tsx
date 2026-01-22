@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, Clock, Phone, Radio, Truck, Users } from 'lucide-react-native';
+import { AlertTriangle, CalendarClock, Clock, Phone, Truck, User, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -46,15 +46,17 @@ interface StatsHeaderProps {
   pendingCalls: number;
   scheduledCalls: number;
   unitsAvailable: number;
-  unitsOnScene: number;
+  personnelAvailable: number;
   personnelOnDuty: number;
   currentTime: string;
   weatherLatitude?: number | null;
   weatherLongitude?: number | null;
 }
 
-export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCalls, scheduledCalls, unitsAvailable, unitsOnScene, personnelOnDuty, currentTime, weatherLatitude, weatherLongitude }) => {
+export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCalls, scheduledCalls, unitsAvailable, personnelAvailable, personnelOnDuty, currentTime, weatherLatitude, weatherLongitude }) => {
   const { t } = useTranslation();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   return (
     <Box className="border-b border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900">
@@ -71,8 +73,8 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCa
         {/* Units Available */}
         <StatItem icon={Truck} label={t('dispatch.units_available')} value={unitsAvailable} color="#22c55e" darkColor="#4ade80" bgClassName="bg-success-50 dark:bg-success-950" />
 
-        {/* Units On Scene */}
-        <StatItem icon={Radio} label={t('dispatch.units_on_scene')} value={unitsOnScene} color="#3b82f6" darkColor="#60a5fa" bgClassName="bg-primary-50 dark:bg-primary-950" />
+        {/* Personnel Available */}
+        <StatItem icon={User} label={t('dispatch.personnel_available')} value={personnelAvailable} color="#6366f1" darkColor="#818cf8" bgClassName="bg-indigo-50 dark:bg-indigo-950" />
 
         {/* Personnel On Duty */}
         <StatItem icon={Users} label={t('dispatch.personnel_on_duty')} value={personnelOnDuty} color="#8b5cf6" darkColor="#a78bfa" bgClassName="bg-tertiary-50 dark:bg-tertiary-950" />
@@ -83,7 +85,7 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCa
             <Clock size={14} className="text-gray-600 dark:text-gray-300" />
             <Text className="text-sm font-bold text-gray-800 dark:text-gray-100">{currentTime}</Text>
           </HStack>
-          <View style={styles.divider} />
+          <View style={StyleSheet.flatten([styles.divider, { backgroundColor: isDark ? '#4b5563' : '#d1d5db' }])} />
           <WeatherWidget latitude={weatherLatitude} longitude={weatherLongitude} compact />
         </HStack>
       </HStack>
@@ -102,6 +104,5 @@ const styles = StyleSheet.create({
   divider: {
     width: 1,
     height: 24,
-    backgroundColor: '#d1d5db',
   },
 });

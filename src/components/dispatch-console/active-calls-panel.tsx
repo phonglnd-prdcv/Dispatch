@@ -148,23 +148,9 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
     fetchCallPriorities();
   }, [fetchCalls, fetchCallPriorities]);
 
-  // Log calls state for debugging
-  useEffect(() => {
-    console.log('[ActiveCallsPanel] Calls updated:', {
-      totalCalls: calls.length,
-      callStates: calls.map((c) => ({ id: c.CallId, name: c.Name, state: c.State })),
-    });
-  }, [calls]);
-
   const activeCalls = useMemo(() => {
     // Filter for active or open calls using utility function
     let filtered = calls.filter((c) => isCallActive(c.State));
-
-    console.log('[ActiveCallsPanel] Active calls filtered:', {
-      total: calls.length,
-      active: filtered.length,
-      filteredCalls: filtered.map((c) => ({ id: c.CallId, name: c.Name, state: c.State })),
-    });
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -205,7 +191,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
   }, [fetchCalls, fetchCallPriorities]);
 
   return (
-    <Box className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
       <PanelHeader
         title={t('dispatch.active_calls')}
         icon={AlertTriangle}
@@ -230,7 +216,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
       {!isCollapsed ? (
         <View style={styles.contentWrapper}>
           {/* Search Input */}
-          <View style={styles.searchContainer}>
+          <HStack className="items-center border-b border-gray-200 px-2 py-1.5 dark:border-gray-700" space="sm">
             <Icon as={Search} size="xs" className="text-gray-400" />
             <TextInput
               style={styles.searchInput}
@@ -247,7 +233,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
                 <Icon as={X} size="xs" className="text-gray-400" />
               </Pressable>
             ) : null}
-          </View>
+          </HStack>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {error ? (
               <View style={styles.emptyState}>
@@ -287,15 +273,6 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
 const styles = StyleSheet.create({
   contentWrapper: {
     flex: 1,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    gap: 8,
   },
   searchInput: {
     flex: 1,

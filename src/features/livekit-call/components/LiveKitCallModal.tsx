@@ -45,8 +45,8 @@ const LiveKitCallModal: React.FC<LiveKitCallModalProps> = ({
     }
   };
 
-  const handleLeaveRoom = () => {
-    actions.disconnectFromRoom();
+  const handleLeaveRoom = async () => {
+    await actions.disconnectFromRoom();
     onClose(); // Close modal on leaving
   };
 

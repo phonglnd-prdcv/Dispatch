@@ -2,6 +2,7 @@ import { type Href, useRouter } from 'expo-router';
 import { Bell, ChevronRight, MapPin, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions, Image } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -21,20 +22,20 @@ type OnboardingItemProps = {
   icon: React.ReactNode;
 };
 
-const onboardingData: OnboardingItemProps[] = [
+const getOnboardingData = (t: (key: string) => string): OnboardingItemProps[] => [
   {
-    title: 'Command Your Operations',
-    description: 'Create, dispatch, and manage emergency calls with a powerful mobile command center at your fingertips',
+    title: t('onboarding.screen1.title'),
+    description: t('onboarding.screen1.description'),
     icon: <MapPin size={80} color="#FF7B1A" />,
   },
   {
-    title: 'Real-Time Situational Awareness',
-    description: 'Track all units, personnel, and resources on an interactive map with live status updates and AVL',
+    title: t('onboarding.screen2.title'),
+    description: t('onboarding.screen2.description'),
     icon: <Bell size={80} color="#FF7B1A" />,
   },
   {
-    title: 'Seamless Coordination',
-    description: 'Communicate instantly with field units, update call statuses, and coordinate response efforts from anywhere',
+    title: t('onboarding.screen3.title'),
+    description: t('onboarding.screen3.description'),
     icon: <Users size={80} color="#FF7B1A" />,
   },
 ];
@@ -62,6 +63,7 @@ const Pagination: React.FC<{ currentIndex: number; length: number }> = ({ curren
 };
 
 export default function Onboarding() {
+  const { t } = useTranslation();
   const [_, setIsFirstTime] = useIsFirstTime();
   const { status, setIsOnboarding } = useAuthStore();
   const router = useRouter();
@@ -69,6 +71,7 @@ export default function Onboarding() {
   const flatListRef = useRef<FlatList<OnboardingItemProps>>(null);
   const buttonOpacity = useSharedValue(0);
   const { colorScheme } = useColorScheme();
+  const onboardingData = getOnboardingData(t);
 
   useEffect(() => {
     setIsOnboarding();
@@ -137,11 +140,11 @@ export default function Onboarding() {
                 router.replace('/login' as Href);
               }}
             >
-              <Text className="text-gray-500">Skip</Text>
+              <Text className="text-gray-500">{t('onboarding.skip')}</Text>
             </Pressable>
 
             <Button size="lg" variant="solid" action="primary" className="bg-primary-500 px-6" onPress={nextSlide}>
-              <ButtonText>Next </ButtonText>
+              <ButtonText>{t('onboarding.next')} </ButtonText>
               <ChevronRight size={20} color={colorScheme === 'dark' ? 'black' : 'white'} />
             </Button>
           </View>
@@ -157,7 +160,7 @@ export default function Onboarding() {
                 router.replace('/login' as Href);
               }}
             >
-              <ButtonText>Let's Get Started</ButtonText>
+              <ButtonText>{t('onboarding.getStarted')}</ButtonText>
             </Button>
           </Animated.View>
         )}

@@ -88,7 +88,6 @@ const client = z.object({
   LOGGING_KEY: z.string(),
   APP_KEY: z.string(),
   MAPBOX_PUBKEY: z.string(),
-  MAPBOX_DLKEY: z.string(),
   IS_MOBILE_APP: z.boolean(),
   SENTRY_DSN: z.string(),
   COUNTLY_APP_KEY: z.string(),
@@ -125,7 +124,6 @@ const _clientEnv = {
   APP_KEY: process.env.DISPATCH_APP_KEY || '',
   IS_MOBILE_APP: true, // or whatever default you want
   MAPBOX_PUBKEY: process.env.DISPATCH_MAPBOX_PUBKEY || '',
-  MAPBOX_DLKEY: process.env.DISPATCH_MAPBOX_DLKEY || '',
   SENTRY_DSN: process.env.DISPATCH_SENTRY_DSN || '',
   COUNTLY_APP_KEY: process.env.DISPATCH_COUNTLY_APP_KEY || '',
   COUNTLY_SERVER_URL: process.env.DISPATCH_COUNTLY_SERVER_URL || '',

@@ -34,17 +34,26 @@ const getExpoEnv = () => {
 /**
  * Merge environments with web runtime taking precedence
  * This allows Docker-injected values to override build-time values
+ * Priority order: window.__ENV__ > Expo Constants
  */
 const mergeEnvironments = () => {
   const expoEnv = getExpoEnv();
   const webRuntimeEnv = getWebRuntimeEnv();
 
-  // If we're on web and have runtime env, merge with runtime taking precedence
+  // If we're on web and have runtime env (Docker), use it with highest priority
   if (webRuntimeEnv) {
     return {
       ...expoEnv,
       ...webRuntimeEnv,
       // Ensure IS_MOBILE_APP is false on web
+      IS_MOBILE_APP: false,
+    };
+  }
+
+  // For web platform, ensure IS_MOBILE_APP is false
+  if (Platform.OS === 'web') {
+    return {
+      ...expoEnv,
       IS_MOBILE_APP: false,
     };
   }

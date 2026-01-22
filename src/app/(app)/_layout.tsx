@@ -7,7 +7,7 @@ import { Redirect, Slot } from 'expo-router';
 import { Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text as RNText, TouchableOpacity, View as RNView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationButton } from '@/components/notifications/NotificationButton';
@@ -41,6 +41,7 @@ export default function TabLayout() {
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
+  const [webColorScheme, setWebColorScheme] = React.useState<'light' | 'dark'>('light');
 
   // Get store states first (hooks must be at top level)
   const config = useCoreStore((state) => state.config);
@@ -58,6 +59,16 @@ export default function TabLayout() {
   }, []);
   const { isActive, appState } = useAppLifecycle();
   const insets = useSafeAreaInsets();
+
+  // Web dark mode detection (safe - only runs on web)
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setWebColorScheme(mediaQuery.matches ? 'dark' : 'light');
+    const handler = (e: MediaQueryListEvent) => setWebColorScheme(e.matches ? 'dark' : 'light');
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   // Refs to track initialization state
   const hasInitialized = useRef(false);
@@ -348,75 +359,66 @@ export default function TabLayout() {
     },
   });
 
-  const content = (
-    <View style={styles.container}>
-      {/* Top Navigation Bar */}
-      <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
-        <CreateDrawerMenuButton setIsOpen={setIsOpen} />
-        <View className="flex-1 items-center">
-          <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
-        </View>
-      </View>
+  // Web theme with dark mode support (matching panel header and button colors)
+  const webIsDark = webColorScheme === 'dark';
+  const webTheme = {
+    navBar: { backgroundColor: webIsDark ? '#1f2937' : '#f9fafb' }, // gray-800 / gray-50 (panel header colors)
+    navBarText: { color: webIsDark ? '#f9fafb' : '#030712' }, // gray-50 / gray-950
+    sidebar: {
+      backgroundColor: webIsDark ? '#030712' : '#f3f4f6', // gray-950 / gray-100
+      borderRightColor: webIsDark ? '#1f2937' : '#e5e7eb', // gray-800 / gray-200
+    },
+    sidebarFooter: {
+      borderTopColor: webIsDark ? '#1f2937' : '#e5e7eb',
+      backgroundColor: webIsDark ? '#111827' : '#ffffff', // gray-900 / white
+    },
+    closeButton: { backgroundColor: '#2563eb' }, // blue-600 (panel button color)
+    closeButtonText: { color: '#ffffff' },
+    mainContent: { backgroundColor: webIsDark ? '#030712' : '#f3f4f6' }, // gray-950 / gray-100
+  };
 
-      <View className="flex-1" ref={parentRef}>
-        {/* Drawer menu - always rendered as modal, closed by default */}
-        {Platform.OS === 'web' ? (
-          // Web-specific drawer implementation with fixed positioning
-          isOpen && (
-            <View
-              // @ts-ignore - web specific styles
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 9999,
-                display: 'flex',
-                flexDirection: 'row',
-              }}
-            >
-              {/* Backdrop */}
-              <Pressable
-                onPress={() => setIsOpen(false)}
-                // @ts-ignore - web specific styles
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                }}
-              />
-              {/* Drawer Content */}
-              <View
-                className="bg-white dark:bg-gray-900"
-                // @ts-ignore - web specific styles
-                style={{
-                  position: 'relative',
-                  width: '80%',
-                  maxWidth: 320,
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  zIndex: 1,
-                  boxShadow: '2px 0 8px rgba(0, 0, 0, 0.15)',
-                }}
-              >
-                <View style={{ flex: 1, overflow: 'scroll' as 'visible' | 'hidden' | 'scroll' }}>
-                  <SideMenu onNavigate={handleNavigate} />
-                </View>
-                <View className="border-t border-gray-200 p-4 dark:border-gray-700">
-                  <Button onPress={() => setIsOpen(false)} className="w-full bg-primary-600">
-                    <ButtonText>Close</ButtonText>
-                  </Button>
-                </View>
-              </View>
-            </View>
-          )
-        ) : (
-          // Native drawer implementation
+  const content =
+    Platform.OS === 'web' ? (
+      <RNView style={styles.container}>
+        {/* Top Navigation Bar */}
+        <RNView style={[layoutStyles.navBar, { paddingTop: insets.top }, webTheme.navBar]}>
+          <CreateDrawerMenuButton setIsOpen={setIsOpen} colorScheme={webColorScheme} />
+          <RNView style={layoutStyles.navBarTitle}>
+            <RNText style={[layoutStyles.navBarTitleText, webTheme.navBarText]}>{t('app.title', 'Resgrid Responder')}</RNText>
+          </RNView>
+        </RNView>
+
+        <RNView style={{ flex: 1, flexDirection: 'row' }} ref={parentRef}>
+          {/* Sidebar - simple show/hide */}
+          {isOpen ? (
+            <RNView style={[layoutStyles.webSidebar, webTheme.sidebar]}>
+              <SideMenu onNavigate={handleNavigate} colorScheme={webColorScheme} />
+              <RNView style={[layoutStyles.sidebarFooter, webTheme.sidebarFooter]}>
+                <TouchableOpacity onPress={() => setIsOpen(false)} style={[layoutStyles.closeButton, webTheme.closeButton]}>
+                  <RNText style={[layoutStyles.closeButtonText, webTheme.closeButtonText]}>{t('menu.close', 'Close Menu')}</RNText>
+                </TouchableOpacity>
+              </RNView>
+            </RNView>
+          ) : null}
+
+          {/* Main content area */}
+          <RNView style={[layoutStyles.mainContent, webTheme.mainContent]}>
+            <Slot />
+          </RNView>
+        </RNView>
+      </RNView>
+    ) : (
+      <View style={styles.container}>
+        {/* Top Navigation Bar */}
+        <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
+          <CreateDrawerMenuButton setIsOpen={setIsOpen} />
+          <View className="flex-1 items-center">
+            <Text className="text-lg font-semibold text-white">{t('app.title', 'Resgrid Responder')}</Text>
+          </View>
+        </View>
+
+        <View className="flex-1" ref={parentRef}>
+          {/* Native drawer implementation */}
           <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
             <DrawerBackdrop onPress={() => setIsOpen(false)} />
             <DrawerContent className="w-4/5 max-w-xs bg-white p-0 dark:bg-gray-900">
@@ -430,15 +432,14 @@ export default function TabLayout() {
               </DrawerFooter>
             </DrawerContent>
           </Drawer>
-        )}
 
-        {/* Main content area */}
-        <View className="w-full flex-1">
-          <Slot />
+          {/* Main content area */}
+          <View className="w-full flex-1">
+            <Slot />
+          </View>
         </View>
       </View>
-    </View>
-  );
+    );
 
   // On web, skip Novu integration as it may cause rendering issues
   if (Platform.OS === 'web') {
@@ -465,9 +466,20 @@ export default function TabLayout() {
 
 interface CreateDrawerMenuButtonProps {
   setIsOpen: (isOpen: boolean) => void;
+  colorScheme?: 'light' | 'dark';
 }
 
-const CreateDrawerMenuButton = ({ setIsOpen }: CreateDrawerMenuButtonProps) => {
+const CreateDrawerMenuButton = ({ setIsOpen, colorScheme }: CreateDrawerMenuButtonProps) => {
+  // Use React Native primitives on web to avoid infinite render loops from gluestack-ui/lucide
+  if (Platform.OS === 'web') {
+    const isDark = colorScheme === 'dark';
+    return (
+      <TouchableOpacity onPress={() => setIsOpen(true)} testID="drawer-menu-button" style={layoutStyles.menuButton}>
+        <RNText style={[layoutStyles.menuIcon, { color: isDark ? '#f9fafb' : '#030712' }]}>☰</RNText>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <Pressable
       className="p-2"
@@ -504,5 +516,73 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+});
+
+const layoutStyles = StyleSheet.create({
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  navBarTitle: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  navBarTitleText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+    letterSpacing: 0.5,
+  },
+  menuButton: {
+    padding: 8,
+    borderRadius: 6,
+  },
+  menuIcon: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  webSidebar: {
+    width: 280,
+    borderRightWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sidebarFooter: {
+    borderTopWidth: 1,
+    padding: 16,
+  },
+  mainContent: {
+    flex: 1,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  closeButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

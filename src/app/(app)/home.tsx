@@ -9,7 +9,7 @@ import { getCallNotes, saveCallNote } from '@/api/calls/callNotes';
 import { getCallExtraData } from '@/api/calls/calls';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { AudioStreamBottomSheet } from '@/components/audio-stream/audio-stream-bottom-sheet';
-import { ActiveCallFilterBanner, ActiveCallsPanel, ActivityLogPanel, MapWidget, NotesPanel, PersonnelPanel, PTTInterface, StatsHeader, UnitsPanel } from '@/components/dispatch-console';
+import { ActiveCallFilterBanner, ActiveCallsPanel, ActivityLogPanel, AddNoteBottomSheet, MapWidget, NotesPanel, PersonnelPanel, PTTInterface, StatsHeader, UnitsPanel } from '@/components/dispatch-console';
 import { Box } from '@/components/ui/box';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
@@ -76,6 +76,7 @@ export default function DispatchConsole() {
   // Local state
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-US', { hour12: false }));
   const [isAddingNote, setIsAddingNote] = useState(false);
+  const [isAddNoteSheetOpen, setIsAddNoteSheetOpen] = useState(false);
   const [selectedPersonnelData, setSelectedPersonnelData] = useState<PersonnelInfoResultData | null>(null);
   const [selectedUnitData, setSelectedUnitData] = useState<UnitInfoResultData | null>(null);
 
@@ -188,16 +189,27 @@ export default function DispatchConsole() {
     const activeCalls = calls.filter((c) => isCallActive(c.State)).length;
     const pendingCalls = calls.filter((c) => isCallPending(c.State)).length;
     const scheduledCalls = calls.filter((c) => isCallScheduled(c.State)).length;
-    const availableUnits = units.filter((u) => !u.CurrentStatusId || u.CurrentStatusId === 'available').length;
-    const onSceneUnits = units.filter((u) => u.CurrentStatusId === 'on_scene').length;
-    const onDutyPersonnel = personnel.filter((p) => p.Staffing && p.Staffing.toLowerCase() !== 'off duty').length;
+    // Only count units/personnel with explicit 'available' or 'standing by' status (case-insensitive)
+    // Missing or null statuses are NOT considered available for safety in dispatch scenarios
+    const availableUnits = units.filter((u) => {
+      const status = (u.CurrentStatus || '').toLowerCase();
+      return status === 'available' || status === 'standing by';
+    }).length;
+    const availablePersonnel = personnel.filter((p) => {
+      const status = (p.Status || '').toLowerCase();
+      return status === 'available' || status === 'standing by';
+    }).length;
+    const onDutyPersonnel = personnel.filter((p) => {
+      const staffing = (p.Staffing || '').toLowerCase();
+      return staffing && staffing !== 'off duty' && staffing !== 'unavailable';
+    }).length;
 
     return {
       activeCalls,
       pendingCalls,
       scheduledCalls,
       unitsAvailable: availableUnits,
-      unitsOnScene: onSceneUnits,
+      personnelAvailable: availablePersonnel,
       personnelOnDuty: onDutyPersonnel,
     };
   }, [calls, units, personnel]);
@@ -272,6 +284,21 @@ export default function DispatchConsole() {
     } finally {
       setIsAddingNote(false);
     }
+  };
+
+  // Handle opening add note sheet
+  const handleOpenAddNoteSheet = () => {
+    setIsAddNoteSheetOpen(true);
+  };
+
+  // Handle note added from bottom sheet
+  const handleNoteAdded = () => {
+    fetchNotes();
+    addActivityLogEntry({
+      type: 'system',
+      action: t('dispatch.note_created'),
+      description: t('dispatch.note_added_to_console'),
+    });
   };
 
   // Handle setting unit status for a call
@@ -432,6 +459,7 @@ export default function DispatchConsole() {
               callNotes={selectedCallNotes}
               onAddCallNote={handleAddCallNote}
               isAddingNote={isAddingNote}
+              onNewNote={handleOpenAddNoteSheet}
             />
             <PTTInterface onPTTPress={handlePTTPress} onPTTRelease={handlePTTRelease} isTransmitting={isTransmitting} currentChannel={currentChannel} />
           </VStack>
@@ -481,6 +509,7 @@ export default function DispatchConsole() {
               callNotes={selectedCallNotes}
               onAddCallNote={handleAddCallNote}
               isAddingNote={isAddingNote}
+              onNewNote={handleOpenAddNoteSheet}
             />
             <PTTInterface onPTTPress={handlePTTPress} onPTTRelease={handlePTTRelease} isTransmitting={isTransmitting} currentChannel={currentChannel} />
             <ActivityLogPanel
@@ -551,6 +580,7 @@ export default function DispatchConsole() {
             callNotes={selectedCallNotes}
             onAddCallNote={handleAddCallNote}
             isAddingNote={isAddingNote}
+            onNewNote={handleOpenAddNoteSheet}
           />
 
           <ActivityLogPanel
@@ -574,8 +604,10 @@ export default function DispatchConsole() {
     );
   };
 
+  const containerStyle = useMemo(() => (colorScheme === 'dark' ? [styles.container, styles.containerDark] : [styles.container, styles.containerLight]), [colorScheme]);
+
   return (
-    <View style={styles.container} testID="dispatch-console-container">
+    <View style={StyleSheet.flatten(containerStyle)} testID="dispatch-console-container">
       <FocusAwareStatusBar />
 
       {/* Stats Header */}
@@ -584,7 +616,7 @@ export default function DispatchConsole() {
         pendingCalls={stats.pendingCalls}
         scheduledCalls={stats.scheduledCalls}
         unitsAvailable={stats.unitsAvailable}
-        unitsOnScene={stats.unitsOnScene}
+        personnelAvailable={stats.personnelAvailable}
         personnelOnDuty={stats.personnelOnDuty}
         currentTime={currentTime}
         weatherLatitude={mapCenterLatitude}
@@ -599,6 +631,9 @@ export default function DispatchConsole() {
 
       {/* Audio Stream Bottom Sheet */}
       <AudioStreamBottomSheet />
+
+      {/* Add Note Bottom Sheet */}
+      <AddNoteBottomSheet isOpen={isAddNoteSheetOpen} onClose={() => setIsAddNoteSheetOpen(false)} onNoteAdded={handleNoteAdded} />
     </View>
   );
 }
@@ -606,7 +641,12 @@ export default function DispatchConsole() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  containerLight: {
     backgroundColor: '#f3f4f6',
+  },
+  containerDark: {
+    backgroundColor: '#030712',
   },
   column: {
     minWidth: 0,
