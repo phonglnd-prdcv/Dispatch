@@ -604,10 +604,7 @@ export default function DispatchConsole() {
     );
   };
 
-  const containerStyle = useMemo(
-    () => (colorScheme === 'dark' ? [styles.container, styles.containerDark] : [styles.container, styles.containerLight]),
-    [colorScheme]
-  );
+  const containerStyle = useMemo(() => (colorScheme === 'dark' ? [styles.container, styles.containerDark] : [styles.container, styles.containerLight]), [colorScheme]);
 
   return (
     <View style={StyleSheet.flatten(containerStyle)} testID="dispatch-console-container">

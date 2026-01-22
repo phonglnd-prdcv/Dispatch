@@ -3,6 +3,29 @@ import React from 'react';
 
 import SideMenu from '../side-menu';
 
+// Mock react-i18next
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'menu.menu': 'Menu',
+        'menu.home': 'Home',
+        'menu.calls': 'Calls',
+        'menu.calls_list': 'Calls List',
+        'menu.new_call': 'New Call',
+        'menu.map': 'Map',
+        'menu.personnel': 'Personnel',
+        'menu.units': 'Units',
+        'menu.messages': 'Messages',
+        'menu.protocols': 'Protocols',
+        'menu.contacts': 'Contacts',
+        'menu.settings': 'Settings',
+      };
+      return translations[key] || key;
+    },
+  }),
+}));
+
 // Mock expo-router
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({

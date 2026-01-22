@@ -345,7 +345,7 @@ export default function NewCallWeb() {
         setIsSubmitting(false);
       }
     },
-    [selectedLocation, callPriorities, callTypes, toast, t, router]
+    [selectedLocation, callPriorities, callTypes, toast, t]
   );
 
   // Keyboard shortcuts

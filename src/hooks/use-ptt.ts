@@ -172,49 +172,6 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
   }, []);
 
   /**
-   * Start iOS CallKeep session for background audio
-   */
-  const startCallKeepSession = useCallback(async (channelName: string) => {
-    if (Platform.OS !== 'ios' || !callKeepService) return;
-
-    try {
-      const callUUID = await callKeepService.startCall(channelName);
-      logger.info({
-        message: 'PTT: CallKeep session started',
-        context: { callUUID, channelName },
-      });
-
-      // Set up mute callback - sync both UI state and LiveKit microphone
-      callKeepService.setMuteStateCallback(async (muted: boolean) => {
-        await setMutedInternal(muted);
-      });
-    } catch (err) {
-      logger.warn({
-        message: 'PTT: Failed to start CallKeep session',
-        context: { error: err },
-      });
-    }
-  }, [setMutedInternal]);
-
-  /**
-   * End iOS CallKeep session
-   */
-  const endCallKeepSession = useCallback(async () => {
-    if (Platform.OS !== 'ios' || !callKeepService) return;
-
-    try {
-      await callKeepService.endCall();
-      callKeepService.setMuteStateCallback(null);
-      logger.info({ message: 'PTT: CallKeep session ended' });
-    } catch (err) {
-      logger.warn({
-        message: 'PTT: Failed to end CallKeep session',
-        context: { error: err },
-      });
-    }
-  }, []);
-
-  /**
    * Internal mute state setter that also controls LiveKit microphone
    */
   const setMutedInternal = useCallback(
@@ -238,6 +195,52 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
     },
     [currentRoom]
   );
+
+  /**
+   * Start iOS CallKeep session for background audio
+   */
+  const startCallKeepSession = useCallback(
+    async (channelName: string) => {
+      if (Platform.OS !== 'ios' || !callKeepService) return;
+
+      try {
+        const callUUID = await callKeepService.startCall(channelName);
+        logger.info({
+          message: 'PTT: CallKeep session started',
+          context: { callUUID, channelName },
+        });
+
+        // Set up mute callback - sync both UI state and LiveKit microphone
+        callKeepService.setMuteStateCallback(async (muted: boolean) => {
+          await setMutedInternal(muted);
+        });
+      } catch (err) {
+        logger.warn({
+          message: 'PTT: Failed to start CallKeep session',
+          context: { error: err },
+        });
+      }
+    },
+    [setMutedInternal]
+  );
+
+  /**
+   * End iOS CallKeep session
+   */
+  const endCallKeepSession = useCallback(async () => {
+    if (Platform.OS !== 'ios' || !callKeepService) return;
+
+    try {
+      await callKeepService.endCall();
+      callKeepService.setMuteStateCallback(null);
+      logger.info({ message: 'PTT: CallKeep session ended' });
+    } catch (err) {
+      logger.warn({
+        message: 'PTT: Failed to end CallKeep session',
+        context: { error: err },
+      });
+    }
+  }, []);
 
   /**
    * Refresh voice settings from the server

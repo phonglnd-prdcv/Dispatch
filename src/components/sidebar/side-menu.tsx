@@ -1,20 +1,7 @@
 import { type Href, useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import {
-  Contact,
-  FileText,
-  Home,
-  List,
-  type LucideIcon,
-  Map as MapIcon,
-  MessageCircle,
-  Phone,
-  Plus,
-  Settings,
-  Truck,
-  Users,
-} from 'lucide-react-native';
+import { Contact, FileText, Home, List, type LucideIcon, Map as MapIcon, MessageCircle, Phone, Plus, Settings, Truck, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface SideMenuProps {
@@ -32,9 +19,9 @@ interface MenuItem {
 
 const getMenuItems = (t: (key: string) => string): MenuItem[] => [
   { id: 'home', label: t('menu.home'), icon: Home, route: '/' },
-  { 
-    id: 'calls', 
-    label: t('menu.calls'), 
+  {
+    id: 'calls',
+    label: t('menu.calls'),
     icon: Phone,
     children: [
       { id: 'calls-list', label: t('menu.calls_list'), icon: List, route: '/calls' },
@@ -83,7 +70,7 @@ function SideMenu({ onNavigate, colorScheme: propColorScheme }: SideMenuProps): 
   const { t } = useTranslation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const menuItems = getMenuItems(t);
-  
+
   // Use prop if provided, otherwise default to light on web
   const isDark = propColorScheme === 'dark';
   const theme = isDark ? colors.dark : colors.light;
@@ -120,29 +107,15 @@ function SideMenu({ onNavigate, colorScheme: propColorScheme }: SideMenuProps): 
               handleNavigation(item.route);
             }
           }}
-          style={({ pressed }) => [
-            styles.menuItem,
-            isChild ? [styles.childMenuItem, { backgroundColor: theme.childBg }] : null,
-            pressed ? { backgroundColor: theme.menuItemPressed } : null,
-          ]}
+          style={({ pressed }) => [styles.menuItem, isChild ? [styles.childMenuItem, { backgroundColor: theme.childBg }] : null, pressed ? { backgroundColor: theme.menuItemPressed } : null]}
         >
           <View style={styles.menuItemIcon}>
             <IconComponent size={isChild ? 18 : 20} color={theme.menuItemIcon} />
           </View>
-          <Text style={[styles.menuItemText, { color: theme.menuItemText }, isChild ? styles.childMenuItemText : null]}>
-            {item.label}
-          </Text>
-          {hasChildren ? (
-            <Text style={[styles.chevron, { color: theme.chevron }]}>
-              {isExpanded ? '▼' : '▶'}
-            </Text>
-          ) : null}
+          <Text style={[styles.menuItemText, { color: theme.menuItemText }, isChild ? styles.childMenuItemText : null]}>{item.label}</Text>
+          {hasChildren ? <Text style={[styles.chevron, { color: theme.chevron }]}>{isExpanded ? '▼' : '▶'}</Text> : null}
         </Pressable>
-        {hasChildren && isExpanded ? (
-          <View style={[styles.childrenContainer, { borderLeftColor: theme.divider }]}>
-            {item.children?.map((child) => renderMenuItem(child, true))}
-          </View>
-        ) : null}
+        {hasChildren && isExpanded ? <View style={[styles.childrenContainer, { borderLeftColor: theme.divider }]}>{item.children?.map((child) => renderMenuItem(child, true))}</View> : null}
       </React.Fragment>
     );
   };
@@ -152,17 +125,11 @@ function SideMenu({ onNavigate, colorScheme: propColorScheme }: SideMenuProps): 
       <View style={[styles.header, { backgroundColor: theme.headerBg, borderBottomColor: theme.headerBorder }]}>
         <Text style={[styles.headerText, { color: theme.headerText }]}>{t('menu.menu')}</Text>
       </View>
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={false}
-        testID="side-menu-scroll-view"
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} testID="side-menu-scroll-view">
         {menuItems.map((item, index) => (
           <React.Fragment key={item.id}>
             {renderMenuItem(item)}
-            {index < menuItems.length - 1 ? (
-              <View style={[styles.divider, { backgroundColor: theme.divider }]} />
-            ) : null}
+            {index < menuItems.length - 1 ? <View style={[styles.divider, { backgroundColor: theme.divider }]} /> : null}
           </React.Fragment>
         ))}
       </ScrollView>

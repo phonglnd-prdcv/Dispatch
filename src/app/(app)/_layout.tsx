@@ -7,14 +7,7 @@ import { Redirect, Slot } from 'expo-router';
 import { Menu } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  Platform,
-  StyleSheet,
-  Text as RNText,
-  TouchableOpacity,
-  View as RNView,
-} from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text as RNText, TouchableOpacity, View as RNView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationButton } from '@/components/notifications/NotificationButton';
@@ -371,11 +364,11 @@ export default function TabLayout() {
   const webTheme = {
     navBar: { backgroundColor: webIsDark ? '#1f2937' : '#f9fafb' }, // gray-800 / gray-50 (panel header colors)
     navBarText: { color: webIsDark ? '#f9fafb' : '#030712' }, // gray-50 / gray-950
-    sidebar: { 
+    sidebar: {
       backgroundColor: webIsDark ? '#030712' : '#f3f4f6', // gray-950 / gray-100
       borderRightColor: webIsDark ? '#1f2937' : '#e5e7eb', // gray-800 / gray-200
     },
-    sidebarFooter: { 
+    sidebarFooter: {
       borderTopColor: webIsDark ? '#1f2937' : '#e5e7eb',
       backgroundColor: webIsDark ? '#111827' : '#ffffff', // gray-900 / white
     },
@@ -384,36 +377,37 @@ export default function TabLayout() {
     mainContent: { backgroundColor: webIsDark ? '#030712' : '#f3f4f6' }, // gray-950 / gray-100
   };
 
-  const content = Platform.OS === 'web' ? (
-    <RNView style={styles.container}>
-      {/* Top Navigation Bar */}
-      <RNView style={[layoutStyles.navBar, { paddingTop: insets.top }, webTheme.navBar]}>
-        <CreateDrawerMenuButton setIsOpen={setIsOpen} colorScheme={webColorScheme} />
-        <RNView style={layoutStyles.navBarTitle}>
-          <RNText style={[layoutStyles.navBarTitleText, webTheme.navBarText]}>{t('app.title', 'Resgrid Responder')}</RNText>
-        </RNView>
-      </RNView>
-
-      <RNView style={{ flex: 1, flexDirection: 'row' }} ref={parentRef}>
-        {/* Sidebar - simple show/hide */}
-        {isOpen ? (
-          <RNView style={[layoutStyles.webSidebar, webTheme.sidebar]}>
-            <SideMenu onNavigate={handleNavigate} colorScheme={webColorScheme} />
-            <RNView style={[layoutStyles.sidebarFooter, webTheme.sidebarFooter]}>
-              <TouchableOpacity onPress={() => setIsOpen(false)} style={[layoutStyles.closeButton, webTheme.closeButton]}>
-                <RNText style={[layoutStyles.closeButtonText, webTheme.closeButtonText]}>{t('menu.close', 'Close Menu')}</RNText>
-              </TouchableOpacity>
-            </RNView>
+  const content =
+    Platform.OS === 'web' ? (
+      <RNView style={styles.container}>
+        {/* Top Navigation Bar */}
+        <RNView style={[layoutStyles.navBar, { paddingTop: insets.top }, webTheme.navBar]}>
+          <CreateDrawerMenuButton setIsOpen={setIsOpen} colorScheme={webColorScheme} />
+          <RNView style={layoutStyles.navBarTitle}>
+            <RNText style={[layoutStyles.navBarTitleText, webTheme.navBarText]}>{t('app.title', 'Resgrid Responder')}</RNText>
           </RNView>
-        ) : null}
+        </RNView>
 
-        {/* Main content area */}
-        <RNView style={[layoutStyles.mainContent, webTheme.mainContent]}>
-          <Slot />
+        <RNView style={{ flex: 1, flexDirection: 'row' }} ref={parentRef}>
+          {/* Sidebar - simple show/hide */}
+          {isOpen ? (
+            <RNView style={[layoutStyles.webSidebar, webTheme.sidebar]}>
+              <SideMenu onNavigate={handleNavigate} colorScheme={webColorScheme} />
+              <RNView style={[layoutStyles.sidebarFooter, webTheme.sidebarFooter]}>
+                <TouchableOpacity onPress={() => setIsOpen(false)} style={[layoutStyles.closeButton, webTheme.closeButton]}>
+                  <RNText style={[layoutStyles.closeButtonText, webTheme.closeButtonText]}>{t('menu.close', 'Close Menu')}</RNText>
+                </TouchableOpacity>
+              </RNView>
+            </RNView>
+          ) : null}
+
+          {/* Main content area */}
+          <RNView style={[layoutStyles.mainContent, webTheme.mainContent]}>
+            <Slot />
+          </RNView>
         </RNView>
       </RNView>
-    </RNView>
-  ) : (
+    ) : (
       <View style={styles.container}>
         {/* Top Navigation Bar */}
         <View className="flex-row items-center justify-between bg-primary-600 px-4" style={{ paddingTop: insets.top }}>
@@ -480,11 +474,7 @@ const CreateDrawerMenuButton = ({ setIsOpen, colorScheme }: CreateDrawerMenuButt
   if (Platform.OS === 'web') {
     const isDark = colorScheme === 'dark';
     return (
-      <TouchableOpacity
-        onPress={() => setIsOpen(true)}
-        testID="drawer-menu-button"
-        style={layoutStyles.menuButton}
-      >
+      <TouchableOpacity onPress={() => setIsOpen(true)} testID="drawer-menu-button" style={layoutStyles.menuButton}>
         <RNText style={[layoutStyles.menuIcon, { color: isDark ? '#f9fafb' : '#030712' }]}>☰</RNText>
       </TouchableOpacity>
     );
