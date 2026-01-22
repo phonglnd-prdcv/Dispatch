@@ -48,6 +48,7 @@ export default function TabLayout() {
   const [isFirstTime, _setIsFirstTime] = useIsFirstTime();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = React.useState(false);
+  const [webColorScheme, setWebColorScheme] = React.useState<'light' | 'dark'>('light');
 
   // Get store states first (hooks must be at top level)
   const config = useCoreStore((state) => state.config);
@@ -65,6 +66,16 @@ export default function TabLayout() {
   }, []);
   const { isActive, appState } = useAppLifecycle();
   const insets = useSafeAreaInsets();
+
+  // Web dark mode detection (safe - only runs on web)
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setWebColorScheme(mediaQuery.matches ? 'dark' : 'light');
+    const handler = (e: MediaQueryListEvent) => setWebColorScheme(e.matches ? 'dark' : 'light');
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   // Refs to track initialization state
   const hasInitialized = useRef(false);
@@ -355,31 +366,49 @@ export default function TabLayout() {
     },
   });
 
+  // Web theme with dark mode support (matching panel header and button colors)
+  const webIsDark = webColorScheme === 'dark';
+  const webTheme = {
+    navBar: { backgroundColor: webIsDark ? '#1f2937' : '#f9fafb' }, // gray-800 / gray-50 (panel header colors)
+    navBarText: { color: webIsDark ? '#f9fafb' : '#030712' }, // gray-50 / gray-950
+    sidebar: { 
+      backgroundColor: webIsDark ? '#030712' : '#f3f4f6', // gray-950 / gray-100
+      borderRightColor: webIsDark ? '#1f2937' : '#e5e7eb', // gray-800 / gray-200
+    },
+    sidebarFooter: { 
+      borderTopColor: webIsDark ? '#1f2937' : '#e5e7eb',
+      backgroundColor: webIsDark ? '#111827' : '#ffffff', // gray-900 / white
+    },
+    closeButton: { backgroundColor: '#2563eb' }, // blue-600 (panel button color)
+    closeButtonText: { color: '#ffffff' },
+    mainContent: { backgroundColor: webIsDark ? '#030712' : '#f3f4f6' }, // gray-950 / gray-100
+  };
+
   const content = Platform.OS === 'web' ? (
     <RNView style={styles.container}>
       {/* Top Navigation Bar */}
-      <RNView style={[layoutStyles.navBar, { paddingTop: insets.top }]}>
-        <CreateDrawerMenuButton setIsOpen={setIsOpen} />
+      <RNView style={[layoutStyles.navBar, { paddingTop: insets.top }, webTheme.navBar]}>
+        <CreateDrawerMenuButton setIsOpen={setIsOpen} colorScheme={webColorScheme} />
         <RNView style={layoutStyles.navBarTitle}>
-          <RNText style={layoutStyles.navBarTitleText}>{t('app.title', 'Resgrid Responder')}</RNText>
+          <RNText style={[layoutStyles.navBarTitleText, webTheme.navBarText]}>{t('app.title', 'Resgrid Responder')}</RNText>
         </RNView>
       </RNView>
 
       <RNView style={{ flex: 1, flexDirection: 'row' }} ref={parentRef}>
         {/* Sidebar - simple show/hide */}
         {isOpen ? (
-          <RNView style={{ width: 280, backgroundColor: '#ffffff', borderRightWidth: 1, borderRightColor: '#e5e7eb' }}>
-            <SideMenu onNavigate={handleNavigate} />
-            <RNView style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', padding: 16 }}>
-              <TouchableOpacity onPress={() => setIsOpen(false)} style={layoutStyles.closeButton}>
-                <RNText style={layoutStyles.closeButtonText}>Close</RNText>
+          <RNView style={[layoutStyles.webSidebar, webTheme.sidebar]}>
+            <SideMenu onNavigate={handleNavigate} colorScheme={webColorScheme} />
+            <RNView style={[layoutStyles.sidebarFooter, webTheme.sidebarFooter]}>
+              <TouchableOpacity onPress={() => setIsOpen(false)} style={[layoutStyles.closeButton, webTheme.closeButton]}>
+                <RNText style={[layoutStyles.closeButtonText, webTheme.closeButtonText]}>Close Menu</RNText>
               </TouchableOpacity>
             </RNView>
           </RNView>
         ) : null}
 
         {/* Main content area */}
-        <RNView style={{ flex: 1 }}>
+        <RNView style={[layoutStyles.mainContent, webTheme.mainContent]}>
           <Slot />
         </RNView>
       </RNView>
@@ -443,18 +472,20 @@ export default function TabLayout() {
 
 interface CreateDrawerMenuButtonProps {
   setIsOpen: (isOpen: boolean) => void;
+  colorScheme?: 'light' | 'dark';
 }
 
-const CreateDrawerMenuButton = ({ setIsOpen }: CreateDrawerMenuButtonProps) => {
+const CreateDrawerMenuButton = ({ setIsOpen, colorScheme }: CreateDrawerMenuButtonProps) => {
   // Use React Native primitives on web to avoid infinite render loops from gluestack-ui/lucide
   if (Platform.OS === 'web') {
+    const isDark = colorScheme === 'dark';
     return (
       <TouchableOpacity
         onPress={() => setIsOpen(true)}
         testID="drawer-menu-button"
         style={layoutStyles.menuButton}
       >
-        <RNText style={layoutStyles.menuIcon}>☰</RNText>
+        <RNText style={[layoutStyles.menuIcon, { color: isDark ? '#f9fafb' : '#030712' }]}>☰</RNText>
       </TouchableOpacity>
     );
   }
@@ -503,8 +534,13 @@ const layoutStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0066cc',
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   navBarTitle: {
     flex: 1,
@@ -512,16 +548,34 @@ const layoutStyles = StyleSheet.create({
   },
   navBarTitleText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: 'white',
+    letterSpacing: 0.5,
   },
   menuButton: {
     padding: 8,
+    borderRadius: 6,
   },
   menuIcon: {
     fontSize: 24,
     color: 'white',
     fontWeight: 'bold',
+  },
+  webSidebar: {
+    width: 280,
+    borderRightWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  sidebarFooter: {
+    borderTopWidth: 1,
+    padding: 16,
+  },
+  mainContent: {
+    flex: 1,
   },
   backdrop: {
     position: 'absolute',
@@ -532,13 +586,13 @@ const layoutStyles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   closeButton: {
-    backgroundColor: '#0066cc',
     padding: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
   },
   closeButtonText: {
     color: 'white',
     fontWeight: '600',
+    fontSize: 14,
   },
 });

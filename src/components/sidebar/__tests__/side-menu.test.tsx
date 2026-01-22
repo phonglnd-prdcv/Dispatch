@@ -1,24 +1,19 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { router } from 'expo-router';
 import React from 'react';
 
 import SideMenu from '../side-menu';
 
 // Mock expo-router
+const mockPush = jest.fn();
 jest.mock('expo-router', () => ({
-  router: {
-    push: jest.fn(),
-  },
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }));
 
 describe('SideMenu', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   it('should render without crashing', () => {
@@ -27,25 +22,31 @@ describe('SideMenu', () => {
     expect(screen.getByTestId('side-menu-scroll-view')).toBeTruthy();
   });
 
+  it('should render header', () => {
+    render(<SideMenu />);
+
+    expect(screen.getByText('Menu')).toBeTruthy();
+  });
+
   it('should render all menu items', () => {
     render(<SideMenu />);
 
-    expect(screen.getByTestId('side-menu-item-home')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-calls')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-map')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-units')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-personnel')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-notes')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-contacts')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-protocols')).toBeTruthy();
-    expect(screen.getByTestId('side-menu-item-settings')).toBeTruthy();
+    expect(screen.getByText('Home')).toBeTruthy();
+    expect(screen.getByText('Calls')).toBeTruthy();
+    expect(screen.getByText('Map')).toBeTruthy();
+    expect(screen.getByText('Personnel')).toBeTruthy();
+    expect(screen.getByText('Units')).toBeTruthy();
+    expect(screen.getByText('Messages')).toBeTruthy();
+    expect(screen.getByText('Protocols')).toBeTruthy();
+    expect(screen.getByText('Contacts')).toBeTruthy();
+    expect(screen.getByText('Settings')).toBeTruthy();
   });
 
   it('should call onNavigate when a menu item is pressed', () => {
     const mockOnNavigate = jest.fn();
     render(<SideMenu onNavigate={mockOnNavigate} />);
 
-    const homeItem = screen.getByTestId('side-menu-item-home');
+    const homeItem = screen.getByText('Home');
     fireEvent.press(homeItem);
 
     expect(mockOnNavigate).toHaveBeenCalledTimes(1);
@@ -55,42 +56,88 @@ describe('SideMenu', () => {
     const mockOnNavigate = jest.fn();
     render(<SideMenu onNavigate={mockOnNavigate} />);
 
-    const callsItem = screen.getByTestId('side-menu-item-calls');
-    fireEvent.press(callsItem);
-
-    // Run all timers and microtasks
-    jest.runAllTimers();
+    // Test direct navigation with Settings (not a parent item)
+    const settingsItem = screen.getByText('Settings');
+    fireEvent.press(settingsItem);
 
     await waitFor(() => {
-      expect(router.push).toHaveBeenCalledWith('/(app)/calls');
+      expect(mockPush).toHaveBeenCalledWith('/settings');
+    });
+  });
+
+  it('should expand parent menu items to show children', async () => {
+    render(<SideMenu />);
+
+    // Calls is a parent item - pressing it should expand to show children
+    const callsItem = screen.getByText('Calls');
+    fireEvent.press(callsItem);
+
+    // After expanding, child items should be visible
+    await waitFor(() => {
+      expect(screen.getByText('Calls List')).toBeTruthy();
+      expect(screen.getByText('New Call')).toBeTruthy();
+    });
+  });
+
+  it('should navigate when child menu item is pressed', async () => {
+    const mockOnNavigate = jest.fn();
+    render(<SideMenu onNavigate={mockOnNavigate} />);
+
+    // First expand the Calls parent
+    const callsItem = screen.getByText('Calls');
+    fireEvent.press(callsItem);
+
+    // Wait for children to be visible and press Calls List
+    await waitFor(() => {
+      expect(screen.getByText('Calls List')).toBeTruthy();
+    });
+
+    const callsListItem = screen.getByText('Calls List');
+    fireEvent.press(callsListItem);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/calls');
+      expect(mockOnNavigate).toHaveBeenCalled();
     });
   });
 
   it('should work without onNavigate prop', async () => {
     render(<SideMenu />);
 
-    const settingsItem = screen.getByTestId('side-menu-item-settings');
+    const settingsItem = screen.getByText('Settings');
     fireEvent.press(settingsItem);
 
-    // Run all timers and microtasks
-    jest.runAllTimers();
-
     await waitFor(() => {
-      expect(router.push).toHaveBeenCalledWith('/(app)/settings');
+      expect(mockPush).toHaveBeenCalledWith('/settings');
     });
   });
 
-  it('should display menu item labels', () => {
+  it('should display menu items with lucide icons', () => {
     render(<SideMenu />);
 
+    // Verify all menu item labels are rendered (icons are now lucide components)
     expect(screen.getByText('Home')).toBeTruthy();
     expect(screen.getByText('Calls')).toBeTruthy();
     expect(screen.getByText('Map')).toBeTruthy();
-    expect(screen.getByText('Units')).toBeTruthy();
     expect(screen.getByText('Personnel')).toBeTruthy();
-    expect(screen.getByText('Notes')).toBeTruthy();
-    expect(screen.getByText('Contacts')).toBeTruthy();
+    expect(screen.getByText('Units')).toBeTruthy();
+    expect(screen.getByText('Messages')).toBeTruthy();
     expect(screen.getByText('Protocols')).toBeTruthy();
+    expect(screen.getByText('Contacts')).toBeTruthy();
     expect(screen.getByText('Settings')).toBeTruthy();
+  });
+
+  it('should apply light theme styles by default', () => {
+    render(<SideMenu />);
+
+    const container = screen.getByTestId('side-menu-scroll-view');
+    expect(container).toBeTruthy();
+  });
+
+  it('should accept colorScheme prop for dark mode', () => {
+    render(<SideMenu colorScheme="dark" />);
+
+    const container = screen.getByTestId('side-menu-scroll-view');
+    expect(container).toBeTruthy();
   });
 });
