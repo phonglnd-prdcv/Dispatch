@@ -95,6 +95,21 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
             // Update marker
             if (marker.current) {
               marker.current.setLngLat([newLocation.longitude, newLocation.latitude]);
+            } else if (map.current) {
+              marker.current = new mapboxgl.Marker({ color: '#FF0000', draggable: true })
+                .setLngLat([newLocation.longitude, newLocation.latitude])
+                .addTo(map.current);
+              marker.current.on('dragend', () => {
+                const lngLat = marker.current?.getLngLat();
+                if (lngLat) {
+                  const draggedLocation = {
+                    latitude: lngLat.lat,
+                    longitude: lngLat.lng,
+                  };
+                  setCurrentLocation(draggedLocation);
+                  reverseGeocode(draggedLocation.latitude, draggedLocation.longitude);
+                }
+              });
             }
 
             setIsLoading(false);
