@@ -1,4 +1,5 @@
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   Contact,
   FileText,
@@ -29,24 +30,24 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-const menuItems: MenuItem[] = [
-  { id: 'home', label: 'Home', icon: Home, route: '/' },
+const getMenuItems = (t: (key: string) => string): MenuItem[] => [
+  { id: 'home', label: t('menu.home'), icon: Home, route: '/' },
   { 
     id: 'calls', 
-    label: 'Calls', 
+    label: t('menu.calls'), 
     icon: Phone,
     children: [
-      { id: 'calls-list', label: 'Calls List', icon: List, route: '/calls' },
-      { id: 'new-call', label: 'New Call', icon: Plus, route: '/new-call' },
+      { id: 'calls-list', label: t('menu.calls_list'), icon: List, route: '/calls' },
+      { id: 'new-call', label: t('menu.new_call'), icon: Plus, route: '/new-call' },
     ],
   },
-  { id: 'map', label: 'Map', icon: MapIcon, route: '/map' },
-  { id: 'personnel', label: 'Personnel', icon: Users, route: '/personnel' },
-  { id: 'units', label: 'Units', icon: Truck, route: '/units' },
-  { id: 'messages', label: 'Messages', icon: MessageCircle, route: '/messages' },
-  { id: 'protocols', label: 'Protocols', icon: FileText, route: '/protocols' },
-  { id: 'contacts', label: 'Contacts', icon: Contact, route: '/contacts' },
-  { id: 'settings', label: 'Settings', icon: Settings, route: '/settings' },
+  { id: 'map', label: t('menu.map'), icon: MapIcon, route: '/map' },
+  { id: 'personnel', label: t('menu.personnel'), icon: Users, route: '/personnel' },
+  { id: 'units', label: t('menu.units'), icon: Truck, route: '/units' },
+  { id: 'messages', label: t('menu.messages'), icon: MessageCircle, route: '/messages' },
+  { id: 'protocols', label: t('menu.protocols'), icon: FileText, route: '/protocols' },
+  { id: 'contacts', label: t('menu.contacts'), icon: Contact, route: '/contacts' },
+  { id: 'settings', label: t('menu.settings'), icon: Settings, route: '/settings' },
 ];
 
 // Color palette matching home page panels
@@ -62,8 +63,6 @@ const colors = {
     divider: '#e5e7eb', // gray-200
     chevron: '#6b7280', // gray-500
     childBg: '#ffffff', // white for child items
-    buttonBg: '#2563eb', // blue-600 (matching panel buttons)
-    buttonText: '#ffffff',
   },
   dark: {
     background: '#030712', // gray-950
@@ -76,14 +75,14 @@ const colors = {
     divider: '#374151', // gray-700
     chevron: '#9ca3af', // gray-400
     childBg: '#111827', // gray-900 for child items
-    buttonBg: '#2563eb', // blue-600 (matching panel buttons)
-    buttonText: '#ffffff',
   },
 };
 
 function SideMenu({ onNavigate, colorScheme: propColorScheme }: SideMenuProps): React.JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const menuItems = getMenuItems(t);
   
   // Use prop if provided, otherwise default to light on web
   const isDark = propColorScheme === 'dark';
@@ -91,7 +90,7 @@ function SideMenu({ onNavigate, colorScheme: propColorScheme }: SideMenuProps): 
 
   const handleNavigation = (route: string) => {
     onNavigate?.();
-    router.push(route as any);
+    router.push(route as Href);
   };
 
   const toggleExpanded = (itemId: string) => {
@@ -149,11 +148,15 @@ function SideMenu({ onNavigate, colorScheme: propColorScheme }: SideMenuProps): 
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]} testID="side-menu-scroll-view">
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.headerBg, borderBottomColor: theme.headerBorder }]}>
-        <Text style={[styles.headerText, { color: theme.headerText }]}>Menu</Text>
+        <Text style={[styles.headerText, { color: theme.headerText }]}>{t('menu.menu')}</Text>
       </View>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        testID="side-menu-scroll-view"
+      >
         {menuItems.map((item, index) => (
           <React.Fragment key={item.id}>
             {renderMenuItem(item)}

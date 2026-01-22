@@ -1,6 +1,5 @@
 import { colorScheme, useColorScheme } from 'nativewind';
 import React from 'react';
-import { Platform } from 'react-native';
 import { useMMKVString } from 'react-native-mmkv';
 
 import { storage } from '../storage';
@@ -32,12 +31,6 @@ export const useSelectedTheme = () => {
 // to be used in the root file to load the selected theme from MMKV
 export const loadSelectedTheme = () => {
   try {
-    // On web, skip theme loading as it causes issues with NativeWind
-    if (Platform.OS === 'web') {
-      console.log('Skipping theme loading on web platform - defaulting to dark mode');
-      return;
-    }
-
     const theme = storage.getString(SELECTED_THEME);
     if (theme !== undefined) {
       console.log('Loading selected theme:', theme);

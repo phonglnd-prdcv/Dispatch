@@ -104,6 +104,5 @@ const styles = StyleSheet.create({
   divider: {
     width: 1,
     height: 24,
-    backgroundColor: '#d1d5db',
   },
 });

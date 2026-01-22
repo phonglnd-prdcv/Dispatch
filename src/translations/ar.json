@@ -518,7 +518,21 @@
     "title": "الملاحظات"
   },
   "onboarding": {
-    "message": "مرحبًا بك في تطبيق obytes"
+    "screen1": {
+      "title": "Resgrid Dispatch",
+      "description": "إنشاء وإرسال وإدارة مكالمات الطوارئ مع مركز قيادة متنقل قوي في متناول يدك"
+    },
+    "screen2": {
+      "title": "الوعي الظرفي في الوقت الفعلي",
+      "description": "تتبع جميع الوحدات والأفراد والموارد على خريطة تفاعلية مع تحديثات الحالة المباشرة وAVL"
+    },
+    "screen3": {
+      "title": "التنسيق السلس",
+      "description": "تواصل فورًا مع الوحدات الميدانية، وقم بتحديث حالات المكالمات، وتنسيق جهود الاستجابة من أي مكان"
+    },
+    "skip": "تخطي",
+    "next": "التالي",
+    "getStarted": "لنبدأ"
   },
   "protocols": {
     "details": {
@@ -698,6 +712,12 @@
     "ptt_end": "انتهاء الإرسال",
     "transmitting_on": "جاري الإرسال على {{channel}}",
     "transmission_ended": "انتهى الإرسال",
+    "voice_disabled": "تم تعطيل الصوت",
+    "select_channel": "اختر القناة",
+    "select_channel_description": "اختر قناة صوتية للاتصال بها",
+    "change_channel_warning": "اختيار قناة جديدة سيؤدي إلى قطع الاتصال من القناة الحالية",
+    "default_channel": "افتراضي",
+    "no_channels_available": "لا توجد قنوات صوتية متاحة",
     "system_update": "تحديث النظام",
     "data_refreshed": "تم تحديث البيانات من الخادم",
     "call_selected": "تم تحديد المكالمة",
@@ -716,6 +736,7 @@
     "no_call_notes": "لا توجد ملاحظات للمكالمة",
     "add_call_note_placeholder": "أضف ملاحظة...",
     "note_added": "تمت إضافة الملاحظة",
+    "note_added_to_console": "تمت إضافة ملاحظة جديدة إلى وحدة التحكم",
     "add_note_title": "إضافة ملاحظة جديدة",
     "note_title_label": "العنوان",
     "note_title_placeholder": "أدخل عنوان الملاحظة...",

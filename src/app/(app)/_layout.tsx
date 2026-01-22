@@ -401,7 +401,7 @@ export default function TabLayout() {
             <SideMenu onNavigate={handleNavigate} colorScheme={webColorScheme} />
             <RNView style={[layoutStyles.sidebarFooter, webTheme.sidebarFooter]}>
               <TouchableOpacity onPress={() => setIsOpen(false)} style={[layoutStyles.closeButton, webTheme.closeButton]}>
-                <RNText style={[layoutStyles.closeButtonText, webTheme.closeButtonText]}>Close Menu</RNText>
+                <RNText style={[layoutStyles.closeButtonText, webTheme.closeButtonText]}>{t('menu.close', 'Close Menu')}</RNText>
               </TouchableOpacity>
             </RNView>
           </RNView>

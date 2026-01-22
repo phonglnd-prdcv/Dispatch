@@ -487,6 +487,20 @@
     "why_down_message": "We are performing scheduled maintenance to improve your experience. We apologize for any inconvenience.",
     "why_down_title": "Why is the Site Down?"
   },
+  "menu": {
+    "calls": "Calls",
+    "calls_list": "Calls List",
+    "contacts": "Contacts",
+    "home": "Home",
+    "map": "Map",
+    "menu": "Menu",
+    "messages": "Messages",
+    "new_call": "New Call",
+    "personnel": "Personnel",
+    "protocols": "Protocols",
+    "settings": "Settings",
+    "units": "Units"
+  },
   "map": {
     "call_set_as_current": "Call set as current call",
     "failed_to_open_maps": "Failed to open maps application",
@@ -521,7 +535,21 @@
     "title": "Notes"
   },
   "onboarding": {
-    "message": "Welcome to obytes app site"
+    "screen1": {
+      "title": "Resgrid Dispatch",
+      "description": "Create, dispatch, and manage emergency calls with a powerful mobile command center at your fingertips"
+    },
+    "screen2": {
+      "title": "Real-Time Situational Awareness",
+      "description": "Track all units, personnel, and resources on an interactive map with live status updates and AVL"
+    },
+    "screen3": {
+      "title": "Seamless Coordination",
+      "description": "Communicate instantly with field units, update call statuses, and coordinate response efforts from anywhere"
+    },
+    "skip": "Skip",
+    "next": "Next",
+    "getStarted": "Let's Get Started"
   },
   "protocols": {
     "details": {
@@ -713,6 +741,7 @@
     "no_call_notes": "No call notes",
     "add_call_note_placeholder": "Add a note...",
     "note_added": "Note Added",
+    "note_added_to_console": "A new note has been added to the console",
     "add_note_title": "Add New Note",
     "note_title_label": "Title",
     "note_title_placeholder": "Enter note title...",

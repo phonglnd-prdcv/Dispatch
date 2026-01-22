@@ -320,6 +320,15 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         });
       });
 
+      // Create the notification channel before displaying the notification (required for Android 8+)
+      await notifee.createChannel({
+        id: 'ptt-channel',
+        name: 'PTT Calls',
+        description: 'Notifications for active Push-to-Talk calls',
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+      });
+
       await notifee.displayNotification({
         title: 'Active PTT Call',
         body: 'There is an active PTT call in progress.',

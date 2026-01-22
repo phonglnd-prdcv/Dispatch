@@ -1,6 +1,5 @@
 import { type Href, router } from 'expo-router';
 import { AlertTriangle, Clock, ExternalLink, MapPin, Plus, Search, X } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
@@ -149,23 +148,9 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
     fetchCallPriorities();
   }, [fetchCalls, fetchCallPriorities]);
 
-  // Log calls state for debugging
-  useEffect(() => {
-    console.log('[ActiveCallsPanel] Calls updated:', {
-      totalCalls: calls.length,
-      callStates: calls.map((c) => ({ id: c.CallId, name: c.Name, state: c.State })),
-    });
-  }, [calls]);
-
   const activeCalls = useMemo(() => {
     // Filter for active or open calls using utility function
     let filtered = calls.filter((c) => isCallActive(c.State));
-
-    console.log('[ActiveCallsPanel] Active calls filtered:', {
-      total: calls.length,
-      active: filtered.length,
-      filteredCalls: filtered.map((c) => ({ id: c.CallId, name: c.Name, state: c.State })),
-    });
 
     // Apply search filter
     if (searchQuery.trim()) {

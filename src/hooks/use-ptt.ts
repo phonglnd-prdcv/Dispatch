@@ -141,7 +141,7 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
   // Initialize voice settings on mount
   useEffect(() => {
     refreshVoiceSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refreshVoiceSettings depends on fetchVoiceSettings from Zustand store which is stable
   }, []);
 
   /**
@@ -184,10 +184,9 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
         context: { callUUID, channelName },
       });
 
-      // Set up mute callback - directly set state instead of using setMutedInternal
+      // Set up mute callback - sync both UI state and LiveKit microphone
       callKeepService.setMuteStateCallback(async (muted: boolean) => {
-        setIsMuted(muted);
-        // Note: Microphone state will be synced when the user interacts
+        await setMutedInternal(muted);
       });
     } catch (err) {
       logger.warn({
@@ -195,7 +194,7 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
         context: { error: err },
       });
     }
-  }, []);
+  }, [setMutedInternal]);
 
   /**
    * End iOS CallKeep session

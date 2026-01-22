@@ -63,6 +63,7 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
   useEffect(() => {
     if (!isOpen) {
       reset();
+      setSaveError(null);
     }
   }, [isOpen, reset]);
 

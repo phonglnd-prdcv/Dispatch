@@ -82,11 +82,6 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
   const isTransmitting = isConnected ? pttTransmitting : externalTransmitting;
   const displayChannel = pttChannel?.Name || externalChannel;
 
-  // Fetch voice settings on mount
-  useEffect(() => {
-    refreshVoiceSettings();
-  }, [refreshVoiceSettings]);
-
   const handleOpenAudioStreams = useCallback(() => {
     if (onOpenAudioStreams) {
       onOpenAudioStreams();

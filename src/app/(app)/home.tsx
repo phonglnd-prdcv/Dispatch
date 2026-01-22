@@ -297,7 +297,7 @@ export default function DispatchConsole() {
     addActivityLogEntry({
       type: 'system',
       action: t('dispatch.note_created'),
-      description: t('dispatch.note_added'),
+      description: t('dispatch.note_added_to_console'),
     });
   };
 
@@ -604,7 +604,10 @@ export default function DispatchConsole() {
     );
   };
 
-  const containerStyle = colorScheme === 'dark' ? [styles.container, styles.containerDark] : [styles.container, styles.containerLight];
+  const containerStyle = useMemo(
+    () => (colorScheme === 'dark' ? [styles.container, styles.containerDark] : [styles.container, styles.containerLight]),
+    [colorScheme]
+  );
 
   return (
     <View style={StyleSheet.flatten(containerStyle)} testID="dispatch-console-container">

@@ -496,7 +496,21 @@
     "title": "Notas"
   },
   "onboarding": {
-    "message": "Bienvenido al sitio de la aplicación obytes"
+    "screen1": {
+      "title": "Resgrid Dispatch",
+      "description": "Cree, despache y gestione llamadas de emergencia con un potente centro de comando móvil al alcance de su mano"
+    },
+    "screen2": {
+      "title": "Conciencia Situacional en Tiempo Real",
+      "description": "Rastree todas las unidades, personal y recursos en un mapa interactivo con actualizaciones de estado en vivo y AVL"
+    },
+    "screen3": {
+      "title": "Coordinación Fluida",
+      "description": "Comuníquese instantáneamente con las unidades de campo, actualice los estados de llamadas y coordine los esfuerzos de respuesta desde cualquier lugar"
+    },
+    "skip": "Omitir",
+    "next": "Siguiente",
+    "getStarted": "Empecemos"
   },
   "protocols": {
     "details": {
@@ -676,6 +690,12 @@
     "ptt_end": "Fin PTT",
     "transmitting_on": "Transmitiendo en {{channel}}",
     "transmission_ended": "Transmisión finalizada",
+    "voice_disabled": "Voz deshabilitada",
+    "select_channel": "Seleccionar Canal",
+    "select_channel_description": "Elija un canal de voz para conectarse",
+    "change_channel_warning": "Seleccionar un nuevo canal desconectará del actual",
+    "default_channel": "Predeterminado",
+    "no_channels_available": "No hay canales de voz disponibles",
     "system_update": "Actualización del Sistema",
     "data_refreshed": "Datos actualizados desde el servidor",
     "call_selected": "Llamada Seleccionada",
@@ -694,6 +714,7 @@
     "no_call_notes": "Sin notas de llamada",
     "add_call_note_placeholder": "Añadir una nota...",
     "note_added": "Nota Añadida",
+    "note_added_to_console": "Se ha añadido una nueva nota a la consola",
     "add_note_title": "Añadir Nueva Nota",
     "note_title_label": "Título",
     "note_title_placeholder": "Ingrese el título de la nota...",
