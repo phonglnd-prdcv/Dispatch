@@ -721,6 +721,7 @@
     "note_no_category": "No Category",
     "note_body_label": "Note Content",
     "note_body_placeholder": "Enter note content...",
+    "note_save_error": "Failed to save note: {{error}}",
     "note_created": "Note Created",
     "units_on_call": "Units on Call",
     "no_units_on_call": "No units on call",

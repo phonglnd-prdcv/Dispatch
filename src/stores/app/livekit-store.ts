@@ -90,6 +90,10 @@ interface LiveKitState {
   fetchVoiceSettings: () => Promise<void>;
   fetchCanConnectToVoice: () => Promise<void>;
   requestPermissions: () => Promise<void>;
+
+  // Android foreground service
+  startAndroidForegroundService: () => Promise<void>;
+  stopAndroidForegroundService: () => Promise<void>;
 }
 
 export const useLiveKitStore = create<LiveKitState>((set, get) => ({
@@ -208,37 +212,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       // Start foreground service only on Android
       if (Platform.OS === 'android') {
-        try {
-          const startForegroundService = async () => {
-            notifee.registerForegroundService(async () => {
-              // Minimal function with no interval or tasks to reduce strain on the main thread
-              return new Promise(() => {
-                logger.debug({
-                  message: 'Foreground service registered',
-                });
-              });
-            });
-
-            // Step 3: Display the notification as a foreground service
-            await notifee.displayNotification({
-              title: 'Active PTT Call',
-              body: 'There is an active PTT call in progress.',
-              android: {
-                channelId: 'notif',
-                asForegroundService: true,
-                smallIcon: 'ic_launcher', // Ensure this icon exists in res/drawable
-              },
-            });
-          };
-
-          await startForegroundService();
-        } catch (error) {
-          logger.error({
-            message: 'Failed to register foreground service',
-            context: { error },
-          });
-        }
+        await get().startAndroidForegroundService();
       }
+
       set({
         currentRoom: room,
         currentRoomInfo: roomInfo,
@@ -262,15 +238,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
       // Stop foreground service only on Android
       if (Platform.OS === 'android') {
-        try {
-          await notifee.stopForegroundService();
-        } catch (error) {
-          logger.error({
-            message: 'Failed to stop foreground service',
-            context: { error },
-          });
-        }
+        await get().stopAndroidForegroundService();
       }
+
       set({
         currentRoom: null,
         currentRoomInfo: null,
@@ -328,6 +298,65 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
     } catch (error) {
       logger.error({
         message: 'Failed to fetch can connect to voice',
+        context: { error },
+      });
+    }
+  },
+
+  startAndroidForegroundService: async () => {
+    if (Platform.OS !== 'android') return;
+
+    try {
+      logger.debug({
+        message: 'Starting Android foreground service',
+      });
+
+      notifee.registerForegroundService(async () => {
+        // Minimal function with no interval or tasks to reduce strain on the main thread
+        return new Promise(() => {
+          logger.debug({
+            message: 'Foreground service registered',
+          });
+        });
+      });
+
+      await notifee.displayNotification({
+        title: 'Active PTT Call',
+        body: 'There is an active PTT call in progress.',
+        android: {
+          channelId: 'ptt-channel',
+          asForegroundService: true,
+          smallIcon: 'ic_launcher',
+        },
+      });
+
+      logger.debug({
+        message: 'Android foreground service started successfully',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to start Android foreground service',
+        context: { error },
+      });
+    }
+  },
+
+  stopAndroidForegroundService: async () => {
+    if (Platform.OS !== 'android') return;
+
+    try {
+      logger.debug({
+        message: 'Stopping Android foreground service',
+      });
+
+      await notifee.stopForegroundService();
+
+      logger.debug({
+        message: 'Android foreground service stopped successfully',
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Failed to stop Android foreground service',
         context: { error },
       });
     }

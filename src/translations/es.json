@@ -702,6 +702,7 @@
     "note_no_category": "Sin Categoría",
     "note_body_label": "Contenido de la Nota",
     "note_body_placeholder": "Ingrese el contenido de la nota...",
+    "note_save_error": "Error al guardar la nota: {{error}}",
     "note_created": "Nota Creada",
     "units_on_call": "Unidades en Llamada",
     "no_units_on_call": "Sin unidades en llamada",

@@ -724,6 +724,7 @@
     "note_no_category": "بدون فئة",
     "note_body_label": "محتوى الملاحظة",
     "note_body_placeholder": "أدخل محتوى الملاحظة...",
+    "note_save_error": "فشل حفظ الملاحظة: {{error}}",
     "note_created": "تم إنشاء الملاحظة",
     "units_on_call": "الوحدات في المكالمة",
     "no_units_on_call": "لا توجد وحدات في المكالمة",

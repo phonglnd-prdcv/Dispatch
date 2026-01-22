@@ -37,6 +37,7 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<NoteCategoryResultData[]>([]);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const {
     control,
@@ -84,6 +85,7 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
 
   const onFormSubmit = async (data: AddNoteForm) => {
     setIsLoading(true);
+    setSaveError(null);
     try {
       const noteInput = new SaveNoteInput();
       noteInput.Title = data.title;
@@ -99,9 +101,13 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
         context: { title: data.title },
       });
 
+      setSaveError(null);
       onNoteAdded();
       onClose();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const userFriendlyMessage = t('dispatch.note_save_error', { error: errorMessage });
+      setSaveError(userFriendlyMessage);
       logger.error({
         message: 'Failed to create note',
         context: { error },
@@ -129,6 +135,13 @@ export function AddNoteBottomSheet({ isOpen, onClose, onNoteAdded }: AddNoteBott
           <VStack space="lg" className="mt-4 w-full">
             {/* Header */}
             <Text className={`text-xl font-semibold ${colorScheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{t('dispatch.add_note_title')}</Text>
+
+            {/* Error Display */}
+            {saveError ? (
+              <VStack className={`rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-red-700 bg-red-900/20' : 'border-red-200 bg-red-50'}`}>
+                <Text className={`text-sm ${colorScheme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>{saveError}</Text>
+              </VStack>
+            ) : null}
 
             {/* Title Field */}
             <FormControl isRequired isInvalid={!!errors.title}>

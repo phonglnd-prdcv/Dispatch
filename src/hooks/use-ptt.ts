@@ -16,16 +16,6 @@ if (Platform.OS === 'ios') {
   }
 }
 
-// Platform-specific imports for Android notifications
-let notifee: any = null;
-if (Platform.OS === 'android') {
-  try {
-    notifee = require('@notifee/react-native').default;
-  } catch {
-    logger.warn({ message: 'Notifee not available on Android' });
-  }
-}
-
 export interface UsePTTOptions {
   onConnectionChange?: (connected: boolean) => void;
   onError?: (error: string) => void;
@@ -226,56 +216,6 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
   }, []);
 
   /**
-   * Start Android foreground service for background audio
-   */
-  const startAndroidForegroundService = useCallback(async (channelName: string) => {
-    if (Platform.OS !== 'android' || !notifee) return;
-
-    try {
-      notifee.registerForegroundService(async () => {
-        return new Promise(() => {
-          logger.debug({ message: 'PTT: Android foreground service registered' });
-        });
-      });
-
-      await notifee.displayNotification({
-        title: 'PTT Active',
-        body: `Connected to ${channelName}`,
-        android: {
-          channelId: 'ptt-channel',
-          asForegroundService: true,
-          smallIcon: 'ic_launcher',
-          ongoing: true,
-        },
-      });
-
-      logger.info({ message: 'PTT: Android foreground service started' });
-    } catch (err) {
-      logger.warn({
-        message: 'PTT: Failed to start Android foreground service',
-        context: { error: err },
-      });
-    }
-  }, []);
-
-  /**
-   * Stop Android foreground service
-   */
-  const stopAndroidForegroundService = useCallback(async () => {
-    if (Platform.OS !== 'android' || !notifee) return;
-
-    try {
-      await notifee.stopForegroundService();
-      logger.info({ message: 'PTT: Android foreground service stopped' });
-    } catch (err) {
-      logger.warn({
-        message: 'PTT: Failed to stop Android foreground service',
-        context: { error: err },
-      });
-    }
-  }, []);
-
-  /**
    * Internal mute state setter that also controls LiveKit microphone
    */
   const setMutedInternal = useCallback(
@@ -362,8 +302,6 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
         // Start platform-specific background audio support
         if (Platform.OS === 'ios') {
           await startCallKeepSession(targetChannel.Name);
-        } else if (Platform.OS === 'android') {
-          await startAndroidForegroundService(targetChannel.Name);
         }
 
         setSelectedChannel(targetChannel);
@@ -382,7 +320,7 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
         });
       }
     },
-    [selectedChannel, isVoiceEnabled, storeConnecting, storeConnected, configureAudioMode, connectToRoom, startCallKeepSession, startAndroidForegroundService]
+    [selectedChannel, isVoiceEnabled, storeConnecting, storeConnected, configureAudioMode, connectToRoom, startCallKeepSession]
   );
 
   /**
@@ -410,8 +348,6 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
       // End platform-specific background audio support
       if (Platform.OS === 'ios') {
         await endCallKeepSession();
-      } else if (Platform.OS === 'android') {
-        await stopAndroidForegroundService();
       }
 
       setIsTransmitting(false);
@@ -428,7 +364,7 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
         context: { error: err },
       });
     }
-  }, [currentRoom, disconnectFromRoom, endCallKeepSession, stopAndroidForegroundService]);
+  }, [currentRoom, disconnectFromRoom, endCallKeepSession]);
 
   /**
    * Start transmitting (unmute and enable PTT)
