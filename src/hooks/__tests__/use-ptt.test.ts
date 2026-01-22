@@ -157,6 +157,7 @@ describe('usePTT hook', () => {
     });
 
     it('should set error when voice is disabled', async () => {
+      const mockFetchVoiceSettings = jest.fn().mockResolvedValue(undefined);
       mockUseLiveKitStore.mockReturnValue({
         isConnected: false,
         isConnecting: false,
@@ -165,13 +166,18 @@ describe('usePTT hook', () => {
         isVoiceEnabled: false,
         voipServerWebsocketSslAddress: 'wss://test.example.com',
         availableRooms: [],
-        fetchVoiceSettings: jest.fn().mockResolvedValue(undefined),
+        fetchVoiceSettings: mockFetchVoiceSettings,
         connectToRoom: jest.fn(),
         disconnectFromRoom: jest.fn(),
       });
 
       const onError = jest.fn();
       const { result } = renderHook(() => usePTT({ onError }));
+
+      // Wait for the initial fetchVoiceSettings to complete on mount
+      await waitFor(() => {
+        expect(mockFetchVoiceSettings).toHaveBeenCalled();
+      });
 
       await act(async () => {
         await result.current.connect({
@@ -183,7 +189,9 @@ describe('usePTT hook', () => {
         });
       });
 
-      expect(result.current.error).toBe('Voice is not enabled for this department');
+      await waitFor(() => {
+        expect(result.current.error).toBe('Voice is not enabled for this department');
+      });
       expect(onError).toHaveBeenCalledWith('Voice is not enabled for this department');
     });
 

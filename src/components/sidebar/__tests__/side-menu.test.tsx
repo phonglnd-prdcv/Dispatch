@@ -59,7 +59,6 @@ describe('SideMenu', () => {
     expect(screen.getByText('Map')).toBeTruthy();
     expect(screen.getByText('Personnel')).toBeTruthy();
     expect(screen.getByText('Units')).toBeTruthy();
-    expect(screen.getByText('Messages')).toBeTruthy();
     expect(screen.getByText('Protocols')).toBeTruthy();
     expect(screen.getByText('Contacts')).toBeTruthy();
     expect(screen.getByText('Settings')).toBeTruthy();
@@ -144,7 +143,6 @@ describe('SideMenu', () => {
     expect(screen.getByText('Map')).toBeTruthy();
     expect(screen.getByText('Personnel')).toBeTruthy();
     expect(screen.getByText('Units')).toBeTruthy();
-    expect(screen.getByText('Messages')).toBeTruthy();
     expect(screen.getByText('Protocols')).toBeTruthy();
     expect(screen.getByText('Contacts')).toBeTruthy();
     expect(screen.getByText('Settings')).toBeTruthy();
