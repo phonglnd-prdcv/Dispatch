@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut, FadeInRight, FadeOutLeft } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeInRight, FadeInUp, FadeOut, FadeOutLeft } from 'react-native-reanimated';
 import * as z from 'zod';
 
 import { Text } from '@/components/ui/text';
@@ -66,14 +66,7 @@ const WebInput: React.FC<WebInputProps> = ({
 
   return (
     <View style={styles.inputContainer}>
-      <View
-        style={StyleSheet.flatten([
-          styles.inputWrapper,
-          isDark ? styles.inputWrapperDark : styles.inputWrapperLight,
-          error ? styles.inputWrapperError : {},
-          disabled ? styles.inputWrapperDisabled : {},
-        ])}
-      >
+      <View style={StyleSheet.flatten([styles.inputWrapper, isDark ? styles.inputWrapperDark : styles.inputWrapperLight, error ? styles.inputWrapperError : {}, disabled ? styles.inputWrapperDisabled : {}])}>
         <View style={styles.inputIcon}>{icon}</View>
         <input
           type={type === 'password' && !showPassword ? 'password' : 'text'}
@@ -123,12 +116,7 @@ interface RotatingFeatureProps {
 
 const RotatingFeature: React.FC<RotatingFeatureProps> = ({ title, description, featureIndex }) => {
   return (
-    <Animated.View
-      key={featureIndex}
-      entering={FadeInRight.duration(400)}
-      exiting={FadeOutLeft.duration(400)}
-      style={styles.rotatingFeatureContainer}
-    >
+    <Animated.View key={featureIndex} entering={FadeInRight.duration(400)} exiting={FadeOutLeft.duration(400)} style={styles.rotatingFeatureContainer}>
       <Text style={styles.rotatingFeatureTitle}>{title}</Text>
       <Text style={styles.rotatingFeatureDescription}>{description}</Text>
     </Animated.View>
@@ -310,23 +298,11 @@ export default function LoginWeb() {
 
               {/* Rotating Feature Display */}
               <View style={styles.rotatingFeatureWrapper}>
-                <RotatingFeature
-                  key={currentFeatureIndex}
-                  title={currentFeature.title}
-                  description={currentFeature.description}
-                  featureIndex={currentFeatureIndex}
-                />
+                <RotatingFeature key={currentFeatureIndex} title={currentFeature.title} description={currentFeature.description} featureIndex={currentFeatureIndex} />
                 {/* Feature Indicators */}
                 <View style={styles.featureIndicators}>
                   {features.map((_, index) => (
-                    <Pressable
-                      key={index}
-                      onPress={() => setCurrentFeatureIndex(index)}
-                      style={StyleSheet.flatten([
-                        styles.featureIndicator,
-                        index === currentFeatureIndex ? styles.featureIndicatorActive : {},
-                      ])}
-                    />
+                    <Pressable key={index} onPress={() => setCurrentFeatureIndex(index)} style={StyleSheet.flatten([styles.featureIndicator, index === currentFeatureIndex ? styles.featureIndicatorActive : {}])} />
                   ))}
                 </View>
               </View>
@@ -336,7 +312,10 @@ export default function LoginWeb() {
 
         {/* Right Side - Login Form */}
         <View style={StyleSheet.flatten([styles.loginSection, !isWideScreen ? styles.loginSectionFullWidth : {}])}>
-          <Animated.View entering={FadeIn.delay(isWideScreen ? 300 : 0).duration(600)} style={StyleSheet.flatten([styles.loginCard, isDark ? styles.loginCardDark : styles.loginCardLight, isMediumScreen ? styles.loginCardWide : {}])}>
+          <Animated.View
+            entering={FadeIn.delay(isWideScreen ? 300 : 0).duration(600)}
+            style={StyleSheet.flatten([styles.loginCard, isDark ? styles.loginCardDark : styles.loginCardLight, isMediumScreen ? styles.loginCardWide : {}])}
+          >
             {/* Logo (shown on smaller screens) */}
             {!isWideScreen ? (
               <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.mobileLogoContainer}>
@@ -353,82 +332,85 @@ export default function LoginWeb() {
               <Text style={StyleSheet.flatten([styles.loginSubtitle, isDark ? styles.loginSubtitleDark : styles.loginSubtitleLight])}>{t('login.page_subtitle')}</Text>
             </Animated.View>
 
-              {/* Login Form */}
-              <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.formContainer}>
-                <Controller
-                  control={loginControl}
-                  name="username"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <WebInput
-                      placeholder={t('login.username_placeholder')}
-                      value={value}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      error={loginErrors.username?.message}
-                      icon={<User size={20} color={isDark ? '#9ca3af' : '#6b7280'} />}
-                      autoFocus
-                      onKeyDown={handleKeyDown}
-                      disabled={isLoading}
-                    />
-                  )}
-                />
+            {/* Login Form */}
+            <Animated.View entering={FadeInDown.delay(300).duration(500)} style={styles.formContainer}>
+              <Controller
+                control={loginControl}
+                name="username"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <WebInput
+                    placeholder={t('login.username_placeholder')}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    error={loginErrors.username?.message}
+                    icon={<User size={20} color={isDark ? '#9ca3af' : '#6b7280'} />}
+                    autoFocus
+                    onKeyDown={handleKeyDown}
+                    disabled={isLoading}
+                  />
+                )}
+              />
 
-                <Controller
-                  control={loginControl}
-                  name="password"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <WebInput
-                      placeholder={t('login.password_placeholder')}
-                      value={value}
-                      onChange={onChange}
-                      onBlur={onBlur}
-                      error={loginErrors.password?.message}
-                      type="password"
-                      icon={<Lock size={20} color={isDark ? '#9ca3af' : '#6b7280'} />}
-                      showPasswordToggle
-                      showPassword={showPassword}
-                      onTogglePassword={() => setShowPassword(!showPassword)}
-                      onKeyDown={handleKeyDown}
-                      disabled={isLoading}
-                    />
-                  )}
-                />
+              <Controller
+                control={loginControl}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <WebInput
+                    placeholder={t('login.password_placeholder')}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    error={loginErrors.password?.message}
+                    type="password"
+                    icon={<Lock size={20} color={isDark ? '#9ca3af' : '#6b7280'} />}
+                    showPasswordToggle
+                    showPassword={showPassword}
+                    onTogglePassword={() => setShowPassword(!showPassword)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isLoading}
+                  />
+                )}
+              />
 
-                {/* Login Button */}
-                <Pressable
-                  style={({ pressed }) => StyleSheet.flatten([styles.loginButton, pressed && !isLoading ? styles.loginButtonPressed : {}, isLoading ? styles.loginButtonLoading : {}])}
-                  onPress={handleLoginSubmit(onLoginSubmit)}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <View style={styles.loadingContainer}>
-                      <Loader2 size={20} color="#ffffff" />
-                      <Text style={styles.loginButtonText}>{t('login.login_button_loading')}</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.loginButtonText}>{t('login.login_button')}</Text>
-                  )}
-                </Pressable>
+              {/* Login Button */}
+              <Pressable
+                style={({ pressed }) => StyleSheet.flatten([styles.loginButton, pressed && !isLoading ? styles.loginButtonPressed : {}, isLoading ? styles.loginButtonLoading : {}])}
+                onPress={handleLoginSubmit(onLoginSubmit)}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <Loader2 size={20} color="#ffffff" />
+                    <Text style={styles.loginButtonText}>{t('login.login_button_loading')}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.loginButtonText}>{t('login.login_button')}</Text>
+                )}
+              </Pressable>
 
-                {/* Server URL Button */}
-                <Pressable style={({ pressed }) => StyleSheet.flatten([styles.serverUrlButton, isDark ? styles.serverUrlButtonDark : styles.serverUrlButtonLight, pressed ? styles.serverUrlButtonPressed : {}])} onPress={() => setShowServerUrlModal(true)}>
-                  <Server size={16} color={isDark ? '#9ca3af' : '#6b7280'} />
-                  <Text style={StyleSheet.flatten([styles.serverUrlButtonText, isDark ? styles.serverUrlButtonTextDark : styles.serverUrlButtonTextLight])}>{t('settings.server_url')}</Text>
-                </Pressable>
-              </Animated.View>
+              {/* Server URL Button */}
+              <Pressable
+                style={({ pressed }) => StyleSheet.flatten([styles.serverUrlButton, isDark ? styles.serverUrlButtonDark : styles.serverUrlButtonLight, pressed ? styles.serverUrlButtonPressed : {}])}
+                onPress={() => setShowServerUrlModal(true)}
+              >
+                <Server size={16} color={isDark ? '#9ca3af' : '#6b7280'} />
+                <Text style={StyleSheet.flatten([styles.serverUrlButtonText, isDark ? styles.serverUrlButtonTextDark : styles.serverUrlButtonTextLight])}>{t('settings.server_url')}</Text>
+              </Pressable>
+            </Animated.View>
 
-              {/* Footer */}
-              <Animated.View entering={FadeInDown.delay(400).duration(500)} style={styles.footerContainer}>
-                <Text style={StyleSheet.flatten([styles.footerText, isDark ? styles.footerTextDark : styles.footerTextLight])}>
-                  {t('login.no_account')}{' '}
-                  <Text style={styles.registerLink} onPress={() => {}}>
-                    {t('login.register')}
-                  </Text>
+            {/* Footer */}
+            <Animated.View entering={FadeInDown.delay(400).duration(500)} style={styles.footerContainer}>
+              <Text style={StyleSheet.flatten([styles.footerText, isDark ? styles.footerTextDark : styles.footerTextLight])}>
+                {t('login.no_account')}{' '}
+                <Text style={styles.registerLink} onPress={() => {}}>
+                  {t('login.register')}
                 </Text>
-                <Text style={StyleSheet.flatten([styles.copyrightText, isDark ? styles.copyrightTextDark : styles.copyrightTextLight])}>
-                  © {new Date().getFullYear()} Resgrid, LLC. {t('login.footer_text')}
-                </Text>
-              </Animated.View>
+              </Text>
+              <Text style={StyleSheet.flatten([styles.copyrightText, isDark ? styles.copyrightTextDark : styles.copyrightTextLight])}>
+                © {new Date().getFullYear()} Resgrid, LLC. {t('login.footer_text')}
+              </Text>
+            </Animated.View>
           </Animated.View>
         </View>
       </View>
@@ -617,7 +599,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     maxWidth: 420,
   },
-  
+
   // Rotating Feature Styles
   rotatingFeatureWrapper: {
     width: '100%',
