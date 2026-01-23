@@ -311,7 +311,8 @@ export default function TabLayout() {
     return <Redirect href={'/lockscreen' as any} />;
   }
 
-  if (isFirstTime) {
+  // Only show onboarding on iOS and Android, skip on web platform
+  if (isFirstTime && Platform.OS !== 'web') {
     logger.info({
       message: 'Is first time navigating to onboarding',
     });

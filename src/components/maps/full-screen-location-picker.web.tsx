@@ -48,7 +48,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
     setIsReverseGeocoding(true);
     try {
       const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${Env.MAPBOX_PUBKEY}`);
-      
+
       if (!response.ok) {
         const body = await response.text();
         console.error('Reverse geocoding failed:', { status: response.status, body });
@@ -96,9 +96,7 @@ const FullScreenLocationPicker: React.FC<FullScreenLocationPickerProps> = ({ ini
             if (marker.current) {
               marker.current.setLngLat([newLocation.longitude, newLocation.latitude]);
             } else if (map.current) {
-              marker.current = new mapboxgl.Marker({ color: '#FF0000', draggable: true })
-                .setLngLat([newLocation.longitude, newLocation.latitude])
-                .addTo(map.current);
+              marker.current = new mapboxgl.Marker({ color: '#FF0000', draggable: true }).setLngLat([newLocation.longitude, newLocation.latitude]).addTo(map.current);
               marker.current.on('dragend', () => {
                 const lngLat = marker.current?.getLngLat();
                 if (lngLat) {

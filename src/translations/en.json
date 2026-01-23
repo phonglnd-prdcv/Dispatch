@@ -453,11 +453,19 @@
     "processingRequest": "Processing your request..."
   },
   "login": {
+    "branding_subtitle": "Powerful dispatch software for first responders, search & rescue, and public safety organizations.",
+    "branding_title": "Emergency Response Management",
     "errorModal": {
       "confirmButton": "OK",
       "message": "Please check your username and password and try again.",
       "title": "Login Failed"
     },
+    "feature_dispatch_desc": "Instantly dispatch units and manage calls with live updates across all devices.",
+    "feature_dispatch_title": "Real-time Dispatch",
+    "feature_mapping_desc": "Track units in real-time with detailed maps, routing, and location management.",
+    "feature_mapping_title": "Advanced Mapping",
+    "feature_personnel_desc": "Manage your team with role-based access, status tracking, and communication tools.",
+    "feature_personnel_title": "Personnel Management",
     "footer_text": "Created with ❤️ in Lake Tahoe",
     "login": "Login",
     "login_button": "Login",
@@ -466,7 +474,7 @@
     "login_button_loading": "Logging in...",
     "login_button_success": "Logged in successfully",
     "no_account": "Don't have an account?",
-    "page_subtitle": "Enter the information below to Sign in to the Resgrid Dispatch application.",
+    "page_subtitle": "Enter your credentials to sign in.",
     "page_title": "Resgrid Dispatch",
     "password": "Password",
     "password_incorrect": "Password was incorrect",
@@ -474,7 +482,8 @@
     "register": "Register",
     "title": "Login",
     "username": "Username",
-    "username_placeholder": "Enter your username"
+    "username_placeholder": "Enter your username",
+    "welcome_title": "Welcome Back"
   },
   "lockscreen": {
     "message": "Enter your password to unlock the screen",

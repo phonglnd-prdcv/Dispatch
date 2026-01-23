@@ -179,7 +179,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   // Render map layers
   const renderMapLayers = () => {
     return visibleLayers.map((layer) => {
-      if (!layer.Data?.Features || layer.Data.Features.length === 0) {
+      if (!layer.Data?.Features || !Array.isArray(layer.Data.Features) || layer.Data.Features.length === 0) {
         return null;
       }
 

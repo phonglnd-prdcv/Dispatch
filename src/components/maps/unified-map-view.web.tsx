@@ -311,7 +311,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
 
     // Add visible layers
     visibleLayers.forEach((layer) => {
-      if (!layer.Data?.Features || layer.Data.Features.length === 0) return;
+      if (!layer.Data?.Features || !Array.isArray(layer.Data.Features) || layer.Data.Features.length === 0) return;
 
       const sourceId = `custom-layer-source-${layer.Id}`;
       const layerId = `custom-layer-${layer.Id}`;

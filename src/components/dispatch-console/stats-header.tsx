@@ -18,16 +18,19 @@ interface StatItemProps {
   value: number | string;
   color: string;
   darkColor: string;
-  bgClassName: string;
+  bgClassName?: string;
+  bgColor?: string;
+  darkBgColor?: string;
 }
 
-const StatItem: React.FC<StatItemProps> = ({ icon, label, value, color, darkColor, bgClassName }) => {
+const StatItem: React.FC<StatItemProps> = ({ icon, label, value, color, darkColor, bgClassName, bgColor, darkBgColor }) => {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const displayColor = isDark ? darkColor : color;
+  const backgroundColor = bgColor || darkBgColor ? (isDark ? darkBgColor : bgColor) : undefined;
 
   return (
-    <HStack className={`flex-1 items-center rounded-lg p-2 ${bgClassName}`} space="sm">
+    <HStack className={`flex-1 items-center rounded-lg p-2 ${bgClassName || ''}`} space="sm" style={backgroundColor ? { backgroundColor } : undefined}>
       <View style={StyleSheet.flatten([styles.iconContainer, { backgroundColor: displayColor }])}>
         <Icon as={icon} size="sm" color="#fff" />
       </View>
@@ -74,10 +77,10 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ activeCalls, pendingCa
         <StatItem icon={Truck} label={t('dispatch.units_available')} value={unitsAvailable} color="#22c55e" darkColor="#4ade80" bgClassName="bg-success-50 dark:bg-success-950" />
 
         {/* Personnel Available */}
-        <StatItem icon={User} label={t('dispatch.personnel_available')} value={personnelAvailable} color="#6366f1" darkColor="#818cf8" bgClassName="bg-indigo-50 dark:bg-indigo-950" />
+        <StatItem icon={User} label={t('dispatch.personnel_available')} value={personnelAvailable} color="#6366f1" darkColor="#818cf8" bgColor="#f8f9ff" darkBgColor="#1e1b4b" />
 
         {/* Personnel On Duty */}
-        <StatItem icon={Users} label={t('dispatch.personnel_on_duty')} value={personnelOnDuty} color="#8b5cf6" darkColor="#a78bfa" bgClassName="bg-tertiary-50 dark:bg-tertiary-950" />
+        <StatItem icon={Users} label={t('dispatch.personnel_on_duty')} value={personnelOnDuty} color="#8b5cf6" darkColor="#a78bfa" bgColor="#faf8ff" darkBgColor="#2e1065" />
 
         {/* Current Time & Weather */}
         <HStack className="flex-1 items-center justify-center rounded-lg bg-gray-100 p-2 dark:bg-gray-800" space="sm">

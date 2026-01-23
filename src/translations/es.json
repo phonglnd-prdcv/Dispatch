@@ -453,23 +453,37 @@
     "processingRequest": "Procesando su solicitud..."
   },
   "login": {
+    "branding_subtitle": "Software de despacho potente para socorristas, búsqueda y rescate, y organizaciones de seguridad pública.",
+    "branding_title": "Gestión de Respuesta de Emergencia",
     "errorModal": {
       "confirmButton": "Aceptar",
       "message": "Por favor, comprueba tu nombre de usuario y contraseña e inténtalo de nuevo.",
       "title": "Inicio de sesión fallido"
     },
+    "feature_dispatch_desc": "Despacha unidades y gestiona llamadas al instante con actualizaciones en vivo en todos los dispositivos.",
+    "feature_dispatch_title": "Despacho en Tiempo Real",
+    "feature_mapping_desc": "Rastrea unidades en tiempo real con mapas detallados, enrutamiento y gestión de ubicación.",
+    "feature_mapping_title": "Mapeo Avanzado",
+    "feature_personnel_desc": "Gestiona tu equipo con acceso basado en roles, seguimiento de estado y herramientas de comunicación.",
+    "feature_personnel_title": "Gestión de Personal",
+    "footer_text": "Creado con ❤️ en Lake Tahoe",
     "login": "Iniciar sesión",
     "login_button": "Iniciar sesión",
     "login_button_description": "Inicia sesión en tu cuenta para continuar",
     "login_button_error": "Error al iniciar sesión",
     "login_button_loading": "Iniciando sesión...",
     "login_button_success": "Sesión iniciada con éxito",
+    "no_account": "¿No tienes cuenta?",
+    "page_subtitle": "Introduce tus credenciales para iniciar sesión.",
+    "page_title": "Resgrid Dispatch",
     "password": "Contraseña",
     "password_incorrect": "La contraseña era incorrecta",
     "password_placeholder": "Introduce tu contraseña",
+    "register": "Registrarse",
     "title": "Iniciar sesión",
     "username": "Nombre de usuario",
-    "username_placeholder": "Introduce tu nombre de usuario"
+    "username_placeholder": "Introduce tu nombre de usuario",
+    "welcome_title": "Bienvenido de Nuevo"
   },
   "map": {
     "call_set_as_current": "Llamada establecida como llamada actual",

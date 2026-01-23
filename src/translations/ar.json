@@ -453,11 +453,19 @@
     "processingRequest": "جاري معالجة طلبك..."
   },
   "login": {
+    "branding_subtitle": "برنامج إرسال قوي للمستجيبين الأوائل والبحث والإنقاذ ومنظمات السلامة العامة.",
+    "branding_title": "إدارة الاستجابة للطوارئ",
     "errorModal": {
       "confirmButton": "موافق",
       "message": "يرجى التحقق من اسم المستخدم وكلمة المرور والمحاولة مرة أخرى.",
       "title": "فشل تسجيل الدخول"
     },
+    "feature_dispatch_desc": "أرسل الوحدات وقم بإدارة المكالمات فوراً مع التحديثات المباشرة على جميع الأجهزة.",
+    "feature_dispatch_title": "الإرسال في الوقت الفعلي",
+    "feature_mapping_desc": "تتبع الوحدات في الوقت الفعلي مع خرائط تفصيلية وتوجيه وإدارة الموقع.",
+    "feature_mapping_title": "خرائط متقدمة",
+    "feature_personnel_desc": "قم بإدارة فريقك مع الوصول القائم على الأدوار وتتبع الحالة وأدوات الاتصال.",
+    "feature_personnel_title": "إدارة الموظفين",
     "footer_text": "صنع بـ ❤️ في نيفادا",
     "login": "تسجيل الدخول",
     "login_button": "تسجيل الدخول",
@@ -466,7 +474,7 @@
     "login_button_loading": "تسجيل الدخول...",
     "login_button_success": "تم تسجيل الدخول بنجاح",
     "no_account": "ليس لديك حساب؟",
-    "page_subtitle": "أدخل المعلومات أدناه لتسجيل الدخول إلى تطبيق Resgrid Dispatch.",
+    "page_subtitle": "أدخل بيانات الاعتماد الخاصة بك لتسجيل الدخول.",
     "page_title": "Resgrid Dispatch",
     "password": "كلمة المرور",
     "password_incorrect": "كانت كلمة المرور غير صحيحة",
@@ -474,7 +482,8 @@
     "register": "تسجيل",
     "title": "تسجيل الدخول",
     "username": "اسم المستخدم",
-    "username_placeholder": "أدخل اسم المستخدم الخاص بك"
+    "username_placeholder": "أدخل اسم المستخدم الخاص بك",
+    "welcome_title": "مرحباً بعودتك"
   },
   "lockscreen": {
     "message": "أدخل كلمة المرور لفتح الشاشة",
