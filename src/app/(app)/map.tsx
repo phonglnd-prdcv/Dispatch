@@ -401,7 +401,7 @@ export default function Map() {
     const visibleLayerData = getVisibleLayerData();
 
     return visibleLayerData.map((layer) => {
-      if (!layer.Data?.Features || layer.Data.Features.length === 0) {
+      if (!layer.Data?.Features || !Array.isArray(layer.Data.Features) || layer.Data.Features.length === 0) {
         return null;
       }
 

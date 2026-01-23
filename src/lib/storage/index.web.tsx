@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { type StateStorage } from 'zustand/middleware';
 
 // Mock MMKV class for web to satisfy type requirements if needed,
@@ -10,8 +9,6 @@ export const storage: any = {
   set: (key: string, value: string) => localStorage.setItem(key, value),
   delete: (key: string) => localStorage.removeItem(key),
 };
-
-const IS_FIRST_TIME = 'IS_FIRST_TIME';
 
 export function getItem<T>(key: string): T | null {
   try {
@@ -56,22 +53,11 @@ export const zustandStorage: StateStorage = {
 };
 
 export const useIsFirstTime = () => {
-  const [isFirstTime, setIsFirstTime] = useState<boolean | undefined>(undefined);
-
-  useEffect(() => {
-    const value = localStorage.getItem(IS_FIRST_TIME);
-    // If value is null, it's first time (true). If 'false', it's not.
-    setIsFirstTime(value === null ? true : value === 'true');
-  }, []);
-
-  const setFirstTime = (value: boolean | undefined) => {
-    if (value === undefined) {
-      localStorage.removeItem(IS_FIRST_TIME);
-    } else {
-      localStorage.setItem(IS_FIRST_TIME, String(value));
-    }
-    setIsFirstTime(value);
+  // On web platform, we never show onboarding, so always return false
+  // This ensures onboarding is only displayed on iOS and Android apps
+  const setFirstTime = (_value: boolean | undefined) => {
+    // No-op on web since we skip onboarding
   };
 
-  return [isFirstTime ?? true, setFirstTime] as const;
+  return [false, setFirstTime] as const;
 };
