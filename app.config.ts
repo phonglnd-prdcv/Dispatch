@@ -1,6 +1,8 @@
 /* eslint-disable max-lines-per-function */
 import type { ConfigContext, ExpoConfig } from '@expo/config';
 import type { AppIconBadgeConfig } from 'app-icon-badge/types';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { ClientEnv, Env } from './env';
 const packageJSON = require('./package.json');
@@ -69,7 +71,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     softwareKeyboardLayoutMode: 'pan',
     package: Env.PACKAGE,
-    googleServicesFile: 'google-services.json',
+    ...(fs.existsSync(path.join(__dirname, 'google-services.json')) && {
+      googleServicesFile: 'google-services.json',
+    }),
     permissions: [
       'android.permission.WAKE_LOCK',
       'android.permission.RECORD_AUDIO',
