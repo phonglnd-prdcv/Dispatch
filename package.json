@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "versionCode": "1",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "electron/main.js",
   "scripts": {
     "start": "cross-env EXPO_NO_DOTENV=1 expo start",
     "prebuild": "cross-env EXPO_NO_DOTENV=1 yarn expo prebuild",
@@ -45,11 +45,41 @@
     "install-maestro": "curl -Ls 'https://get.maestro.mobile.dev' | bash",
     "e2e-test": "maestro test .maestro/ -e APP_ID=com.obytes.development",
     "web:build": "cross-env APP_ENV=production expo export --platform web",
+    "electron:dev": "concurrently \"cross-env BROWSER=none yarn web\" \"wait-on http://localhost:8081 && electron .\"",
+    "electron:pack": "yarn web:build && electron-builder -c.extraMetadata.main=electron/main.js",
     "docker:build": "docker build -t resgrid-dispatch-web .",
     "docker:run": "docker run -p 3000:80 --env-file .env.docker resgrid-dispatch-web",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f"
+  },
+  "build": {
+    "appId": "com.resgrid.dispatch",
+    "productName": "Dispatch",
+    "directories": {
+      "output": "dist/electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
   },
   "dependencies": {
     "@config-plugins/react-native-callkeep": "^11.0.0",
@@ -195,8 +225,12 @@
     "@typescript-eslint/eslint-plugin": "~5.62.0",
     "@typescript-eslint/parser": "~5.62.0",
     "babel-jest": "~30.0.0",
+    "concurrently": "^9.2.1",
     "cross-env": "~7.0.3",
     "dotenv": "~16.4.5",
+    "electron": "^40.1.0",
+    "electron-builder": "^26.7.0",
+    "electron-is-dev": "^3.0.1",
     "eslint": "~8.57.0",
     "eslint-config-expo": "~7.1.2",
     "eslint-config-prettier": "~9.1.0",
@@ -223,7 +257,8 @@
     "tailwindcss": "3.4.4",
     "ts-jest": "~29.1.2",
     "ts-node": "~10.9.2",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "wait-on": "^9.0.3"
   },
   "repository": {
     "type": "git",

@@ -559,3 +559,49 @@ jobs:
         env:
           CHANGERAWR_API_KEY: ${{ secrets.CHANGERAWR_API_KEY }}
           CHANGERAWR_API_URL: ${{ secrets.CHANGERAWR_API_URL }}
+
+  build-electron:
+    needs: test
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: 📦 Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: 🖥️ Build Electron App
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          yarn electron:pack
+          
+      - name: 📦 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-build-${{ matrix.os }}
+          path: |
+            dist/electron/*.dmg
+            dist/electron/*.exe
+            dist/electron/*.AppImage
+            dist/electron/*.zip
+          if-no-files-found: warn
+
+      - name: 🚀 Publish to Release
+        if: github.event_name == 'push' || github.event.inputs.buildType == 'all'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: '1.${{ github.run_number }}'
+          allowUpdates: true
+          artifacts: "dist/electron/*.dmg,dist/electron/*.exe,dist/electron/*.AppImage,dist/electron/*.zip"
+          token: ${{ secrets.GITHUB_TOKEN }}
