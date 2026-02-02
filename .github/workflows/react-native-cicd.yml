@@ -428,11 +428,93 @@ jobs:
               core.setOutput('pr_url', '');
             }
 
+
+  build-electron:
+    needs: test
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🏗 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: 📦 Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: 🖥️ Build Electron App
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          yarn electron:pack
+          
+      - name: 📦 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-build-${{ matrix.os }}
+          path: |
+            dist/electron/*.dmg
+            dist/electron/*.exe
+            dist/electron/*.AppImage
+            dist/electron/*.zip
+          if-no-files-found: warn
+
+  publish-release:
+    needs: [build-and-deploy, build-electron]
+    if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || (github.event_name == 'workflow_dispatch' && (github.event.inputs.buildType == 'all' || github.event.inputs.buildType == 'prod-apk'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 🏗 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: 📋 Get PR information
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const commit = context.sha;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: commit
+            });
+            
+            if (prs.length > 0) {
+              const pr = prs[0];
+              core.setOutput('pr_number', pr.number);
+              core.setOutput('pr_title', pr.title);
+              core.setOutput('pr_body', pr.body || '');
+              core.setOutput('pr_url', pr.html_url);
+            } else {
+              core.setOutput('pr_number', '');
+              core.setOutput('pr_title', '');
+              core.setOutput('pr_body', '');
+              core.setOutput('pr_url', '');
+            }
+
       - name: 📋 Prepare Release Notes file
-        if: ${{ matrix.platform == 'android' }}
         env:
           RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
-          PR_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || steps.pr_info.outputs.pr_body }}
+          PR_BODY: ${{ steps.pr_info.outputs.pr_body }}
         run: |
           set -eo pipefail
           # Determine source of release notes: workflow input, PR body, or recent commits
@@ -467,36 +549,8 @@ jobs:
             echo
             printf '%s\n' "$NOTES"
           } > RELEASE_NOTES.md
-          
-          # Store release notes for later use
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          cat RELEASE_NOTES.md >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
 
-      - name: 📦 Download Web Artifacts
-        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
-        uses: actions/download-artifact@v4
-        with:
-          name: app-builds-web
-          path: ./web-artifacts
-        continue-on-error: true
-
-      - name: � Check Web Artifacts
-        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
-        id: check-web-artifacts
-        run: |
-          if [ -f "./web-artifacts/ResgridDispatch-web.zip" ]; then
-            echo "WEB_ARTIFACT_EXISTS=true" >> $GITHUB_ENV
-            echo "RELEASE_ARTIFACTS=./ResgridDispatch-prod.apk,./web-artifacts/ResgridDispatch-web.zip" >> $GITHUB_ENV
-            echo "Web artifact found"
-          else
-            echo "WEB_ARTIFACT_EXISTS=false" >> $GITHUB_ENV
-            echo "RELEASE_ARTIFACTS=./ResgridDispatch-prod.apk" >> $GITHUB_ENV
-            echo "Web artifact not found, will only include APK"
-          fi
-
-      - name: 📦 Create Release
-        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
+      - name: 🚀 Publish to Release
         uses: ncipollo/release-action@v1
         with:
           tag: '1.${{ github.run_number }}'
@@ -504,11 +558,11 @@ jobs:
           makeLatest: true
           allowUpdates: true
           name: '1.${{ github.run_number }}'
-          artifacts: ${{ env.RELEASE_ARTIFACTS }}
+          artifacts: "artifacts/ResgridDispatch-prod.apk,artifacts/ResgridDispatch-web.zip,artifacts/*.dmg,artifacts/*.exe,artifacts/*.AppImage,artifacts/*.zip"
           bodyFile: 'RELEASE_NOTES.md'
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📡 Send Release Notes to Changerawr
-        if: ${{ matrix.platform == 'android' && (github.event.inputs.buildType == 'all' || github.event_name == 'push' || github.event.inputs.buildType == 'prod-apk') }}
         continue-on-error: true
         run: |
           set -eo pipefail
