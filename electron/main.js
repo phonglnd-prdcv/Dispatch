@@ -8,9 +8,9 @@ function createWindow() {
         height: 800,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: true,
-            contextIsolation: false,
-            webSecurity: false // Often needed for local development or certain map/audio features, evaluate heavily for prod
+            nodeIntegration: isDev,
+            contextIsolation: !isDev,
+            webSecurity: !isDev
         },
     });
 
