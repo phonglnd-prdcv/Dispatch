@@ -59,6 +59,7 @@
     "directories": {
       "output": "dist/electron"
     },
+    "icon": "assets/icon.png",
     "files": [
       "dist/**/*",
       "electron/**/*",
