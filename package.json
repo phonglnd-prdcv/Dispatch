@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "versionCode": "1",
   "private": true,
-  "main": "electron/main.js",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "cross-env EXPO_NO_DOTENV=1 expo start",
     "prebuild": "cross-env EXPO_NO_DOTENV=1 yarn expo prebuild",
