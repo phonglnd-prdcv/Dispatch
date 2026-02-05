@@ -61,6 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   experiments: {
     typedRoutes: true,
+    baseUrl: '/',
   },
   android: {
     version: packageJSON.version,
@@ -89,7 +90,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/favicon.png',
     bundler: 'metro',
     output: 'static',
-    baseUrl: './',
   },
   plugins: [
     [
