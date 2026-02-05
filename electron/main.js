@@ -1,6 +1,9 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
+
+// Use Electron's built-in app.isPackaged instead of electron-is-dev
+// app.isPackaged is true when running from a packaged app, false during development
+const isDev = !app.isPackaged;
 
 function createWindow() {
     const mainWindow = new BrowserWindow({

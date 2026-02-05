@@ -55,7 +55,7 @@
   },
   "build": {
     "appId": "com.resgrid.dispatch",
-    "productName": "Dispatch",
+    "productName": "Resgrid Dispatch",
     "publish": null,
     "directories": {
       "output": "dist/electron"
