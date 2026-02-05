@@ -737,6 +737,7 @@
     "transmitting_on": "Transmitting on {{channel}}",
     "transmission_ended": "Transmission ended",
     "voice_disabled": "Voice disabled",
+    "disconnected": "Disconnected",
     "select_channel": "Select Channel",
     "select_channel_description": "Choose a voice channel to connect to",
     "change_channel_warning": "Selecting a new channel will disconnect from the current one",

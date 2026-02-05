@@ -4,6 +4,7 @@ import { AppState, type AppStateStatus, Platform } from 'react-native';
 
 import { logger } from '@/lib/logging';
 import { type DepartmentVoiceChannelResultData } from '@/models/v4/voice/departmentVoiceResultData';
+import { audioService } from '@/services/audio.service';
 import { useLiveKitStore } from '@/stores/app/livekit-store';
 
 // Platform-specific imports for iOS CallKeep
@@ -384,9 +385,20 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
       setIsTransmitting(true);
       setIsMuted(false);
 
+      // Play PTT start sound
+      await audioService.playStartTransmittingSound();
+
       logger.debug({ message: 'PTT: Started transmitting' });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to start transmitting';
+      let errorMsg = err instanceof Error ? err.message : 'Failed to start transmitting';
+
+      // Provide more helpful error messages for common issues
+      if (errorMsg.includes('Requested device not found') || errorMsg.includes('NotFoundError')) {
+        errorMsg = 'No microphone found. Please check your audio device settings.';
+      } else if (errorMsg.includes('NotAllowedError') || errorMsg.includes('Permission')) {
+        errorMsg = 'Microphone permission denied. Please allow microphone access.';
+      }
+
       setError(errorMsg);
       onErrorRef.current?.(errorMsg);
       logger.error({
@@ -409,6 +421,9 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
       // Disable microphone
       await currentRoom.localParticipant.setMicrophoneEnabled(false);
       setIsTransmitting(false);
+
+      // Play PTT stop sound
+      await audioService.playStopTransmittingSound();
 
       logger.debug({ message: 'PTT: Stopped transmitting' });
     } catch (err) {

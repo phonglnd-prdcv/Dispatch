@@ -746,6 +746,7 @@
     "transmitting_on": "جاري الإرسال على {{channel}}",
     "transmission_ended": "انتهى الإرسال",
     "voice_disabled": "تم تعطيل الصوت",
+    "disconnected": "غير متصل",
     "select_channel": "اختر القناة",
     "select_channel_description": "اختر قناة صوتية للاتصال بها",
     "change_channel_warning": "اختيار قناة جديدة سيؤدي إلى قطع الاتصال من القناة الحالية",
