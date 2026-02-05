@@ -19,12 +19,14 @@ function createWindow() {
 
     // In development, load the local Expo web server
     // In production, load the built index.html
-    const startUrl = isDev
-        ? 'http://localhost:8081'
-        : `file://${path.join(__dirname, '../dist/index.html')}`;
-
-    console.log('Loading URL:', startUrl);
-    mainWindow.loadURL(startUrl);
+    if (isDev) {
+        console.log('Loading dev URL: http://localhost:8081');
+        mainWindow.loadURL('http://localhost:8081');
+    } else {
+        const indexPath = path.join(__dirname, '../dist/index.html');
+        console.log('Loading file:', indexPath);
+        mainWindow.loadFile(indexPath);
+    }
 
     if (isDev) {
         mainWindow.webContents.openDevTools();
