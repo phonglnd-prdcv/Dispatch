@@ -116,6 +116,7 @@ jest.mock('../../../lib/logging', () => ({
   logger: {
     info: jest.fn(),
     error: jest.fn(),
+    warn: jest.fn(),
     debug: jest.fn(),
   },
 }));
@@ -135,7 +136,7 @@ describe('LiveKit Store - Permission Management', () => {
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
-    
+
     // Reset store state
     useLiveKitStore.setState({
       currentRoom: null,
@@ -386,7 +387,7 @@ describe('LiveKit Store - Permission Management', () => {
     beforeEach(() => {
       jest.clearAllMocks();
       (Platform as any).OS = 'ios';
-      
+
       // Reset mock implementations
       mockCallKeepService.setup.mockResolvedValue(undefined);
       mockCallKeepService.startCall.mockResolvedValue('test-uuid');
@@ -424,17 +425,17 @@ describe('LiveKit Store - Permission Management', () => {
       const uuid = await mockCallKeepService.startCall('test-room');
       expect(mockCallKeepService.startCall).toHaveBeenCalledWith('test-room');
       expect(uuid).toBe('test-uuid');
-      
+
       await mockCallKeepService.endCall();
       expect(mockCallKeepService.endCall).toHaveBeenCalled();
     });
 
     it('should skip CallKeep operations on non-iOS platforms', async () => {
       (Platform as any).OS = 'android';
-      
+
       // Verify that platform checks work as expected
       expect(Platform.OS).toBe('android');
-      
+
       // CallKeep operations would be skipped on Android
       // This test confirms the platform detection works properly
     });
@@ -442,13 +443,13 @@ describe('LiveKit Store - Permission Management', () => {
     it('should handle CallKeep service errors gracefully', async () => {
       const error = new Error('CallKeep operation failed');
       mockCallKeepService.setup.mockRejectedValue(error);
-      
+
       try {
         await mockCallKeepService.setup({});
       } catch (e) {
         expect(e).toBe(error);
       }
-      
+
       expect(mockCallKeepService.setup).toHaveBeenCalled();
     });
   });

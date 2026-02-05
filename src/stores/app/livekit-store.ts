@@ -126,7 +126,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
             // Request microphone access - this will prompt the user for permission
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             // Release the stream immediately - LiveKit will get its own stream
-            stream.getTracks().forEach((track) => track.stop());
+            stream.getTracks().forEach((track) => {
+              track.stop();
+            });
             logger.info({
               message: 'Microphone permission granted successfully',
               context: { platform: 'web' },

@@ -386,7 +386,14 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
       setIsMuted(false);
 
       // Play PTT start sound
-      await audioService.playStartTransmittingSound();
+      try {
+        await audioService.playStartTransmittingSound();
+      } catch (sfxErr) {
+        logger.warn({
+          message: 'PTT: Failed to play start transmitting sound',
+          context: { error: sfxErr },
+        });
+      }
 
       logger.debug({ message: 'PTT: Started transmitting' });
     } catch (err) {
@@ -423,7 +430,14 @@ export function usePTT(options: UsePTTOptions = {}): UsePTTReturn {
       setIsTransmitting(false);
 
       // Play PTT stop sound
-      await audioService.playStopTransmittingSound();
+      try {
+        await audioService.playStopTransmittingSound();
+      } catch (sfxErr) {
+        logger.warn({
+          message: 'PTT: Failed to play stop transmitting sound',
+          context: { error: sfxErr },
+        });
+      }
 
       logger.debug({ message: 'PTT: Stopped transmitting' });
     } catch (err) {
