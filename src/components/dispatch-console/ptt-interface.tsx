@@ -1,4 +1,4 @@
-import { Headphones, Mic, MicOff, PhoneOff, Radio, Volume2, VolumeX, Wifi, WifiOff } from 'lucide-react-native';
+import { Mic, MicOff, PhoneOff, Radio, Wifi, WifiOff } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,6 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { usePTT } from '@/hooks/use-ptt';
-import { useAudioStreamStore } from '@/stores/app/audio-stream-store';
 
 import { PTTChannelSelector } from './ptt-channel-selector';
 
@@ -19,18 +18,15 @@ interface PTTInterfaceProps {
   onPTTPress?: () => void;
   /** Optional callback when PTT press ends (for activity logging) */
   onPTTRelease?: () => void;
-  /** Optional callback to open audio streams panel */
-  onOpenAudioStreams?: () => void;
   /** External transmitting state (for activity logging only, actual state managed by hook) */
   isTransmitting?: boolean;
   /** Display name for current channel (fallback only, actual channel from hook) */
   currentChannel?: string;
 }
 
-export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRelease, onOpenAudioStreams, isTransmitting: externalTransmitting = false, currentChannel: externalChannel = 'Main Channel' }) => {
+export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRelease, isTransmitting: externalTransmitting = false, currentChannel: externalChannel = 'Disconnected' }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const { isPlaying, currentStream, setIsBottomSheetVisible } = useAudioStreamStore();
 
   // Use refs to store callback functions to avoid re-creating onTransmittingChange
   const onPTTPressRef = useRef(onPTTPress);
@@ -80,15 +76,7 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
 
   // Use actual PTT state or fallback to external props
   const isTransmitting = isConnected ? pttTransmitting : externalTransmitting;
-  const displayChannel = pttChannel?.Name || externalChannel;
-
-  const handleOpenAudioStreams = useCallback(() => {
-    if (onOpenAudioStreams) {
-      onOpenAudioStreams();
-    } else {
-      setIsBottomSheetVisible(true);
-    }
-  }, [onOpenAudioStreams, setIsBottomSheetVisible]);
+  const displayChannel = isConnected ? (pttChannel?.Name || externalChannel) : (pttChannel?.Name || t('dispatch.disconnected'));
 
   const handlePTTPress = useCallback(async () => {
     if (!isConnected) {
@@ -133,9 +121,11 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
         }
         selectChannel(channel);
         setIsChannelSelectorOpen(false);
+        // Auto-connect to the selected channel
+        await connect(channel);
       }
     },
-    [availableChannels, isConnected, disconnect, selectChannel]
+    [availableChannels, isConnected, disconnect, selectChannel, connect]
   );
 
   const handleDisconnect = useCallback(async () => {
@@ -207,23 +197,11 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
                 </Text>
               </HStack>
             </Pressable>
-            <Pressable onPress={handleOpenAudioStreams}>
-              <HStack className="items-center" space="xs">
-                <Icon as={isPlaying ? Volume2 : VolumeX} size="2xs" color={isPlaying ? '#3b82f6' : colorScheme === 'dark' ? '#6b7280' : '#9ca3af'} />
-                <Text className="text-xs text-gray-600 dark:text-gray-300" numberOfLines={1}>
-                  {currentStream ? currentStream.Name : t('dispatch.no_stream')}
-                </Text>
-              </HStack>
-            </Pressable>
           </VStack>
         </HStack>
 
         {/* Compact Controls */}
         <HStack className="items-center" space="sm">
-          {/* Audio Streams Button */}
-          <Pressable onPress={handleOpenAudioStreams} style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }])}>
-            <Icon as={Headphones} size="sm" color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />
-          </Pressable>
 
           {/* Disconnect Button (only shown when connected) */}
           {isConnected ? (

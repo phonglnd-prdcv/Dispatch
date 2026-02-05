@@ -119,7 +119,49 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
   requestPermissions: async () => {
     try {
-      if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      if (Platform.OS === 'web') {
+        // On web, use the browser's MediaDevices API to request microphone permission
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            // Request microphone access - this will prompt the user for permission
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Release the stream immediately - LiveKit will get its own stream
+            stream.getTracks().forEach((track) => {
+              track.stop();
+            });
+            logger.info({
+              message: 'Microphone permission granted successfully',
+              context: { platform: 'web' },
+            });
+          } catch (mediaError: any) {
+            if (mediaError.name === 'NotAllowedError') {
+              logger.error({
+                message: 'Microphone permission denied by user',
+                context: { platform: 'web', error: mediaError },
+              });
+              // Only throw on permission denied - this requires user action
+              throw mediaError;
+            } else if (mediaError.name === 'NotFoundError') {
+              // No microphone found - log warning but continue
+              // User can still listen and may connect a microphone later
+              logger.warn({
+                message: 'No microphone device found - voice channel will be listen-only until a microphone is connected',
+                context: { platform: 'web' },
+              });
+            } else {
+              logger.warn({
+                message: 'Failed to request microphone permission - continuing with limited audio',
+                context: { platform: 'web', error: mediaError },
+              });
+            }
+          }
+        } else {
+          logger.warn({
+            message: 'MediaDevices API not available in this browser',
+            context: { platform: 'web' },
+          });
+        }
+      } else if (Platform.OS === 'android' || Platform.OS === 'ios') {
         // Use expo-audio for both Android and iOS microphone permissions
         const micPermission = await getRecordingPermissionsAsync();
 
@@ -158,7 +200,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
 
   connectToRoom: async (roomInfo, token) => {
     try {
-      const { currentRoom, voipServerWebsocketSslAddress } = get();
+      const { currentRoom, voipServerWebsocketSslAddress, requestPermissions } = get();
 
       // Disconnect from current room if connected
       if (currentRoom) {
@@ -166,6 +208,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       }
 
       set({ isConnecting: true });
+
+      // Request microphone permissions before connecting
+      await requestPermissions();
 
       // Create a new room
       const room = new Room();
@@ -202,8 +247,24 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
       await room.connect(voipServerWebsocketSslAddress, token);
 
       // Set microphone to muted by default, camera to disabled (audio-only call)
-      await room.localParticipant.setMicrophoneEnabled(false);
-      await room.localParticipant.setCameraEnabled(false);
+      // Wrap in try-catch as some platforms may not have devices available yet
+      try {
+        await room.localParticipant.setMicrophoneEnabled(false);
+      } catch (micError) {
+        logger.warn({
+          message: 'Failed to set initial microphone state (will be set when user transmits)',
+          context: { error: micError },
+        });
+      }
+
+      try {
+        await room.localParticipant.setCameraEnabled(false);
+      } catch (camError) {
+        logger.warn({
+          message: 'Failed to set initial camera state',
+          context: { error: camError },
+        });
+      }
 
       // Setup audio routing based on selected devices
       await setupAudioRouting(room);

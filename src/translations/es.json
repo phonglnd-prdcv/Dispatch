@@ -729,6 +729,7 @@
     "transmitting_on": "Transmitiendo en {{channel}}",
     "transmission_ended": "Transmisión finalizada",
     "voice_disabled": "Voz deshabilitada",
+    "disconnected": "Desconectado",
     "select_channel": "Seleccionar Canal",
     "select_channel_description": "Elija un canal de voz para conectarse",
     "change_channel_warning": "Seleccionar un nuevo canal desconectará del actual",
