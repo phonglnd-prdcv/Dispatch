@@ -1,4 +1,4 @@
-import { Mic, MicOff, PhoneOff, Radio, Wifi, WifiOff } from 'lucide-react-native';
+import { PhoneOff, Radio, Wifi, WifiOff } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -64,7 +64,6 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
     disconnect,
     startTransmitting,
     stopTransmitting,
-    toggleMute,
     selectChannel,
     refreshVoiceSettings,
   } = usePTT({
@@ -78,7 +77,8 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
   const isTransmitting = isConnected ? pttTransmitting : externalTransmitting;
   const displayChannel = isConnected ? (pttChannel?.Name || externalChannel) : (pttChannel?.Name || t('dispatch.disconnected'));
 
-  const handlePTTPress = useCallback(async () => {
+  // Toggle-style PTT handler - tap to start/stop transmitting
+  const handlePTTToggle = useCallback(async () => {
     if (!isConnected) {
       // If not connected, try to connect first
       if (availableChannels.length > 0 && !pttChannel) {
@@ -92,18 +92,13 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
       return;
     }
 
-    await startTransmitting();
-  }, [isConnected, availableChannels, pttChannel, selectChannel, connect, startTransmitting]);
-
-  const handlePTTRelease = useCallback(async () => {
-    if (isConnected && pttTransmitting) {
+    // Toggle transmitting state
+    if (pttTransmitting) {
       await stopTransmitting();
+    } else {
+      await startTransmitting();
     }
-  }, [isConnected, pttTransmitting, stopTransmitting]);
-
-  const handleMuteToggle = useCallback(async () => {
-    await toggleMute();
-  }, [toggleMute]);
+  }, [isConnected, availableChannels, pttChannel, pttTransmitting, selectChannel, connect, startTransmitting, stopTransmitting]);
 
   const handleChannelPress = useCallback(() => {
     if (isVoiceEnabled && availableChannels.length > 0) {
@@ -210,17 +205,8 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
             </Pressable>
           ) : null}
 
-          {/* Mute Button */}
-          <Pressable
-            onPress={handleMuteToggle}
-            style={StyleSheet.flatten([styles.compactControlButton, { backgroundColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }, isMuted && styles.mutedButton])}
-            disabled={!isConnected}
-          >
-            <Icon as={isMuted ? MicOff : Mic} size="sm" color={isMuted ? '#ef4444' : !isConnected ? '#9ca3af' : colorScheme === 'dark' ? '#fff' : '#374151'} />
-          </Pressable>
-
-          {/* PTT Button */}
-          <Pressable onPressIn={handlePTTPress} onPressOut={handlePTTRelease} style={StyleSheet.flatten(getPTTButtonStyle())} disabled={!isVoiceEnabled || isMuted}>
+          {/* PTT Toggle Button - tap to start/stop transmitting */}
+          <Pressable onPress={handlePTTToggle} style={StyleSheet.flatten(getPTTButtonStyle())} disabled={!isVoiceEnabled}>
             <Icon as={Radio} size="sm" color="#fff" />
           </Pressable>
         </HStack>
@@ -254,6 +240,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Note: mutedButton style kept for backwards compatibility but no longer used
   mutedButton: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },

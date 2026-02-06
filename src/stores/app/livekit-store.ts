@@ -1,6 +1,6 @@
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
-import { Room, RoomEvent } from 'livekit-client';
+import { Room, RoomEvent, Track } from 'livekit-client';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 
@@ -57,6 +57,8 @@ const setupAudioRouting = async (room: Room): Promise<void> => {
   }
 };
 
+// Map to store web audio elements for cleanup (keyed by track SID)
+const webAudioElements = new Map<string, HTMLAudioElement>();
 interface LiveKitState {
   // Connection state
   isConnected: boolean;
@@ -243,6 +245,53 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
         set({ isTalking });
       });
 
+      // Handle remote audio tracks for web platform
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        // On web, attach audio tracks to DOM elements for playback
+        if (Platform.OS === 'web' && track.kind === Track.Kind.Audio) {
+          try {
+            const audioElement = track.attach();
+            const trackSid = track.sid || publication.trackSid;
+            if (trackSid) {
+              audioElement.id = `livekit-audio-${trackSid}`;
+              document.body.appendChild(audioElement);
+              webAudioElements.set(trackSid, audioElement);
+            }
+            logger.debug({
+              message: 'Attached audio track for web playback',
+              context: { trackSid, participantIdentity: participant.identity },
+            });
+          } catch (err) {
+            logger.error({
+              message: 'Failed to attach audio track',
+              context: { error: err, trackSid: track.sid },
+            });
+          }
+        }
+      });
+
+      room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+        // On web, detach and remove audio elements
+        if (Platform.OS === 'web' && track.kind === Track.Kind.Audio) {
+          try {
+            track.detach().forEach((el) => el.remove());
+            const trackSid = track.sid || publication.trackSid;
+            if (trackSid) {
+              webAudioElements.delete(trackSid);
+            }
+            logger.debug({
+              message: 'Detached audio track',
+              context: { trackSid, participantIdentity: participant.identity },
+            });
+          } catch (err) {
+            logger.error({
+              message: 'Failed to detach audio track',
+              context: { error: err, trackSid: track.sid },
+            });
+          }
+        }
+      });
+
       // Connect to the room
       await room.connect(voipServerWebsocketSslAddress, token);
 
@@ -294,6 +343,22 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => ({
   disconnectFromRoom: async () => {
     const { currentRoom } = get();
     if (currentRoom) {
+      // Clean up web audio elements before disconnecting
+      if (Platform.OS === 'web') {
+        webAudioElements.forEach((audioElement, trackSid) => {
+          try {
+            audioElement.pause();
+            audioElement.remove();
+          } catch (err) {
+            logger.warn({
+              message: 'Failed to clean up audio element',
+              context: { error: err, trackSid },
+            });
+          }
+        });
+        webAudioElements.clear();
+      }
+
       await currentRoom.disconnect();
       await audioService.playDisconnectedFromAudioRoomSound();
 
