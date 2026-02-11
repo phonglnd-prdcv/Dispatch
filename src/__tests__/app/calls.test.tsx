@@ -205,7 +205,7 @@ jest.mock('@react-navigation/native', () => ({
   useIsFocused: jest.fn(() => true),
 }));
 
-import CallsScreen from '../calls';
+import CallsScreen from '../../app/(app)/calls';
 
 describe('CallsScreen', () => {
   const { useCallsStore } = require('@/stores/calls/store');

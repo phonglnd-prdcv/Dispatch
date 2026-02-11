@@ -4,7 +4,7 @@ import React from 'react';
 
 import { CallProtocolsResultData } from '@/models/v4/callProtocols/callProtocolsResultData';
 
-import Protocols from '../protocols';
+import Protocols from '../../app/(app)/protocols';
 
 // Mock dependencies
 jest.mock('react-i18next', () => ({

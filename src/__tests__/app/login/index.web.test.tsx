@@ -100,7 +100,7 @@ jest.mock('../index.web', () => {
 });
 
 // Import after mocking
-import LoginWeb from '../index.web';
+import LoginWeb from '../../app/login/index.web';
 
 // Mock hooks and dependencies
 const mockLogin = jest.fn();

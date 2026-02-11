@@ -11,7 +11,7 @@ import { useLocationStore } from '@/stores/app/location-store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
 
-import CallDetail from '../[id]';
+import CallDetail from '../../app/call/[id]';
 
 
 

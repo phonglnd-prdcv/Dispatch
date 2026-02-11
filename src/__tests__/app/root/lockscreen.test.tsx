@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { NavigationContainer } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
-import Lockscreen from '../lockscreen';
+import Lockscreen from '../../app/lockscreen';
 import { useAuth } from '@/lib/auth';
 import useLockscreenStore from '@/stores/lockscreen/store';
 

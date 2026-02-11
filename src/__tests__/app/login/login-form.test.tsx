@@ -60,7 +60,7 @@ jest.mock('../login-form', () => {
   };
 });
 
-import { LoginForm } from '../login-form';
+import { LoginForm } from '../../app/login/login-form';
 
 // Mock react-i18next
 jest.mock('react-i18next', () => ({

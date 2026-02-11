@@ -4,7 +4,7 @@ import React from 'react';
 
 import { ContactType } from '@/models/v4/contacts/contactResultData';
 
-import Contacts from '../contacts';
+import Contacts from '../../app/(app)/contacts';
 
 // Mock dependencies
 jest.mock('react-i18next', () => ({
