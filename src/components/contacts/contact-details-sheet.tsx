@@ -20,6 +20,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 
+import { UdfFieldsRenderer } from '@/components/calls/udf-fields-renderer';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { ContactType } from '@/models/v4/contacts/contactResultData';
@@ -311,6 +312,11 @@ export const ContactDetailsSheet: React.FC = () => {
                     </VStack>
                   </Section>
                 ) : null}
+
+                {/* Additional Fields (UDF) Section */}
+                <Section title={t('contacts.additionalFields', 'Additional Fields')} icon={<SettingsIcon size={16} color="#6366F1" />} defaultExpanded={false}>
+                  <UdfFieldsRenderer entityType={3} entityId={selectedContact.ContactId} onValuesChange={() => {}} readOnly={true} />
+                </Section>
               </VStack>
             </ScrollView>
           ) : (

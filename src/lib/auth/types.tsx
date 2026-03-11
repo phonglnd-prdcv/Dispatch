@@ -36,6 +36,22 @@ export interface ProfileModel {
   oi_tkn_id: string;
 }
 
+export interface SsoConfig {
+  ssoEnabled: boolean;
+  providerType: 'oidc' | 'saml2' | null;
+  authority: string | null;
+  clientId: string | null;
+  metadataUrl: string | null;
+  entityId: string | null;
+  idpSsoUrl: string | null;
+  allowLocalLogin: boolean;
+  requireSso: boolean;
+  requireMfa: boolean;
+  oidcRedirectUri: string | null;
+  oidcScopes: string | null;
+  departmentCode: string | null;
+}
+
 export type AuthStatus = 'idle' | 'signedIn' | 'signedOut' | 'loading' | 'error' | 'onboarding';
 
 export interface AuthState {
@@ -52,4 +68,5 @@ export interface AuthState {
   isFirstTime: boolean;
   isAuthenticated: () => boolean;
   setIsOnboarding: () => void;
+  loginWithSso: (authResponse: AuthResponse) => Promise<void>;
 }

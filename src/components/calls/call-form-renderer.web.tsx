@@ -1,0 +1,118 @@
+import { useColorScheme } from 'nativewind';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
+
+interface CallFormRendererProps {
+  formSchemaJson: string;
+  onFormDataChange: (formDataJson: string) => void;
+  height?: number;
+}
+
+function buildHtml(formSchemaJson: string, isDark: boolean): string {
+  const bg = isDark ? '#171717' : '#ffffff';
+  const text = isDark ? '#f3f4f6' : '#111827';
+  const border = isDark ? '#404040' : '#d1d5db';
+  const inputBg = isDark ? '#262626' : '#f9fafb';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Call Form</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://formbuilder.online/assets/js/form-render.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 8px;
+    background-color: ${bg};
+    color: ${text};
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+  }
+  .rendered-form label { display: block; margin-bottom: 4px; font-weight: 500; }
+  .rendered-form .form-group { margin-bottom: 12px; }
+  .rendered-form input,
+  .rendered-form select,
+  .rendered-form textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid ${border};
+    border-radius: 6px;
+    background: ${inputBg};
+    color: ${text};
+    font-size: 14px;
+    outline: none;
+  }
+  .rendered-form input:focus,
+  .rendered-form select:focus,
+  .rendered-form textarea:focus {
+    border-color: #2563eb;
+  }
+</style>
+</head>
+<body>
+<form id="callForm" class="rendered-form"></form>
+<script>
+  var formData = ${formSchemaJson};
+  $(function() {
+    if (typeof formData === 'string') {
+      try { formData = JSON.parse(formData); } catch(e) {}
+    }
+    $('#callForm').formRender({ formData: formData });
+
+    function sendData() {
+      var data = {};
+      var fields = document.querySelectorAll('#callForm input, #callForm select, #callForm textarea');
+      fields.forEach(function(el) {
+        if (el.name) data[el.name] = el.value;
+      });
+      window.parent.postMessage(JSON.stringify(data), '*');
+    }
+    document.getElementById('callForm').addEventListener('change', sendData);
+    document.getElementById('callForm').addEventListener('input', sendData);
+  });
+</script>
+</body>
+</html>`;
+}
+
+export const CallFormRenderer: React.FC<CallFormRendererProps> = ({ formSchemaJson, onFormDataChange, height = 400 }) => {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const html = buildHtml(formSchemaJson, isDark);
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (typeof event.data === 'string') {
+        onFormDataChange(event.data);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [onFormDataChange]);
+
+  return (
+    <View style={StyleSheet.flatten([styles.container, { height }, isDark ? styles.containerDark : styles.containerLight])}>
+      <iframe
+        ref={iframeRef}
+        srcDoc={html}
+        style={{ width: '100%', height: '100%', border: 'none' }}
+        title="Call Form"
+        sandbox="allow-scripts allow-same-origin"
+      />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+  },
+  containerDark: { borderColor: '#404040' },
+  containerLight: { borderColor: '#e5e7eb' },
+});

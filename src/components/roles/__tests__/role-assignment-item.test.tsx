@@ -101,6 +101,7 @@ describe('RoleAssignmentItem', () => {
       StaffingColor: '',
       StaffingTimestamp: '',
       Roles: [],
+      UdfValues: [],
     },
     {
       UserId: 'user2',
@@ -123,6 +124,7 @@ describe('RoleAssignmentItem', () => {
       StaffingColor: '',
       StaffingTimestamp: '',
       Roles: [],
+      UdfValues: [],
     },
   ];
 

@@ -44,6 +44,7 @@ describe('Personnel Store', () => {
 			StaffingColor: '#3B82F6',
 			StaffingTimestamp: '2023-12-01T08:00:00Z',
 			Roles: ['Firefighter', 'EMT'],
+			UdfValues: [],
 		},
 		{
 			UserId: '2',
@@ -66,6 +67,7 @@ describe('Personnel Store', () => {
 			StaffingColor: '#6B7280',
 			StaffingTimestamp: '2023-12-01T09:00:00Z',
 			Roles: ['Paramedic', 'Driver'],
+			UdfValues: [],
 		},
 		{
 			UserId: '3',
@@ -88,6 +90,7 @@ describe('Personnel Store', () => {
 			StaffingColor: '#3B82F6',
 			StaffingTimestamp: '2023-12-01T08:30:00Z',
 			Roles: ['Captain', 'Firefighter'],
+			UdfValues: [],
 		},
 	];
 

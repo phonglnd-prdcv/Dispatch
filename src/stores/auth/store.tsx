@@ -191,6 +191,55 @@ const useAuthStore = create<AuthState>()(
           status: 'onboarding',
         });
       },
+      loginWithSso: async (authResponse: AuthResponse) => {
+        try {
+          set({ status: 'loading', error: null });
+
+          const tokenToDecode = authResponse.id_token || authResponse.access_token;
+          let profileData: ProfileModel;
+
+          try {
+            profileData = jwtDecode<ProfileModel>(tokenToDecode);
+            logger.info({
+              message: 'SSO: Successfully decoded JWT token',
+              context: { userId: profileData.sub },
+            });
+          } catch (jwtError) {
+            logger.error({
+              message: 'SSO: Failed to decode JWT token',
+              context: { error: jwtError instanceof Error ? jwtError.message : String(jwtError) },
+            });
+            throw new Error('Failed to decode SSO authentication token');
+          }
+
+          const now = new Date();
+          const expiresOn = new Date(now.getTime() + authResponse.expires_in * 1000).getTime().toString();
+
+          set({
+            accessToken: authResponse.access_token,
+            refreshToken: authResponse.refresh_token,
+            refreshTokenExpiresOn: expiresOn,
+            status: 'signedIn',
+            error: null,
+            profile: profileData,
+            userId: profileData.sub,
+          });
+
+          logger.info({
+            message: 'SSO: State updated to signedIn',
+            context: { userId: profileData.sub },
+          });
+        } catch (error) {
+          logger.error({
+            message: 'SSO: loginWithSso exception',
+            context: { error: error instanceof Error ? error.message : String(error) },
+          });
+          set({
+            status: 'error',
+            error: error instanceof Error ? error.message : 'SSO login failed',
+          });
+        }
+      },
     }),
     {
       name: 'auth-storage',

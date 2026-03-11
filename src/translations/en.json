@@ -294,7 +294,39 @@
     "new_call_web_hint": "Fill in the call details below. Press Ctrl+Enter to create.",
     "edit_call_web_hint": "Update the call details below. Press Ctrl+S to save.",
     "keyboard_shortcuts": "Tip: Press Ctrl+Enter to create, Escape to cancel",
-    "edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel"
+    "edit_keyboard_shortcuts": "Tip: Press Ctrl+S to save, Escape to cancel",
+    "templates": {
+      "title": "Call Templates",
+      "select_template": "Select Template",
+      "search_placeholder": "Search templates...",
+      "none": "No templates available",
+      "template_applied": "Template applied"
+    },
+    "form": {
+      "title": "Call Form",
+      "no_form": "No call form configured"
+    },
+    "linked_calls": {
+      "title": "Linked Call",
+      "select": "Link to existing call",
+      "change": "Change linked call",
+      "none": "No active calls available",
+      "search_placeholder": "Search calls...",
+      "linked": "Linked"
+    },
+    "contact_picker": {
+      "title": "Select Contact",
+      "search_placeholder": "Search contacts...",
+      "none": "No contacts available"
+    },
+    "protocols": {
+      "title": "Protocols",
+      "select": "Select Protocols",
+      "none": "No protocols available",
+      "selected_count": "selected",
+      "expand_questions": "View questions",
+      "collapse": "Collapse"
+    }
   },
   "common": {
     "add": "Add",
@@ -451,6 +483,29 @@
     "loadingData": "Loading data...",
     "pleaseWait": "Please wait",
     "processingRequest": "Processing your request..."
+  },
+  "sso": {
+    "authenticating": "Authenticating...",
+    "back_to_login": "Back to Login",
+    "back_to_lookup": "Change User",
+    "continue_button": "Continue",
+    "department_id_label": "Department ID",
+    "department_id_placeholder": "Enter department ID",
+    "error_generic": "Sign-in failed. Please try again.",
+    "error_oidc_cancelled": "Sign-in was cancelled.",
+    "error_oidc_not_ready": "SSO provider is loading, please wait.",
+    "error_sso_not_enabled": "Single sign-on is not enabled for this user.",
+    "error_token_exchange": "Failed to complete sign-in. Please try again.",
+    "error_user_not_found": "User not found. Please check and try again.",
+    "looking_up": "Looking up...",
+    "optional": "optional",
+    "page_subtitle": "Enter your username to look up your organization's sign-in options.",
+    "page_title": "Single Sign-On",
+    "provider_oidc": "OpenID Connect (OIDC)",
+    "provider_saml": "SAML 2.0",
+    "sign_in_button": "Sign In with SSO",
+    "sign_in_title": "Sign In",
+    "sso_button": "SSO Login"
   },
   "login": {
     "branding_subtitle": "Powerful dispatch software for first responders, search & rescue, and public safety organizations.",

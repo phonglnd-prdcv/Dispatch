@@ -304,7 +304,7 @@ jest.mock('react-native-svg', () => ({
   Mixin: {},
 }));
 
-import CallDetail from '../../app/call/[id]';
+import CallDetail from '../../../app/call/[id]';
 
 describe('CallDetail', () => {
   const { useCallDetailStore } = require('@/stores/calls/detail-store');

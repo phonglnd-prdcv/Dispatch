@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { View, Text, TextInput, Pressable } from 'react-native';
 
 // Mock the entire web login module
-jest.mock('../index.web', () => {
+jest.mock('../../../app/login/index.web', () => {
   const React = require('react');
   const { View, Text, TextInput, Pressable } = require('react-native');
 
@@ -100,7 +100,7 @@ jest.mock('../index.web', () => {
 });
 
 // Import after mocking
-import LoginWeb from '../../app/login/index.web';
+import LoginWeb from '../../../app/login/index.web';
 
 // Mock hooks and dependencies
 const mockLogin = jest.fn();

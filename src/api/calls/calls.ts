@@ -50,6 +50,10 @@ export interface CreateCallRequest {
   dispatchRoles?: string[];
   dispatchUnits?: string[];
   dispatchEveryone?: boolean;
+  callFormData?: string;
+  linkedCallId?: string;
+  externalId?: string;
+  referenceId?: string;
 }
 
 export interface UpdateCallRequest {
@@ -71,6 +75,10 @@ export interface UpdateCallRequest {
   dispatchRoles?: string[];
   dispatchUnits?: string[];
   dispatchEveryone?: boolean;
+  callFormData?: string;
+  linkedCallId?: string;
+  externalId?: string;
+  referenceId?: string;
 }
 
 export interface CloseCallRequest {
@@ -120,6 +128,10 @@ export const createCall = async (callData: CreateCallRequest) => {
     What3Words: callData.what3words || '',
     PlusCode: callData.plusCode || '',
     DispatchList: dispatchList,
+    CallFormData: callData.callFormData || '',
+    IncidentId: callData.linkedCallId || '',
+    ExternalId: callData.externalId || '',
+    ReferenceId: callData.referenceId || '',
   };
 
   const response = await createCallApi.post<SaveCallResult>(data);
@@ -168,6 +180,10 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     What3Words: callData.what3words || '',
     PlusCode: callData.plusCode || '',
     DispatchList: dispatchList,
+    CallFormData: callData.callFormData || '',
+    IncidentId: callData.linkedCallId || '',
+    ExternalId: callData.externalId || '',
+    ReferenceId: callData.referenceId || '',
   };
 
   const response = await updateCallApi.post<SaveCallResult>(data);

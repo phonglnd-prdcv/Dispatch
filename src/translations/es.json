@@ -294,7 +294,39 @@
     "new_call_web_hint": "Complete los detalles de la llamada a continuación. Presione Ctrl+Enter para crear.",
     "edit_call_web_hint": "Actualice los detalles de la llamada a continuación. Presione Ctrl+S para guardar.",
     "keyboard_shortcuts": "Consejo: Presione Ctrl+Enter para crear, Escape para cancelar",
-    "edit_keyboard_shortcuts": "Consejo: Presione Ctrl+S para guardar, Escape para cancelar"
+    "edit_keyboard_shortcuts": "Consejo: Presione Ctrl+S para guardar, Escape para cancelar",
+    "templates": {
+      "title": "Plantillas de Llamada",
+      "select_template": "Seleccionar Plantilla",
+      "search_placeholder": "Buscar plantillas...",
+      "none": "No hay plantillas disponibles",
+      "template_applied": "Plantilla aplicada"
+    },
+    "form": {
+      "title": "Formulario de Llamada",
+      "no_form": "No hay formulario de llamada configurado"
+    },
+    "linked_calls": {
+      "title": "Llamada Vinculada",
+      "select": "Vincular a llamada existente",
+      "change": "Cambiar llamada vinculada",
+      "none": "No hay llamadas activas disponibles",
+      "search_placeholder": "Buscar llamadas...",
+      "linked": "Vinculada"
+    },
+    "contact_picker": {
+      "title": "Seleccionar Contacto",
+      "search_placeholder": "Buscar contactos...",
+      "none": "No hay contactos disponibles"
+    },
+    "protocols": {
+      "title": "Protocolos",
+      "select": "Seleccionar Protocolos",
+      "none": "No hay protocolos disponibles",
+      "selected_count": "seleccionados",
+      "expand_questions": "Ver preguntas",
+      "collapse": "Contraer"
+    }
   },
   "common": {
     "add": "Añadir",
@@ -451,6 +483,29 @@
     "loadingData": "Cargando datos...",
     "pleaseWait": "Por favor, espere",
     "processingRequest": "Procesando su solicitud..."
+  },
+  "sso": {
+    "authenticating": "Autenticando...",
+    "back_to_login": "Volver al inicio de sesión",
+    "back_to_lookup": "Cambiar usuario",
+    "continue_button": "Continuar",
+    "department_id_label": "ID de departamento",
+    "department_id_placeholder": "Ingrese el ID de departamento",
+    "error_generic": "Error al iniciar sesión. Por favor intente de nuevo.",
+    "error_oidc_cancelled": "El inicio de sesión fue cancelado.",
+    "error_oidc_not_ready": "El proveedor SSO se está cargando, por favor espere.",
+    "error_sso_not_enabled": "El inicio de sesión único no está habilitado para este usuario.",
+    "error_token_exchange": "Error al completar el inicio de sesión. Por favor intente de nuevo.",
+    "error_user_not_found": "Usuario no encontrado. Por favor verifique e intente de nuevo.",
+    "looking_up": "Buscando...",
+    "optional": "opcional",
+    "page_subtitle": "Ingrese su nombre de usuario para ver las opciones de inicio de sesión de su organización.",
+    "page_title": "Inicio de sesión único",
+    "provider_oidc": "OpenID Connect (OIDC)",
+    "provider_saml": "SAML 2.0",
+    "sign_in_button": "Iniciar sesión con SSO",
+    "sign_in_title": "Iniciar sesión",
+    "sso_button": "Acceso SSO"
   },
   "login": {
     "branding_subtitle": "Software de despacho potente para socorristas, búsqueda y rescate, y organizaciones de seguridad pública.",

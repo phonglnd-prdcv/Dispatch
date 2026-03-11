@@ -10,7 +10,18 @@ class MockMMKV {
   private prefix: string;
 
   constructor(config?: { id?: string; encryptionKey?: string }) {
-    this.storage = typeof window !== 'undefined' ? window.localStorage : ({} as Storage);
+    const _fallbackData: Record<string, string> = {};
+    const _fallbackStorage: Storage = {
+      getItem(key: string) { return _fallbackData[key] ?? null; },
+      setItem(key: string, value: string) { _fallbackData[key] = value; },
+      removeItem(key: string) { delete _fallbackData[key]; },
+      key(index: number) { return Object.keys(_fallbackData)[index] ?? null; },
+      get length() { return Object.keys(_fallbackData).length; },
+      clear() { Object.keys(_fallbackData).forEach((k) => delete _fallbackData[k]); },
+    } as unknown as Storage;
+    this.storage = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
+      ? window.localStorage
+      : _fallbackStorage;
     this.prefix = config?.id || 'mmkv';
   }
 
