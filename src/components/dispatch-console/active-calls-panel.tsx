@@ -51,7 +51,8 @@ DispatchBadge.displayName = 'DispatchBadge';
 const DispatchTicker: React.FC<{
   dispatches: DispatchedEventResultData[];
   isLoading?: boolean;
-}> = React.memo(({ dispatches, isLoading }) => {
+  textColor?: string;
+}> = React.memo(({ dispatches, isLoading, textColor = '#ffffff' }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const containerWidthRef = useRef(0);
   const contentWidthRef = useRef(0);
@@ -78,10 +79,19 @@ const DispatchTicker: React.FC<{
   }, [translateX]);
 
   useEffect(() => {
+    if (isLoading || dispatches.length === 0) {
+      if (animRef.current) {
+        animRef.current.stop();
+        animRef.current = null;
+      }
+    }
     return () => {
-      animRef.current?.stop();
+      if (animRef.current) {
+        animRef.current.stop();
+        animRef.current = null;
+      }
     };
-  }, []);
+  }, [isLoading, dispatches.length]);
 
   return (
     <View
@@ -92,9 +102,9 @@ const DispatchTicker: React.FC<{
       }}
     >
       {isLoading ? (
-        <RNText style={styles.tickerPlaceholder}>…</RNText>
+        <RNText style={StyleSheet.flatten([styles.tickerPlaceholder, { color: `${textColor}80` }])}>…</RNText>
       ) : dispatches.length === 0 ? (
-        <RNText style={styles.tickerPlaceholder}>—</RNText>
+        <RNText style={StyleSheet.flatten([styles.tickerPlaceholder, { color: `${textColor}80` }])}>—</RNText>
       ) : (
         <Animated.View style={StyleSheet.flatten([styles.tickerScrollTrack, { transform: [{ translateX }] }])}>
           <View
@@ -178,7 +188,7 @@ const DashboardCallCard: React.FC<{
         <View style={styles.tickerIconWrapper}>
           <Radio size={9} color={textColor} />
         </View>
-        <DispatchTicker dispatches={dispatches ?? []} isLoading={isLoadingDispatches} />
+        <DispatchTicker dispatches={dispatches ?? []} isLoading={isLoadingDispatches} textColor={textColor} />
       </View>
     </View>
   );
@@ -252,7 +262,11 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
   const [callDispatchesMap, setCallDispatchesMap] = useState<Record<string, DispatchedEventResultData[]>>({});
   const [loadingCallIds, setLoadingCallIds] = useState<Set<string>>(new Set());
   const fetchedCallIdsRef = useRef<Set<string>>(new Set());
-  const fetchEpochRef = useRef(0);
+  // Per-call epoch tracking: prevents a later batch from silently discarding an
+  // earlier in-flight batch while still allowing each call to clear its own
+  // loading state independently.
+  const callFetchEpochsRef = useRef<Map<string, number>>(new Map());
+  const epochCounterRef = useRef(0);
 
   // Keep selected call's dispatches fresh via dispatch console store (updated by SignalR)
   const selectedCallExtraData = useDispatchConsoleStore((state) => state.selectedCallExtraData);
@@ -293,8 +307,14 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
       return next;
     });
 
-    fetchEpochRef.current += 1;
-    const epoch = fetchEpochRef.current;
+    // Stamp each callId with its own epoch so a later batch for different
+    // callIds does not invalidate these in-flight requests.
+    const batchEpochs = new Map<string, number>();
+    toFetch.forEach((id) => {
+      epochCounterRef.current += 1;
+      callFetchEpochsRef.current.set(id, epochCounterRef.current);
+      batchEpochs.set(id, epochCounterRef.current);
+    });
 
     Promise.all(
       toFetch.map((callId) =>
@@ -303,11 +323,11 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
           .catch(() => ({ callId, dispatches: null as DispatchedEventResultData[] | null }))
       )
     ).then((results) => {
-      if (epoch !== fetchEpochRef.current) return;
-
       setCallDispatchesMap((prev) => {
         const next = { ...prev };
         results.forEach(({ callId, dispatches }) => {
+          // Skip update if a newer request superseded this one for this callId.
+          if (callFetchEpochsRef.current.get(callId) !== batchEpochs.get(callId)) return;
           if (dispatches !== null) {
             next[callId] = dispatches;
           } else {
@@ -317,6 +337,8 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
         });
         return next;
       });
+      // Always clear loading state so spinners are never permanently stuck,
+      // even if a concurrent batch started after this one.
       setLoadingCallIds((prev) => {
         const next = new Set(prev);
         toFetch.forEach((id) => {
@@ -366,8 +388,10 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
-    // Invalidate any in-flight fetch batch before resetting state
-    fetchEpochRef.current += 1;
+    // Invalidate all in-flight per-call requests by wiping the epoch map;
+    // any in-flight batch's batchEpochs values will no longer match, so
+    // stale results won't be written back to callDispatchesMap.
+    callFetchEpochsRef.current = new Map();
     // Clear tracking state so all active calls get their dispatches re-fetched
     fetchedCallIdsRef.current = new Set();
     setLoadingCallIds(new Set());
@@ -599,7 +623,6 @@ const styles = StyleSheet.create({
   },
   tickerPlaceholder: {
     fontSize: 9,
-    color: 'rgba(255,255,255,0.5)',
     fontStyle: 'italic' as const,
   },
   // Dispatch badge pill
