@@ -1,8 +1,8 @@
 import { type Href, router } from 'expo-router';
-import { AlertTriangle, Clock, ExternalLink, MapPin, Plus, Search, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Clock, ExternalLink, MapPin, Plus, Radio, Search, X } from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { Box } from '@/components/ui/box';
@@ -13,17 +13,120 @@ import { VStack } from '@/components/ui/vstack';
 import { getTimeAgoUtc, invertColor, isCallActive, stripHtmlTags } from '@/lib/utils';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
+import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { useCallsStore } from '@/stores/calls/store';
+import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
 import { useSecurityStore } from '@/stores/security/store';
+
+import { getCallExtraData } from '@/api/calls/calls';
 
 import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
+
+// Type → badge appearance
+const getDispatchTypeStyle = (type: string): { bg: string; fg: string; label: string } => {
+  const t = (type || '').toLowerCase();
+  if (t.includes('user') || t.includes('personnel')) return { bg: '#2563eb', fg: '#ffffff', label: 'P' };
+  if (t.includes('unit')) return { bg: '#d97706', fg: '#ffffff', label: 'U' };
+  if (t.includes('group')) return { bg: '#059669', fg: '#ffffff', label: 'G' };
+  if (t.includes('role')) return { bg: '#7c3aed', fg: '#ffffff', label: 'R' };
+  return { bg: '#6b7280', fg: '#ffffff', label: '•' };
+};
+
+const DispatchBadge: React.FC<{ dispatch: DispatchedEventResultData }> = React.memo(({ dispatch }) => {
+  const ts = getDispatchTypeStyle(dispatch.Type);
+  return (
+    <View style={StyleSheet.flatten([styles.dispatchBadge, { backgroundColor: ts.bg }])}>
+      <RNText style={StyleSheet.flatten([styles.dispatchBadgeLabel, { color: ts.fg }])}>{ts.label}</RNText>
+      <View style={styles.dispatchBadgeDivider} />
+      <RNText style={StyleSheet.flatten([styles.dispatchBadgeName, { color: ts.fg }])} numberOfLines={1}>
+        {dispatch.Name}
+      </RNText>
+    </View>
+  );
+});
+
+DispatchBadge.displayName = 'DispatchBadge';
+
+// Animated horizontal dispatch ticker with color-coded badges
+const DispatchTicker: React.FC<{
+  dispatches: DispatchedEventResultData[];
+  isLoading?: boolean;
+}> = React.memo(({ dispatches, isLoading }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const containerWidthRef = useRef(0);
+  const contentWidthRef = useRef(0);
+  const animRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  const startAnim = useCallback(() => {
+    if (containerWidthRef.current <= 0 || contentWidthRef.current <= 0) return;
+    animRef.current?.stop();
+    if (contentWidthRef.current <= containerWidthRef.current) {
+      // Content fits – no scrolling needed
+      translateX.setValue(0);
+      return;
+    }
+    translateX.setValue(containerWidthRef.current);
+    const totalDistance = contentWidthRef.current + containerWidthRef.current;
+    animRef.current = Animated.loop(
+      Animated.timing(translateX, {
+        toValue: -contentWidthRef.current,
+        duration: (totalDistance / 60) * 1000,
+        useNativeDriver: Platform.OS !== 'web',
+      })
+    );
+    animRef.current.start();
+  }, [translateX]);
+
+  useEffect(() => {
+    return () => {
+      animRef.current?.stop();
+    };
+  }, []);
+
+  return (
+    <View
+      style={styles.tickerContainer}
+      onLayout={(e) => {
+        containerWidthRef.current = e.nativeEvent.layout.width;
+        startAnim();
+      }}
+    >
+      {isLoading ? (
+        <RNText style={styles.tickerPlaceholder}>…</RNText>
+      ) : dispatches.length === 0 ? (
+        <RNText style={styles.tickerPlaceholder}>—</RNText>
+      ) : (
+        <Animated.View style={StyleSheet.flatten([styles.tickerScrollTrack, { transform: [{ translateX }] }])}>
+          <View
+            style={styles.tickerBadgeRow}
+            onLayout={(e) => {
+              contentWidthRef.current = e.nativeEvent.layout.width;
+              startAnim();
+            }}
+          >
+            {dispatches.map((d, i) => (
+              <React.Fragment key={d.Id || `${d.Name}-${i}`}>
+                {i > 0 ? <View style={styles.tickerBadgeGap} /> : null}
+                <DispatchBadge dispatch={d} />
+              </React.Fragment>
+            ))}
+          </View>
+        </Animated.View>
+      )}
+    </View>
+  );
+});
+
+DispatchTicker.displayName = 'DispatchTicker';
 
 // Compact call card optimized for dispatch dashboard
 const DashboardCallCard: React.FC<{
   call: CallResultData;
   priority?: CallPriorityResultData;
-}> = React.memo(({ call, priority }) => {
+  dispatches?: DispatchedEventResultData[];
+  isLoadingDispatches?: boolean;
+}> = React.memo(({ call, priority, dispatches, isLoadingDispatches }) => {
   const bgColor = priority?.Color || '#6b7280';
   const textColor = invertColor(bgColor, true);
 
@@ -69,6 +172,15 @@ const DashboardCallCard: React.FC<{
           </RNText>
         ) : null}
       </View>
+
+      {/* Dispatched Resources Ticker - always visible */}
+      <View style={StyleSheet.flatten([styles.tickerDivider, { backgroundColor: `${textColor}40` }])} />
+      <View style={styles.tickerRow}>
+        <View style={styles.tickerIconWrapper}>
+          <Radio size={9} color={textColor} />
+        </View>
+        <DispatchTicker dispatches={dispatches ?? []} isLoading={isLoadingDispatches} />
+      </View>
     </View>
   );
 });
@@ -87,9 +199,12 @@ const CallItemWrapper: React.FC<{
   priority?: CallPriorityResultData;
   isSelected: boolean;
   isFilterActive: boolean;
+  dispatches?: DispatchedEventResultData[];
+  isLoadingDispatches?: boolean;
   onPress: () => void;
   onOpenDetails: () => void;
-}> = ({ call, priority, isSelected, isFilterActive, onPress, onOpenDetails }) => {
+}> = ({ call, priority, isSelected, isFilterActive, dispatches, isLoadingDispatches, onPress, onOpenDetails }) => {
+  void isFilterActive; // kept in props for selection badge only
   const { t } = useTranslation();
   const bgColor = priority?.Color || '#6b7280';
   const textColor = invertColor(bgColor, true);
@@ -111,7 +226,7 @@ const CallItemWrapper: React.FC<{
 
         {/* Dashboard Card with action button overlay */}
         <View style={styles.cardContainer}>
-          <DashboardCallCard call={call} priority={priority} />
+          <DashboardCallCard call={call} priority={priority} dispatches={dispatches} isLoadingDispatches={isLoadingDispatches} />
           <Pressable
             onPress={(e) => {
               e.stopPropagation();
@@ -134,6 +249,19 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Per-call dispatches cache (fetched eagerly for all active calls)
+  const [callDispatchesMap, setCallDispatchesMap] = useState<Record<string, DispatchedEventResultData[]>>({});
+  const [loadingCallIds, setLoadingCallIds] = useState<Set<string>>(new Set());
+  const fetchedCallIdsRef = useRef<Set<string>>(new Set());
+
+  // Keep selected call's dispatches fresh via dispatch console store (updated by SignalR)
+  const selectedCallExtraData = useDispatchConsoleStore((state) => state.selectedCallExtraData);
+  useEffect(() => {
+    if (selectedCallId && selectedCallExtraData?.Dispatches) {
+      setCallDispatchesMap((prev) => ({ ...prev, [selectedCallId]: selectedCallExtraData.Dispatches }));
+    }
+  }, [selectedCallId, selectedCallExtraData]);
+
   // Get calls and priorities from the store - use separate selectors for better performance
   const calls = useCallsStore((state) => state.calls);
   const callPriorities = useCallsStore((state) => state.callPriorities);
@@ -147,6 +275,48 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
     fetchCalls();
     fetchCallPriorities();
   }, [fetchCalls, fetchCallPriorities]);
+
+  // Eagerly fetch dispatches for all active calls not yet fetched
+  useEffect(() => {
+    const toFetch = calls.filter((c) => isCallActive(c.State) && !fetchedCallIdsRef.current.has(c.CallId)).map((c) => c.CallId);
+
+    if (toFetch.length === 0) return;
+
+    toFetch.forEach((id) => {
+      fetchedCallIdsRef.current.add(id);
+    });
+    setLoadingCallIds((prev) => {
+      const next = new Set(prev);
+      toFetch.forEach((id) => {
+        next.add(id);
+      });
+      return next;
+    });
+
+    Promise.all(
+      toFetch.map((callId) =>
+        getCallExtraData(callId)
+          .then((res) => ({ callId, dispatches: res?.Data?.Dispatches ?? [] }))
+          .catch(() => ({ callId, dispatches: [] as DispatchedEventResultData[] }))
+      )
+    ).then((results) => {
+      setCallDispatchesMap((prev) => {
+        const next = { ...prev };
+        results.forEach(({ callId, dispatches }) => {
+          next[callId] = dispatches;
+        });
+        return next;
+      });
+      setLoadingCallIds((prev) => {
+        const next = new Set(prev);
+        toFetch.forEach((id) => {
+          next.delete(id);
+        });
+        return next;
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calls]);
 
   const activeCalls = useMemo(() => {
     // Filter for active or open calls using utility function
@@ -256,6 +426,8 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
                   priority={getPriority(call.Priority)}
                   isSelected={selectedCallId === call.CallId}
                   isFilterActive={isFilterActive}
+                  dispatches={callDispatchesMap[call.CallId]}
+                  isLoadingDispatches={loadingCallIds.has(call.CallId)}
                   onPress={() => {
                     onSelectCall?.(call.CallId);
                   }}
@@ -376,5 +548,67 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontStyle: 'italic' as const,
     paddingLeft: 14,
+  },
+  // Dispatch ticker styles
+  tickerDivider: {
+    height: 1,
+    marginTop: 6,
+    marginBottom: 5,
+    marginHorizontal: -10,
+  },
+  tickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  tickerIconWrapper: {
+    marginRight: 5,
+    flexShrink: 0,
+  },
+  tickerContainer: {
+    flex: 1,
+    overflow: 'hidden',
+    height: 18,
+    justifyContent: 'center',
+  },
+  tickerScrollTrack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tickerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tickerBadgeGap: {
+    width: 5,
+  },
+  tickerPlaceholder: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.5)',
+    fontStyle: 'italic' as const,
+  },
+  // Dispatch badge pill
+  dispatchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 3,
+    overflow: 'hidden',
+    height: 14,
+  },
+  dispatchBadgeLabel: {
+    fontSize: 9,
+    fontWeight: '700' as const,
+    paddingHorizontal: 3,
+    opacity: 1,
+  },
+  dispatchBadgeDivider: {
+    width: 1,
+    height: '100%' as unknown as number,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  dispatchBadgeName: {
+    fontSize: 9,
+    fontWeight: '500' as const,
+    paddingHorizontal: 4,
   },
 });

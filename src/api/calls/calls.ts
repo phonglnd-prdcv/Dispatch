@@ -54,6 +54,7 @@ export interface CreateCallRequest {
   linkedCallId?: string;
   externalId?: string;
   referenceId?: string;
+  scheduledOn?: string;
 }
 
 export interface UpdateCallRequest {
@@ -132,6 +133,7 @@ export const createCall = async (callData: CreateCallRequest) => {
     IncidentId: callData.linkedCallId || '',
     ExternalId: callData.externalId || '',
     ReferenceId: callData.referenceId || '',
+    ScheduledOn: callData.scheduledOn || '',
   };
 
   const response = await createCallApi.post<SaveCallResult>(data);

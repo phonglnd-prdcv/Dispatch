@@ -92,7 +92,7 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority }) => {
 
       {/* Nature of Call - Use iframe for web instead of WebView */}
       {call.Nature ? (
-        <Box className="mt-4 rounded-lg bg-white/50 p-3">
+        <Box className="mt-4 p-0">
           <div style={{ width: '100%', height: 80, overflow: 'hidden' }}>
             <iframe
               srcDoc={`
@@ -103,6 +103,7 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority }) => {
                     <style>
                       body {
                         color: ${textColor};
+                        background-color: ${bgColor};
                         font-family: system-ui, -apple-system, sans-serif;
                         margin: 0;
                         padding: 0;
@@ -118,7 +119,7 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority }) => {
                   <body>${call.Nature}</body>
                 </html>
               `}
-              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: 'transparent' }}
+              style={{ width: '100%', height: '100%', border: 'none', backgroundColor: bgColor }}
               scrolling="no"
               frameBorder="0"
             />

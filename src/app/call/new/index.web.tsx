@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import { type Href, router, Stack } from 'expo-router';
-import { BookOpenIcon, ChevronDownIcon, ChevronUpIcon, FileTextIcon, LinkIcon, MapPinIcon, PlusIcon, SearchIcon, UserIcon, XIcon } from 'lucide-react-native';
+import { BookOpenIcon, CalendarClockIcon, ChevronDownIcon, ChevronUpIcon, FileTextIcon, LinkIcon, MapPinIcon, PlusIcon, SearchIcon, UserIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -54,6 +54,7 @@ const formSchema = z.object({
   type: z.string().min(1, { message: 'Type is required' }),
   contactName: z.string().optional(),
   contactInfo: z.string().optional(),
+  scheduledOn: z.string().optional(),
   dispatchSelection: z
     .object({
       everyone: z.boolean(),
@@ -178,6 +179,38 @@ const WebInput: React.FC<WebInputProps> = ({ label, placeholder, value, onChange
   );
 };
 
+// Web-optimized datetime input component
+interface WebDateTimeInputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  min?: string;
+  error?: string;
+  helperText?: string;
+  testID?: string;
+}
+
+const WebDateTimeInput: React.FC<WebDateTimeInputProps> = ({ label, value, onChange, min, error, helperText, testID }) => {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  const inputStyles = StyleSheet.flatten([webStyles.webInput as any, isDark ? styles.webInputDark : styles.webInputLight, error ? styles.webInputError : {}]);
+
+  const accessibleInputStyles = {
+    ...inputStyles,
+    outline: 'none',
+  } as React.CSSProperties;
+
+  return (
+    <View style={styles.webInputContainer}>
+      <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight])}>{label}</Text>
+      <input type="datetime-local" className="web-input-accessible" style={accessibleInputStyles} value={value} onChange={(e) => onChange(e.target.value)} min={min} data-testid={testID} />
+      {helperText ? <Text style={StyleSheet.flatten([styles.webLabel, { color: isDark ? '#9ca3af' : '#6b7280', fontWeight: '400', marginTop: 4 }])}>{helperText}</Text> : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </View>
+  );
+};
+
 // Web-optimized select component
 interface WebSelectProps {
   label: string;
@@ -262,6 +295,7 @@ export default function NewCallWeb() {
   const [sectionsExpanded, setSectionsExpanded] = useState({
     templates: false,
     callDetails: true,
+    scheduledDispatch: false,
     contact: false,
     protocols: false,
     linkedCall: false,
@@ -302,6 +336,7 @@ export default function NewCallWeb() {
       type: '',
       contactName: '',
       contactInfo: '',
+      scheduledOn: '',
       dispatchSelection: {
         everyone: false,
         users: [],
@@ -347,6 +382,16 @@ export default function NewCallWeb() {
           data.longitude = selectedLocation.longitude;
         }
 
+        // Validate scheduled time is in the future if provided
+        if (data.scheduledOn?.trim()) {
+          const scheduledDate = new Date(data.scheduledOn);
+          if (scheduledDate <= new Date()) {
+            setIsSubmitting(false);
+            toast.error(t('calls.scheduled_on_past_error'));
+            return;
+          }
+        }
+
         const priority = callPriorities.find((p) => p.Name === data.priority);
         const type = callTypes.find((t) => t.Name === data.type);
 
@@ -380,6 +425,7 @@ export default function NewCallWeb() {
           dispatchEveryone: data.dispatchSelection?.everyone,
           callFormData: callFormData ?? undefined,
           linkedCallId: linkedCall?.callId,
+          scheduledOn: data.scheduledOn?.trim() ? new Date(data.scheduledOn).toISOString() : undefined,
         });
 
         if (udfValues.length > 0 && response?.Id) {
@@ -785,6 +831,37 @@ export default function NewCallWeb() {
                       name="note"
                       render={({ field: { onChange, onBlur, value } }) => (
                         <WebInput label={t('calls.note')} placeholder={t('calls.note_placeholder')} value={value || ''} onChange={onChange} onBlur={onBlur} multiline rows={4} testID="note-input" />
+                      )}
+                    />
+                  </View>
+                ) : null}
+              </Card>
+
+              {/* Schedule Dispatch */}
+              <Card style={StyleSheet.flatten([styles.card, isDark ? styles.cardDark : styles.cardLight])}>
+                <Pressable style={styles.collapsibleHeader} onPress={() => toggleSection('scheduledDispatch')}>
+                  <View style={styles.collapsibleHeaderLeft}>
+                    <CalendarClockIcon size={18} color={isDark ? '#9ca3af' : '#6b7280'} />
+                    <Text style={StyleSheet.flatten([styles.sectionTitle, isDark ? styles.sectionTitleDark : styles.sectionTitleLight, { marginBottom: 0, marginLeft: 8 }])}>{t('calls.schedule_dispatch')}</Text>
+                  </View>
+                  <View>{sectionsExpanded.scheduledDispatch ? <ChevronUpIcon size={20} color={isDark ? '#9ca3af' : '#6b7280'} /> : <ChevronDownIcon size={20} color={isDark ? '#9ca3af' : '#6b7280'} />}</View>
+                </Pressable>
+                {sectionsExpanded.scheduledDispatch ? (
+                  <View style={{ marginTop: 16 }}>
+                    <Text style={StyleSheet.flatten([styles.webLabel, { color: isDark ? '#9ca3af' : '#6b7280', fontWeight: '400', marginBottom: 12 }])}>{t('calls.schedule_dispatch_description')}</Text>
+                    <Controller
+                      control={control}
+                      name="scheduledOn"
+                      render={({ field: { onChange, value } }) => (
+                        <WebDateTimeInput
+                          label={t('calls.scheduled_on')}
+                          value={value || ''}
+                          onChange={onChange}
+                          min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                          helperText={t('calls.scheduled_on_helper')}
+                          error={errors.scheduledOn?.message}
+                          testID="scheduled-on-input"
+                        />
                       )}
                     />
                   </View>
