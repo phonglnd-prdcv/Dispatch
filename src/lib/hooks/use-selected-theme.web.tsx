@@ -36,8 +36,7 @@ export const loadSelectedTheme = () => {
       // Not in a browser environment (e.g. Electron preload / SSR), skip
       return;
     }
-    const storedTheme =
-      typeof localStorage !== 'undefined' ? localStorage.getItem(SELECTED_THEME) : null;
+    const storedTheme = typeof localStorage !== 'undefined' ? localStorage.getItem(SELECTED_THEME) : null;
     if (storedTheme) {
       console.log('Loading selected theme:', storedTheme);
       colorScheme.set(storedTheme as ColorSchemeType);

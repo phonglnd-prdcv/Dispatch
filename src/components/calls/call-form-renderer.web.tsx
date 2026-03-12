@@ -8,11 +8,18 @@ interface CallFormRendererProps {
   height?: number;
 }
 
+function escapeHtmlAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function buildHtml(formSchemaJson: string, isDark: boolean): string {
   const bg = isDark ? '#171717' : '#ffffff';
   const text = isDark ? '#f3f4f6' : '#111827';
   const border = isDark ? '#404040' : '#d1d5db';
   const inputBg = isDark ? '#262626' : '#f9fafb';
+  // Escape the JSON for safe embedding in an HTML attribute — it is never
+  // placed inside a <script> block, so it cannot be executed as code.
+  const safeSchema = escapeHtmlAttr(formSchemaJson);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -52,13 +59,15 @@ function buildHtml(formSchemaJson: string, isDark: boolean): string {
 </style>
 </head>
 <body>
+<!-- Form schema is stored in a data attribute and parsed via JSON.parse —
+     it is never interpolated into executable script context. -->
+<div id="form-schema-data" data-schema="${safeSchema}" style="display:none"></div>
 <form id="callForm" class="rendered-form"></form>
 <script>
-  var formData = ${formSchemaJson};
   $(function() {
-    if (typeof formData === 'string') {
-      try { formData = JSON.parse(formData); } catch(e) {}
-    }
+    var schemaText = document.getElementById('form-schema-data').getAttribute('data-schema');
+    var formData;
+    try { formData = JSON.parse(schemaText); } catch(e) { formData = []; }
     $('#callForm').formRender({ formData: formData });
 
     function sendData() {
@@ -67,7 +76,10 @@ function buildHtml(formSchemaJson: string, isDark: boolean): string {
       fields.forEach(function(el) {
         if (el.name) data[el.name] = el.value;
       });
-      window.parent.postMessage(JSON.stringify(data), '*');
+      // Use window.location.origin (same as parent because sandbox uses
+      // allow-same-origin) instead of '*' to prevent leaking form data to
+      // unintended origins.
+      window.parent.postMessage(JSON.stringify(data), window.location.origin);
     }
     document.getElementById('callForm').addEventListener('change', sendData);
     document.getElementById('callForm').addEventListener('input', sendData);
@@ -86,6 +98,9 @@ export const CallFormRenderer: React.FC<CallFormRendererProps> = ({ formSchemaJs
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
+      // Reject messages from unexpected origins (the iframe uses allow-same-origin
+      // so legitimate messages will always come from window.location.origin).
+      if (event.origin !== window.location.origin) return;
       if (typeof event.data === 'string') {
         onFormDataChange(event.data);
       }
@@ -96,13 +111,7 @@ export const CallFormRenderer: React.FC<CallFormRendererProps> = ({ formSchemaJs
 
   return (
     <View style={StyleSheet.flatten([styles.container, { height }, isDark ? styles.containerDark : styles.containerLight])}>
-      <iframe
-        ref={iframeRef}
-        srcDoc={html}
-        style={{ width: '100%', height: '100%', border: 'none' }}
-        title="Call Form"
-        sandbox="allow-scripts allow-same-origin"
-      />
+      <iframe ref={iframeRef} srcDoc={html} style={{ width: '100%', height: '100%', border: 'none' }} title="Call Form" sandbox="allow-scripts allow-same-origin" />
     </View>
   );
 };

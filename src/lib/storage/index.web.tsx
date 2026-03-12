@@ -7,9 +7,31 @@ const isLocalStorageAvailable = typeof localStorage !== 'undefined';
 // However, other files might expect 'storage' to be exported.
 // Let's export a dummy object or just 'any'.
 export const storage: any = {
-  getString: (key: string) => (isLocalStorageAvailable ? localStorage.getItem(key) : null),
-  set: (key: string, value: string) => { if (isLocalStorageAvailable) localStorage.setItem(key, value); },
-  delete: (key: string) => { if (isLocalStorageAvailable) localStorage.removeItem(key); },
+  getString: (key: string) => {
+    if (!isLocalStorageAvailable) return null;
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn('localStorage.getItem failed', e);
+      return null;
+    }
+  },
+  set: (key: string, value: string) => {
+    if (!isLocalStorageAvailable) return;
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn('localStorage.setItem failed', e);
+    }
+  },
+  delete: (key: string) => {
+    if (!isLocalStorageAvailable) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn('localStorage.removeItem failed', e);
+    }
+  },
 };
 
 export function getItem<T>(key: string): T | null {
@@ -51,10 +73,20 @@ export const zustandStorage: StateStorage = {
   },
   getItem: (name) => {
     if (!isLocalStorageAvailable) return null;
-    return localStorage.getItem(name);
+    try {
+      return localStorage.getItem(name);
+    } catch (e) {
+      console.warn('localStorage.getItem failed', e);
+      return null;
+    }
   },
   removeItem: (name) => {
-    if (isLocalStorageAvailable) localStorage.removeItem(name);
+    if (!isLocalStorageAvailable) return;
+    try {
+      localStorage.removeItem(name);
+    } catch (e) {
+      console.warn('localStorage.removeItem failed', e);
+    }
   },
 };
 

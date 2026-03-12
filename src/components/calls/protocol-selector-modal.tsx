@@ -5,10 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import {
-  type CallProtocolsResultData,
-  type ProtocolTriggerQuestionResultData,
-} from '@/models/v4/callProtocols/callProtocolsResultData';
+import { type CallProtocolsResultData, type ProtocolTriggerQuestionResultData } from '@/models/v4/callProtocols/callProtocolsResultData';
 import { useProtocolsStore } from '@/stores/protocols/store';
 
 export interface SelectedProtocol {
@@ -23,12 +20,7 @@ interface ProtocolSelectorModalProps {
   initialSelected?: SelectedProtocol[];
 }
 
-export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
-  isVisible,
-  onClose,
-  onConfirm,
-  initialSelected = [],
-}) => {
+export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({ isVisible, onClose, onConfirm, initialSelected = [] }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -46,7 +38,7 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
         fetchProtocols().finally(() => setIsLoading(false));
       }
     }
-  }, [isVisible]);
+  }, [isVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeProtocols = protocols.filter((p) => !p.IsDisabled);
 
@@ -78,7 +70,7 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
         if (s.protocolId !== protocolId) return s;
         const newAnswers = { ...s.answers, [question.Id]: answerId };
         return { ...s, answers: newAnswers };
-      }),
+      })
     );
   }
 
@@ -97,9 +89,7 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
           <View style={StyleSheet.flatten([styles.header, isDark ? styles.headerDark : styles.headerLight])}>
             <View style={styles.headerLeft}>
               <ClipboardListIcon size={20} color={isDark ? '#e5e7eb' : '#111827'} />
-              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>
-                {t('calls.protocols.title', 'Protocols')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>{t('calls.protocols.title', 'Protocols')}</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel={t('common.close')}>
               <X size={20} color={isDark ? '#9ca3af' : '#6b7280'} />
@@ -113,9 +103,7 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
             </View>
           ) : activeProtocols.length === 0 ? (
             <View style={styles.center}>
-              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>
-                {t('calls.protocols.none', 'No protocols available')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>{t('calls.protocols.none', 'No protocols available')}</Text>
             </View>
           ) : (
             <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -126,10 +114,7 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
                 const hasQuestions = protocol.Questions && protocol.Questions.length > 0;
 
                 return (
-                  <View
-                    key={stableId}
-                    style={StyleSheet.flatten([styles.item, isDark ? styles.itemDark : styles.itemLight, isChecked ? styles.itemSelected : {}])}
-                  >
+                  <View key={stableId} style={StyleSheet.flatten([styles.item, isDark ? styles.itemDark : styles.itemLight, isChecked ? styles.itemSelected : {}])}>
                     {/* Protocol row */}
                     <View style={styles.protocolRow}>
                       <TouchableOpacity
@@ -143,14 +128,8 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
                           {isChecked ? <CheckIcon size={12} color="#ffffff" /> : null}
                         </View>
                         <View style={styles.protocolInfo}>
-                          <Text style={StyleSheet.flatten([styles.protocolName, isDark ? styles.protocolNameDark : styles.protocolNameLight])}>
-                            {protocol.Name}
-                          </Text>
-                          {!!protocol.Code && (
-                            <Text style={StyleSheet.flatten([styles.protocolCode, isDark ? styles.protocolCodeDark : styles.protocolCodeLight])}>
-                              {protocol.Code}
-                            </Text>
-                          )}
+                          <Text style={StyleSheet.flatten([styles.protocolName, isDark ? styles.protocolNameDark : styles.protocolNameLight])}>{protocol.Name}</Text>
+                          {!!protocol.Code && <Text style={StyleSheet.flatten([styles.protocolCode, isDark ? styles.protocolCodeDark : styles.protocolCodeLight])}>{protocol.Code}</Text>}
                         </View>
                       </TouchableOpacity>
                       {hasQuestions && isChecked ? (
@@ -159,11 +138,7 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
                           style={styles.expandBtn}
                           accessibilityLabel={isExpanded ? t('calls.protocols.collapse') : t('calls.protocols.expand_questions')}
                         >
-                          {isExpanded ? (
-                            <ChevronUpIcon size={16} color={isDark ? '#9ca3af' : '#6b7280'} />
-                          ) : (
-                            <ChevronDownIcon size={16} color={isDark ? '#9ca3af' : '#6b7280'} />
-                          )}
+                          {isExpanded ? <ChevronUpIcon size={16} color={isDark ? '#9ca3af' : '#6b7280'} /> : <ChevronDownIcon size={16} color={isDark ? '#9ca3af' : '#6b7280'} />}
                         </TouchableOpacity>
                       ) : null}
                     </View>
@@ -173,32 +148,19 @@ export const ProtocolSelectorModal: React.FC<ProtocolSelectorModalProps> = ({
                       <View style={StyleSheet.flatten([styles.questionsContainer, isDark ? styles.questionsContainerDark : styles.questionsContainerLight])}>
                         {protocol.Questions.map((question) => (
                           <View key={question.Id || question.Question} style={styles.question}>
-                            <Text style={StyleSheet.flatten([styles.questionText, isDark ? styles.questionTextDark : styles.questionTextLight])}>
-                              {question.Question}
-                            </Text>
+                            <Text style={StyleSheet.flatten([styles.questionText, isDark ? styles.questionTextDark : styles.questionTextLight])}>{question.Question}</Text>
                             <View style={styles.answersRow}>
                               {question.Answers.map((answer) => {
                                 const isAnswerSelected = getAnswerForQuestion(stableId, question.Id) === answer.Id;
                                 return (
                                   <TouchableOpacity
                                     key={answer.Id || answer.Answer}
-                                    style={StyleSheet.flatten([
-                                      styles.answerBtn,
-                                      isDark ? styles.answerBtnDark : styles.answerBtnLight,
-                                      isAnswerSelected ? styles.answerBtnSelected : {},
-                                    ])}
+                                    style={StyleSheet.flatten([styles.answerBtn, isDark ? styles.answerBtnDark : styles.answerBtnLight, isAnswerSelected ? styles.answerBtnSelected : {}])}
                                     onPress={() => selectAnswer(stableId, question, answer.Id)}
                                     accessibilityRole="radio"
                                     accessibilityState={{ selected: isAnswerSelected }}
                                   >
-                                    <Text
-                                      style={StyleSheet.flatten([
-                                        styles.answerText,
-                                        isAnswerSelected ? styles.answerTextSelected : isDark ? styles.answerTextDark : styles.answerTextLight,
-                                      ])}
-                                    >
-                                      {answer.Answer}
-                                    </Text>
+                                    <Text style={StyleSheet.flatten([styles.answerText, isAnswerSelected ? styles.answerTextSelected : isDark ? styles.answerTextDark : styles.answerTextLight])}>{answer.Answer}</Text>
                                   </TouchableOpacity>
                                 );
                               })}

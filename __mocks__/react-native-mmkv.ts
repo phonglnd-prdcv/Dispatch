@@ -5,24 +5,36 @@
 
 import { useState } from 'react';
 
+const fallbackStores: Map<string, Record<string, string>> = new Map();
+
+function getFallbackStorage(id: string): Storage {
+  let existing = fallbackStores.get(id);
+  if (existing === undefined) {
+    existing = {};
+    fallbackStores.set(id, existing);
+  }
+  const _fallbackData: Record<string, string> = existing;
+  const _fallbackStorage: Storage = {
+    getItem(key: string) { return _fallbackData[key] ?? null; },
+    setItem(key: string, value: string) { _fallbackData[key] = value; },
+    removeItem(key: string) { delete _fallbackData[key]; },
+    key(index: number) { return Object.keys(_fallbackData)[index] ?? null; },
+    get length() { return Object.keys(_fallbackData).length; },
+    clear() { Object.keys(_fallbackData).forEach((k) => { delete _fallbackData[k]; }); },
+  } as unknown as Storage;
+  return _fallbackStorage;
+}
+
 class MockMMKV {
   private storage: Storage;
   private prefix: string;
 
   constructor(config?: { id?: string; encryptionKey?: string }) {
-    const _fallbackData: Record<string, string> = {};
-    const _fallbackStorage: Storage = {
-      getItem(key: string) { return _fallbackData[key] ?? null; },
-      setItem(key: string, value: string) { _fallbackData[key] = value; },
-      removeItem(key: string) { delete _fallbackData[key]; },
-      key(index: number) { return Object.keys(_fallbackData)[index] ?? null; },
-      get length() { return Object.keys(_fallbackData).length; },
-      clear() { Object.keys(_fallbackData).forEach((k) => delete _fallbackData[k]); },
-    } as unknown as Storage;
+    const id = config?.id || 'mmkv';
     this.storage = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
       ? window.localStorage
-      : _fallbackStorage;
-    this.prefix = config?.id || 'mmkv';
+      : getFallbackStorage(id);
+    this.prefix = id;
   }
 
   private getKey(key: string): string {

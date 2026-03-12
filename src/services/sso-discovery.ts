@@ -6,6 +6,7 @@ import { getBaseApiUrl } from '@/lib/storage/app';
 import type { SsoConfig } from '../lib/auth/types';
 
 export async function fetchSsoConfigForUser(username: string, departmentId?: number): Promise<SsoConfig | null> {
+  const requestId = `sso-${Date.now().toString(36)}`;
   try {
     const baseUrl = getBaseApiUrl();
     const params: Record<string, string | number> = { username };
@@ -17,15 +18,15 @@ export async function fetchSsoConfigForUser(username: string, departmentId?: num
 
     logger.info({
       message: 'SSO: Fetched SSO config for user',
-      context: { username, ssoEnabled: response.data?.Data?.ssoEnabled },
+      context: { requestId, ssoEnabled: response.data?.Data?.ssoEnabled ?? false, outcome: 'success' },
     });
 
     return response.data?.Data ?? null;
   } catch (error) {
     logger.error({
       message: 'SSO: Failed to fetch SSO config for user',
-      context: { error, username },
+      context: { requestId, outcome: 'failure', error },
     });
-    return null;
+    throw error instanceof Error ? error : new Error('Failed to fetch SSO config');
   }
 }

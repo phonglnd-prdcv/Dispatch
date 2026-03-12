@@ -238,6 +238,7 @@ const useAuthStore = create<AuthState>()(
             status: 'error',
             error: error instanceof Error ? error.message : 'SSO login failed',
           });
+          throw error;
         }
       },
     }),

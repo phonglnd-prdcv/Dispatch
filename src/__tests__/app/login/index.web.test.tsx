@@ -1,115 +1,28 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { View, Text, TextInput, Pressable } from 'react-native';
 
-// Mock the entire web login module
-jest.mock('../../../app/login/index.web', () => {
-  const React = require('react');
-  const { View, Text, TextInput, Pressable } = require('react-native');
-
-  const MockLoginWeb = () => {
-    const [username, setUsername] = React.useState('');
-    const [password, setPassword] = React.useState('');
-    const [showPassword, setShowPassword] = React.useState(false);
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [showServerUrlModal, setShowServerUrlModal] = React.useState(false);
-    const [showErrorModal, setShowErrorModal] = React.useState(false);
-
-    const mockLogin = jest.fn();
-    const mockOnSubmit = () => {
-      if (username && password) {
-        setIsLoading(true);
-        mockLogin({ username, password });
-        setTimeout(() => setIsLoading(false), 100);
-      }
-    };
-
-    return (
-      <View testID="login-web-container">
-        <View testID="login-card">
-          <Text testID="page-title">Resgrid Dispatch</Text>
-          <Text testID="page-subtitle">Enter the information below to Sign in...</Text>
-
-          <View testID="username-input-wrapper">
-            <TextInput
-              testID="username-input"
-              value={username}
-              onChangeText={setUsername}
-              placeholder="Enter your username"
-              autoCapitalize="off"
-            />
-          </View>
-
-          <View testID="password-input-wrapper">
-            <TextInput
-              testID="password-input"
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Enter your password"
-              secureTextEntry={!showPassword}
-            />
-            <Pressable testID="toggle-password" onPress={() => setShowPassword(!showPassword)}>
-              <Text>{showPassword ? 'Hide' : 'Show'}</Text>
-            </Pressable>
-          </View>
-
-          <Pressable testID="login-button" onPress={mockOnSubmit} disabled={isLoading}>
-            <Text>{isLoading ? 'Logging in...' : 'Login'}</Text>
-          </Pressable>
-
-          <Pressable testID="server-url-button" onPress={() => setShowServerUrlModal(true)}>
-            <Text>Server URL</Text>
-          </Pressable>
-
-          <View testID="footer">
-            <Text testID="no-account-text">Don't have an account? Register</Text>
-            <Text testID="copyright-text">© 2026 Resgrid, LLC.</Text>
-          </View>
-        </View>
-
-        {showServerUrlModal && (
-          <View testID="server-url-modal">
-            <Text>Server URL</Text>
-            <TextInput testID="server-url-input" placeholder="Enter server URL" />
-            <Pressable testID="server-url-cancel" onPress={() => setShowServerUrlModal(false)}>
-              <Text>Cancel</Text>
-            </Pressable>
-            <Pressable testID="server-url-save" onPress={() => setShowServerUrlModal(false)}>
-              <Text>Save</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {showErrorModal && (
-          <View testID="error-modal">
-            <Text>Login Failed</Text>
-            <Text>Please check your username and password and try again.</Text>
-            <Pressable testID="error-modal-ok" onPress={() => setShowErrorModal(false)}>
-              <Text>OK</Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  return {
-    __esModule: true,
-    default: MockLoginWeb,
-  };
-});
-
-// Import after mocking
 import LoginWeb from '../../../app/login/index.web';
+import { useAuth } from '@/lib/auth';
 
 // Mock hooks and dependencies
 const mockLogin = jest.fn();
 const mockTrackEvent = jest.fn();
 const mockReplace = jest.fn();
+const mockPush = jest.fn();
+
+// Map @/components/ui/text to the standard RN Text so getByText works
+jest.mock('@/components/ui/text', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    Text: ({ children, ...props }: any) => React.createElement(Text, props, children),
+  };
+});
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     replace: mockReplace,
+    push: mockPush,
   }),
 }));
 
@@ -117,7 +30,6 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => {
       const translations: Record<string, string> = {
-        'login.page_title': 'Resgrid Dispatch',
         'login.page_subtitle': 'Enter the information below to Sign in to the Resgrid Dispatch application.',
         'login.username_placeholder': 'Enter your username',
         'login.password_placeholder': 'Enter your password',
@@ -132,6 +44,7 @@ jest.mock('react-i18next', () => ({
         'login.errorModal.confirmButton': 'OK',
         'common.cancel': 'Cancel',
         'common.save': 'Save',
+        'sso.sso_button': 'SSO Login',
       };
       return translations[key] || fallback || key;
     },
@@ -145,12 +58,7 @@ jest.mock('@/hooks/use-analytics', () => ({
 }));
 
 jest.mock('@/lib/auth', () => ({
-  useAuth: () => ({
-    login: mockLogin,
-    status: 'idle',
-    error: null,
-    isAuthenticated: false,
-  }),
+  useAuth: jest.fn(),
 }));
 
 jest.mock('@/lib/logging', () => ({
@@ -179,7 +87,6 @@ jest.mock('nativewind', () => ({
   }),
 }));
 
-// Mock useWindowDimensions properly without spreading all RN
 jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   default: () => ({
     width: 1200,
@@ -190,12 +97,16 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
 jest.mock('react-native-reanimated', () => {
   const Reanimated = require('react-native-reanimated/mock');
   Reanimated.default.call = () => {};
+  // Support any chain of .delay().duration() or .duration().delay()
+  const animChain: any = () => ({ duration: animChain, delay: animChain });
   return {
     ...Reanimated,
-    FadeIn: { duration: () => ({ delay: () => ({}) }) },
-    FadeInDown: { duration: () => ({ delay: () => ({}) }), delay: () => ({ duration: () => ({}) }) },
-    FadeInUp: { duration: () => ({ delay: () => ({}) }), delay: () => ({ duration: () => ({}) }) },
-    FadeOut: { duration: () => ({}) },
+    FadeIn: animChain(),
+    FadeInDown: animChain(),
+    FadeInUp: animChain(),
+    FadeInRight: animChain(),
+    FadeOut: animChain(),
+    FadeOutLeft: animChain(),
   };
 });
 
@@ -212,146 +123,137 @@ jest.mock('lucide-react-native', () => ({
 describe('LoginWeb', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('renders login form elements', () => {
-    render(<LoginWeb />);
-
-    expect(screen.getByTestId('login-web-container')).toBeTruthy();
-    expect(screen.getByTestId('login-card')).toBeTruthy();
-    expect(screen.getByTestId('page-title')).toBeTruthy();
-    expect(screen.getByTestId('page-subtitle')).toBeTruthy();
-  });
-
-  it('renders username and password inputs', () => {
-    render(<LoginWeb />);
-
-    expect(screen.getByTestId('username-input')).toBeTruthy();
-    expect(screen.getByTestId('password-input')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Enter your username')).toBeTruthy();
-    expect(screen.getByPlaceholderText('Enter your password')).toBeTruthy();
-  });
-
-  it('renders login button', () => {
-    render(<LoginWeb />);
-
-    expect(screen.getByTestId('login-button')).toBeTruthy();
-    expect(screen.getByText('Login')).toBeTruthy();
-  });
-
-  it('renders server URL button', () => {
-    render(<LoginWeb />);
-
-    expect(screen.getByTestId('server-url-button')).toBeTruthy();
-    expect(screen.getByText('Server URL')).toBeTruthy();
-  });
-
-  it('renders footer with registration link and copyright', () => {
-    render(<LoginWeb />);
-
-    expect(screen.getByTestId('footer')).toBeTruthy();
-    expect(screen.getByTestId('no-account-text')).toBeTruthy();
-    expect(screen.getByTestId('copyright-text')).toBeTruthy();
-  });
-
-  it('allows user to enter username', () => {
-    render(<LoginWeb />);
-
-    const usernameInput = screen.getByTestId('username-input');
-    fireEvent.changeText(usernameInput, 'testuser');
-
-    expect(usernameInput.props.value).toBe('testuser');
-  });
-
-  it('allows user to enter password', () => {
-    render(<LoginWeb />);
-
-    const passwordInput = screen.getByTestId('password-input');
-    fireEvent.changeText(passwordInput, 'testpassword');
-
-    expect(passwordInput.props.value).toBe('testpassword');
-  });
-
-  it('toggles password visibility', () => {
-    render(<LoginWeb />);
-
-    const passwordInput = screen.getByTestId('password-input');
-    const toggleButton = screen.getByTestId('toggle-password');
-
-    // Initially should be secured
-    expect(passwordInput.props.secureTextEntry).toBe(true);
-
-    // Toggle visibility
-    fireEvent.press(toggleButton);
-    expect(passwordInput.props.secureTextEntry).toBe(false);
-
-    // Toggle back
-    fireEvent.press(toggleButton);
-    expect(passwordInput.props.secureTextEntry).toBe(true);
-  });
-
-  it('opens server URL modal when button is pressed', () => {
-    render(<LoginWeb />);
-
-    const serverUrlButton = screen.getByTestId('server-url-button');
-    fireEvent.press(serverUrlButton);
-
-    expect(screen.getByTestId('server-url-modal')).toBeTruthy();
-  });
-
-  it('closes server URL modal when cancel is pressed', () => {
-    render(<LoginWeb />);
-
-    // Open modal
-    fireEvent.press(screen.getByTestId('server-url-button'));
-    expect(screen.getByTestId('server-url-modal')).toBeTruthy();
-
-    // Close modal
-    fireEvent.press(screen.getByTestId('server-url-cancel'));
-    expect(screen.queryByTestId('server-url-modal')).toBeNull();
-  });
-
-  it('closes server URL modal when save is pressed', () => {
-    render(<LoginWeb />);
-
-    // Open modal
-    fireEvent.press(screen.getByTestId('server-url-button'));
-
-    // Save and close
-    fireEvent.press(screen.getByTestId('server-url-save'));
-    expect(screen.queryByTestId('server-url-modal')).toBeNull();
-  });
-
-  it('shows loading state when login button is pressed', async () => {
-    render(<LoginWeb />);
-
-    const usernameInput = screen.getByTestId('username-input');
-    const passwordInput = screen.getByTestId('password-input');
-    const loginButton = screen.getByTestId('login-button');
-
-    // Fill in form
-    fireEvent.changeText(usernameInput, 'testuser');
-    fireEvent.changeText(passwordInput, 'testpassword');
-
-    // Press login
-    fireEvent.press(loginButton);
-
-    // Should show loading text
-    await waitFor(() => {
-      expect(screen.getByText('Logging in...')).toBeTruthy();
+    (useAuth as jest.Mock).mockReturnValue({
+      login: mockLogin,
+      status: 'idle',
+      error: null,
+      isAuthenticated: false,
     });
   });
 
-  it('displays correct page title', () => {
-    render(<LoginWeb />);
-
-    expect(screen.getByText('Resgrid Dispatch')).toBeTruthy();
+  it('renders without crashing', () => {
+    const { toJSON } = render(<LoginWeb />);
+    expect(toJSON()).toBeTruthy();
   });
 
-  it('has proper accessibility for username input', () => {
+  it('renders the login button', () => {
     render(<LoginWeb />);
+    expect(screen.getByText('Login')).toBeTruthy();
+  });
 
-    const usernameInput = screen.getByTestId('username-input');
-    expect(usernameInput.props.autoCapitalize).toBe('off');
+  it('renders the server URL button', () => {
+    render(<LoginWeb />);
+    expect(screen.getByText('Server URL')).toBeTruthy();
+  });
+
+  it('renders the SSO login button', () => {
+    render(<LoginWeb />);
+    expect(screen.getByText('SSO Login')).toBeTruthy();
+  });
+
+  it('renders the page subtitle', () => {
+    render(<LoginWeb />);
+    expect(screen.getByText('Enter the information below to Sign in to the Resgrid Dispatch application.')).toBeTruthy();
+  });
+
+  it('renders the footer registration link', () => {
+    render(<LoginWeb />);
+    expect(screen.getByText(/Don't have an account/)).toBeTruthy();
+    expect(screen.getByText('Register')).toBeTruthy();
+  });
+
+  it('renders the copyright text', () => {
+    render(<LoginWeb />);
+    expect(screen.getByText(/Resgrid, LLC/)).toBeTruthy();
+  });
+
+  it('opens server URL modal when server URL button is pressed', () => {
+    render(<LoginWeb />);
+    fireEvent.press(screen.getByText('Server URL'));
+    expect(screen.getByText('Cancel')).toBeTruthy();
+    expect(screen.getByText('Save')).toBeTruthy();
+  });
+
+  it('closes server URL modal when cancel is pressed', async () => {
+    render(<LoginWeb />);
+    fireEvent.press(screen.getByText('Server URL'));
+    expect(screen.getByText('Cancel')).toBeTruthy();
+    fireEvent.press(screen.getByText('Cancel'));
+    await waitFor(() => {
+      expect(screen.queryByText('Cancel')).toBeNull();
+    });
+  });
+
+  it('navigates to SSO login when SSO button is pressed', () => {
+    render(<LoginWeb />);
+    fireEvent.press(screen.getByText('SSO Login'));
+    expect(mockPush).toHaveBeenCalledWith('/login/sso');
+  });
+
+  it('shows loading text when auth status is loading', () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      login: mockLogin,
+      status: 'loading',
+      error: null,
+      isAuthenticated: false,
+    });
+    render(<LoginWeb />);
+    expect(screen.getByText('Logging in...')).toBeTruthy();
+    expect(screen.queryByText('Login')).toBeNull();
+  });
+
+  it('shows error modal when auth status is error', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      login: mockLogin,
+      status: 'error',
+      error: 'Invalid credentials',
+      isAuthenticated: false,
+    });
+    render(<LoginWeb />);
+    await waitFor(() => {
+      expect(screen.getByText('Login Failed')).toBeTruthy();
+      expect(screen.getByText('Please check your username and password and try again.')).toBeTruthy();
+    });
+  });
+
+  it('closes error modal when OK is pressed', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      login: mockLogin,
+      status: 'error',
+      error: 'Invalid credentials',
+      isAuthenticated: false,
+    });
+    render(<LoginWeb />);
+    await waitFor(() => {
+      expect(screen.getByText('OK')).toBeTruthy();
+    });
+    fireEvent.press(screen.getByText('OK'));
+    await waitFor(() => {
+      expect(screen.queryByText('Login Failed')).toBeNull();
+    });
+  });
+
+  it('redirects to home when authentication succeeds', async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      login: mockLogin,
+      status: 'signedIn',
+      error: null,
+      isAuthenticated: true,
+    });
+    render(<LoginWeb />);
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith('/(app)');
+    });
+  });
+
+  it('tracks page view analytics on mount', () => {
+    render(<LoginWeb />);
+    expect(mockTrackEvent).toHaveBeenCalledWith(
+      'login_web_view_rendered',
+      expect.objectContaining({
+        hasError: false,
+        status: 'idle',
+      })
+    );
   });
 });

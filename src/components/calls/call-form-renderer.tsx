@@ -3,6 +3,8 @@ import React, { useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 
+import { formRenderSource, jquerySource } from '../../utils/webview-scripts';
+
 interface CallFormRendererProps {
   formSchemaJson: string;
   onFormDataChange: (formDataJson: string) => void;
@@ -21,8 +23,8 @@ function buildHtml(formSchemaJson: string, isDark: boolean): string {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>Call Form</title>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://formbuilder.online/assets/js/form-render.min.js"></script>
+<script>${jquerySource}</script>
+<script>${formRenderSource}</script>
 <style>
   * { box-sizing: border-box; }
   body {

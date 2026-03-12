@@ -51,9 +51,7 @@ export const CallTemplatesModal: React.FC<CallTemplatesModalProps> = ({ isVisibl
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return templates;
     const q = searchQuery.toLowerCase();
-    return templates.filter(
-      (t) => t.Name.toLowerCase().includes(q) || t.CallName.toLowerCase().includes(q) || t.CallNature.toLowerCase().includes(q),
-    );
+    return templates.filter((t) => t.Name.toLowerCase().includes(q) || t.CallName.toLowerCase().includes(q) || t.CallNature.toLowerCase().includes(q));
   }, [templates, searchQuery]);
 
   const handleSelect = useCallback(
@@ -66,7 +64,7 @@ export const CallTemplatesModal: React.FC<CallTemplatesModalProps> = ({ isVisibl
       });
       onClose();
     },
-    [onSelect, onClose],
+    [onSelect, onClose]
   );
 
   if (!isVisible) return null;
@@ -79,9 +77,7 @@ export const CallTemplatesModal: React.FC<CallTemplatesModalProps> = ({ isVisibl
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <FileTextIcon size={20} color={isDark ? '#e5e7eb' : '#111827'} />
-              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>
-                {t('calls.templates.title', 'Call Templates')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>{t('calls.templates.title', 'Call Templates')}</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel={t('common.close')}>
               <X size={20} color={isDark ? '#9ca3af' : '#6b7280'} />
@@ -107,9 +103,7 @@ export const CallTemplatesModal: React.FC<CallTemplatesModalProps> = ({ isVisibl
             </View>
           ) : filtered.length === 0 ? (
             <View style={styles.center}>
-              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>
-                {t('calls.templates.none', 'No templates available')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>{t('calls.templates.none', 'No templates available')}</Text>
             </View>
           ) : (
             <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -121,9 +115,7 @@ export const CallTemplatesModal: React.FC<CallTemplatesModalProps> = ({ isVisibl
                   accessibilityRole="button"
                   accessibilityLabel={template.Name}
                 >
-                  <Text style={StyleSheet.flatten([styles.itemName, isDark ? styles.itemNameDark : styles.itemNameLight])}>
-                    {template.Name}
-                  </Text>
+                  <Text style={StyleSheet.flatten([styles.itemName, isDark ? styles.itemNameDark : styles.itemNameLight])}>{template.Name}</Text>
                   {!!template.CallName && (
                     <Text style={StyleSheet.flatten([styles.itemMeta, isDark ? styles.itemMetaDark : styles.itemMetaLight])}>
                       {t('calls.name')}: {template.CallName}

@@ -28,7 +28,7 @@ export const ContactPickerModal: React.FC<ContactPickerModalProps> = ({ isVisibl
       setIsLoading(true);
       fetchContacts().finally(() => setIsLoading(false));
     }
-  }, [isVisible]);
+  }, [isVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return contacts;
@@ -70,9 +70,7 @@ export const ContactPickerModal: React.FC<ContactPickerModalProps> = ({ isVisibl
           <View style={StyleSheet.flatten([styles.header, isDark ? styles.headerDark : styles.headerLight])}>
             <View style={styles.headerLeft}>
               <UserIcon size={20} color={isDark ? '#e5e7eb' : '#111827'} />
-              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>
-                {t('calls.contact_picker.title', 'Select Contact')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>{t('calls.contact_picker.title', 'Select Contact')}</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel={t('common.close')}>
               <X size={20} color={isDark ? '#9ca3af' : '#6b7280'} />
@@ -98,9 +96,7 @@ export const ContactPickerModal: React.FC<ContactPickerModalProps> = ({ isVisibl
             </View>
           ) : filtered.length === 0 ? (
             <View style={styles.center}>
-              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>
-                {t('calls.contact_picker.none', 'No contacts available')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>{t('calls.contact_picker.none', 'No contacts available')}</Text>
             </View>
           ) : (
             <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -119,14 +115,8 @@ export const ContactPickerModal: React.FC<ContactPickerModalProps> = ({ isVisibl
                       <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
                     </View>
                     <View style={styles.itemContent}>
-                      <Text style={StyleSheet.flatten([styles.itemName, isDark ? styles.itemNameDark : styles.itemNameLight])}>
-                        {displayName}
-                      </Text>
-                      {!!info && (
-                        <Text style={StyleSheet.flatten([styles.itemInfo, isDark ? styles.itemInfoDark : styles.itemInfoLight])}>
-                          {info}
-                        </Text>
-                      )}
+                      <Text style={StyleSheet.flatten([styles.itemName, isDark ? styles.itemNameDark : styles.itemNameLight])}>{displayName}</Text>
+                      {!!info && <Text style={StyleSheet.flatten([styles.itemInfo, isDark ? styles.itemInfoDark : styles.itemInfoLight])}>{info}</Text>}
                     </View>
                   </TouchableOpacity>
                 );

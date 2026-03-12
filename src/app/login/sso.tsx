@@ -66,7 +66,7 @@ function OidcSignInSection({ authority, clientId, username, departmentId, isAuth
     } else if (response?.type === 'error') {
       onError(t('sso.error_oidc_cancelled'));
     }
-  }, [response]);
+  }, [response]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePress = async () => {
     onAuthStart();
@@ -115,28 +115,36 @@ function SamlSignInSection({ idpSsoUrl, username, departmentId, isAuthenticating
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const subscription = Linking.addEventListener('url', ({ url }) => {
+    const processDeepLink = async (url: string) => {
       if (url.includes('auth/callback') && url.includes('saml_response')) {
-        (async () => {
-          onAuthStart();
-          try {
-            const authResponse = await handleSamlDeepLink(url);
-            if (!authResponse) {
-              onError(t('sso.error_token_exchange'));
-            } else {
-              onTokenReceived(authResponse);
-            }
-          } catch (err) {
-            logger.error({ message: 'SSO SamlSignInSection: deep link failed', context: { err } });
-            onError(t('sso.error_generic'));
-          } finally {
-            onAuthEnd();
+        onAuthStart();
+        try {
+          const authResponse = await handleSamlDeepLink(url);
+          if (!authResponse) {
+            onError(t('sso.error_token_exchange'));
+          } else {
+            onTokenReceived(authResponse);
           }
-        })();
+        } catch (err) {
+          logger.error({ message: 'SSO SamlSignInSection: deep link failed', context: { err } });
+          onError(t('sso.error_generic'));
+        } finally {
+          onAuthEnd();
+        }
       }
+    };
+
+    // Handle cold-start: app opened directly via SAML redirect URL
+    Linking.getInitialURL().then((url) => {
+      if (url) processDeepLink(url);
     });
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      processDeepLink(url);
+    });
+
     return () => subscription.remove();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePress = async () => {
     onAuthStart();
@@ -225,24 +233,30 @@ export default function SsoLoginScreen() {
     setIsLookingUp(true);
 
     const parsedDeptId = data.departmentId ? parseInt(data.departmentId, 10) : undefined;
-    const config = await fetchSsoConfigForUser(data.username.trim(), parsedDeptId);
 
-    setIsLookingUp(false);
+    try {
+      const config = await fetchSsoConfigForUser(data.username.trim(), parsedDeptId);
 
-    if (!config) {
-      setLookupError(t('sso.error_user_not_found'));
-      return;
+      if (!config) {
+        setLookupError(t('sso.error_user_not_found'));
+        return;
+      }
+
+      if (!config.ssoEnabled) {
+        setLookupError(t('sso.error_sso_not_enabled'));
+        return;
+      }
+
+      setResolvedUsername(data.username.trim());
+      setResolvedDepartmentId(parsedDeptId);
+      setSsoConfig(config);
+      setPhase('sso-options');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('sso.error_lookup_failed');
+      setLookupError(message);
+    } finally {
+      setIsLookingUp(false);
     }
-
-    if (!config.ssoEnabled) {
-      setLookupError(t('sso.error_sso_not_enabled'));
-      return;
-    }
-
-    setResolvedUsername(data.username.trim());
-    setResolvedDepartmentId(parsedDeptId);
-    setSsoConfig(config);
-    setPhase('sso-options');
   };
 
   if (phase === 'lookup') {

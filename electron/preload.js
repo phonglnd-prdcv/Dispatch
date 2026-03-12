@@ -6,7 +6,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 // ── Expose Electron platform flag ──────────────────────────────────────
 // The renderer can use `window.__ELECTRON__` to detect if it is running
 // inside Electron (as opposed to a regular browser).
-window.__ELECTRON__ = true;
+contextBridge.exposeInMainWorld('__ELECTRON__', true);
 
 // ── Expose notification bridge ─────────────────────────────────────────
 // Provides a safe bridge for the renderer to trigger native OS

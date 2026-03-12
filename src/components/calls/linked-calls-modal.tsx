@@ -45,13 +45,7 @@ export const LinkedCallsModal: React.FC<LinkedCallsModalProps> = ({ isVisible, o
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return calls;
     const q = searchQuery.toLowerCase();
-    return calls.filter(
-      (c) =>
-        c.Name.toLowerCase().includes(q) ||
-        c.Number.toLowerCase().includes(q) ||
-        c.Nature.toLowerCase().includes(q) ||
-        c.Address.toLowerCase().includes(q),
-    );
+    return calls.filter((c) => c.Name.toLowerCase().includes(q) || c.Number.toLowerCase().includes(q) || c.Nature.toLowerCase().includes(q) || c.Address.toLowerCase().includes(q));
   }, [calls, searchQuery]);
 
   const handleSelect = useCallback(
@@ -59,7 +53,7 @@ export const LinkedCallsModal: React.FC<LinkedCallsModalProps> = ({ isVisible, o
       onSelect(call);
       onClose();
     },
-    [onSelect, onClose],
+    [onSelect, onClose]
   );
 
   if (!isVisible) return null;
@@ -72,9 +66,7 @@ export const LinkedCallsModal: React.FC<LinkedCallsModalProps> = ({ isVisible, o
           <View style={StyleSheet.flatten([styles.header, isDark ? styles.headerDark : styles.headerLight])}>
             <View style={styles.headerLeft}>
               <LinkIcon size={20} color={isDark ? '#e5e7eb' : '#111827'} />
-              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>
-                {t('calls.linked_calls.title', 'Link to Existing Call')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.title, isDark ? styles.titleDark : styles.titleLight])}>{t('calls.linked_calls.title', 'Link to Existing Call')}</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityLabel={t('common.close')}>
               <X size={20} color={isDark ? '#9ca3af' : '#6b7280'} />
@@ -100,9 +92,7 @@ export const LinkedCallsModal: React.FC<LinkedCallsModalProps> = ({ isVisible, o
             </View>
           ) : filtered.length === 0 ? (
             <View style={styles.center}>
-              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>
-                {t('calls.linked_calls.none', 'No active calls available')}
-              </Text>
+              <Text style={StyleSheet.flatten([styles.emptyText, isDark ? styles.emptyTextDark : styles.emptyTextLight])}>{t('calls.linked_calls.none', 'No active calls available')}</Text>
             </View>
           ) : (
             <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
@@ -111,28 +101,20 @@ export const LinkedCallsModal: React.FC<LinkedCallsModalProps> = ({ isVisible, o
                 return (
                   <TouchableOpacity
                     key={call.CallId}
-                    style={StyleSheet.flatten([
-                      styles.item,
-                      isDark ? styles.itemDark : styles.itemLight,
-                      isSelected ? styles.itemSelected : {},
-                    ])}
+                    style={StyleSheet.flatten([styles.item, isDark ? styles.itemDark : styles.itemLight, isSelected ? styles.itemSelected : {}])}
                     onPress={() => handleSelect(call)}
                     accessibilityRole="button"
                     accessibilityLabel={call.Name}
                   >
                     <View style={styles.itemRow}>
-                      <Text style={StyleSheet.flatten([styles.callNumber, isDark ? styles.callNumberDark : styles.callNumberLight])}>
-                        #{call.Number}
-                      </Text>
+                      <Text style={StyleSheet.flatten([styles.callNumber, isDark ? styles.callNumberDark : styles.callNumberLight])}>#{call.Number}</Text>
                       {isSelected ? (
                         <View style={styles.selectedBadge}>
                           <Text style={styles.selectedBadgeText}>{t('calls.linked_calls.linked', 'Linked')}</Text>
                         </View>
                       ) : null}
                     </View>
-                    <Text style={StyleSheet.flatten([styles.itemName, isDark ? styles.itemNameDark : styles.itemNameLight])}>
-                      {call.Name}
-                    </Text>
+                    <Text style={StyleSheet.flatten([styles.itemName, isDark ? styles.itemNameDark : styles.itemNameLight])}>{call.Name}</Text>
                     {!!call.Nature && (
                       <Text style={StyleSheet.flatten([styles.itemMeta, isDark ? styles.itemMetaDark : styles.itemMetaLight])} numberOfLines={2}>
                         {call.Nature}
