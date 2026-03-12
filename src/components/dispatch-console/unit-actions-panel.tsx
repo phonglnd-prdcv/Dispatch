@@ -1,10 +1,11 @@
-import { Building2, Check, ChevronRight, Phone, Send, Truck, X } from 'lucide-react-native';
+import { Building2, Check, ChevronDown, ChevronRight, ChevronUp, Phone, Send, Truck, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { getAllGroups } from '@/api/groups/groups';
 import { getAllUnitStatuses } from '@/api/satuses';
+import { UdfFieldsRenderer } from '@/components/calls/udf-fields-renderer';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
@@ -107,6 +108,7 @@ export const UnitActionsPanel: React.FC<UnitActionsPanelProps> = ({ unit: unitPr
   // Local state for action sheets
   const [isStatusSheetOpen, setIsStatusSheetOpen] = useState(false);
   const [isDestinationSheetOpen, setIsDestinationSheetOpen] = useState(false);
+  const [isAdditionalFieldsExpanded, setIsAdditionalFieldsExpanded] = useState(false);
   const [destinationTab, setDestinationTab] = useState<'calls' | 'stations'>('calls');
 
   // Local state for selected status (to fix synchronization issues)
@@ -438,6 +440,18 @@ export const UnitActionsPanel: React.FC<UnitActionsPanelProps> = ({ unit: unitPr
                 </Button>
               </>
             ) : null}
+
+            {/* Additional Fields divider */}
+            <View className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+
+            {/* Additional Fields (UDF) */}
+            <Pressable onPress={() => setIsAdditionalFieldsExpanded((prev) => !prev)}>
+              <HStack className="items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+                <Text className="text-xs text-gray-500 dark:text-gray-400">{t('calls.additional_fields', 'Additional Fields')}</Text>
+                <Icon as={isAdditionalFieldsExpanded ? ChevronUp : ChevronDown} size="sm" className="text-gray-400" />
+              </HStack>
+            </Pressable>
+            {isAdditionalFieldsExpanded ? <UdfFieldsRenderer entityType={2} entityId={selectedUnit.UnitId} onValuesChange={() => {}} readOnly={true} /> : null}
           </VStack>
         )}
       </Box>

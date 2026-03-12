@@ -75,7 +75,7 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
 
   // Use actual PTT state or fallback to external props
   const isTransmitting = isConnected ? pttTransmitting : externalTransmitting;
-  const displayChannel = isConnected ? (pttChannel?.Name || externalChannel) : (pttChannel?.Name || t('dispatch.disconnected'));
+  const displayChannel = isConnected ? pttChannel?.Name || externalChannel : pttChannel?.Name || t('dispatch.disconnected');
 
   // Toggle-style PTT handler - tap to start/stop transmitting
   const handlePTTToggle = useCallback(async () => {
@@ -197,7 +197,6 @@ export const PTTInterface: React.FC<PTTInterfaceProps> = ({ onPTTPress, onPTTRel
 
         {/* Compact Controls */}
         <HStack className="items-center" space="sm">
-
           {/* Disconnect Button (only shown when connected) */}
           {isConnected ? (
             <Pressable onPress={handleDisconnect} style={StyleSheet.flatten([styles.compactControlButton, styles.disconnectButton])}>

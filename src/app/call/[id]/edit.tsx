@@ -1,15 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ChevronDownIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon, SearchIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import * as z from 'zod';
 
+import { saveUdfValues } from '@/api/userDefinedFields/userDefinedFields';
 import { DispatchSelectionModal } from '@/components/calls/dispatch-selection-modal';
+import { UdfFieldsRenderer } from '@/components/calls/udf-fields-renderer';
 import { Loading } from '@/components/common/loading';
 import FullScreenLocationPicker from '@/components/maps/full-screen-location-picker';
 import LocationPicker from '@/components/maps/location-picker';
@@ -24,6 +26,7 @@ import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { type UdfFieldValueInput } from '@/models/v4/userDefinedFields/udfFieldValueInput';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -84,6 +87,8 @@ export default function EditCall() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showAddressSelection, setShowAddressSelection] = useState(false);
+  const [udfValues, setUdfValues] = useState<UdfFieldValueInput[]>([]);
+  const [isAdditionalFieldsExpanded, setIsAdditionalFieldsExpanded] = useState(false);
   const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
   const [isGeocodingPlusCode, setIsGeocodingPlusCode] = useState(false);
   const [isGeocodingCoordinates, setIsGeocodingCoordinates] = useState(false);
@@ -230,6 +235,14 @@ export default function EditCall() {
         dispatchUnits: data.dispatchSelection?.units,
         dispatchEveryone: data.dispatchSelection?.everyone,
       });
+
+      if (udfValues.length > 0 && callId) {
+        try {
+          await saveUdfValues(0, callId, udfValues);
+        } catch (udfError) {
+          console.warn('Failed to save UDF values:', udfError);
+        }
+      }
 
       // Show success toast
       toast.show({
@@ -642,6 +655,19 @@ export default function EditCall() {
                   )}
                 />
               </FormControl>
+            </Card>
+
+            {/* Additional Fields (UDF) */}
+            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+              <TouchableOpacity className="flex-row items-center justify-between" onPress={() => setIsAdditionalFieldsExpanded((prev) => !prev)}>
+                <Text className="text-lg font-semibold">{t('calls.additional_fields', 'Additional Fields')}</Text>
+                {isAdditionalFieldsExpanded ? <ChevronUpIcon size={16} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} /> : <ChevronDownIcon size={16} color={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'} />}
+              </TouchableOpacity>
+              {isAdditionalFieldsExpanded ? (
+                <View className="mt-4">
+                  <UdfFieldsRenderer entityType={0} entityId={callId} onValuesChange={setUdfValues} isDark={colorScheme === 'dark'} />
+                </View>
+              ) : null}
             </Card>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>

@@ -122,6 +122,7 @@ describe('RolesModal', () => {
       StaffingColor: '',
       StaffingTimestamp: '',
       Roles: [],
+      UdfValues: [],
     },
   ];
 

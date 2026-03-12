@@ -9,9 +9,11 @@ export const useSelectedTheme = () => {
   const [theme, setThemeState] = useState<ColorSchemeType | undefined>(undefined);
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem(SELECTED_THEME);
-    if (storedTheme) {
-      setThemeState(storedTheme as ColorSchemeType);
+    if (typeof localStorage !== 'undefined') {
+      const storedTheme = localStorage.getItem(SELECTED_THEME);
+      if (storedTheme) {
+        setThemeState(storedTheme as ColorSchemeType);
+      }
     }
   }, []);
 
@@ -19,7 +21,7 @@ export const useSelectedTheme = () => {
     (t: ColorSchemeType) => {
       setColorScheme(t);
       setThemeState(t);
-      localStorage.setItem(SELECTED_THEME, t);
+      if (typeof localStorage !== 'undefined') localStorage.setItem(SELECTED_THEME, t);
     },
     [setColorScheme]
   );
@@ -30,7 +32,11 @@ export const useSelectedTheme = () => {
 
 export const loadSelectedTheme = () => {
   try {
-    const storedTheme = localStorage.getItem(SELECTED_THEME);
+    if (typeof document === 'undefined') {
+      // Not in a browser environment (e.g. Electron preload / SSR), skip
+      return;
+    }
+    const storedTheme = typeof localStorage !== 'undefined' ? localStorage.getItem(SELECTED_THEME) : null;
     if (storedTheme) {
       console.log('Loading selected theme:', storedTheme);
       colorScheme.set(storedTheme as ColorSchemeType);

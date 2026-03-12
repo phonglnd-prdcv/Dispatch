@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ChevronDownIcon, MapPinIcon, SaveIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { ChevronDownIcon, ChevronUpIcon, MapPinIcon, SaveIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -9,7 +9,9 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import * as z from 'zod';
 
+import { saveUdfValues } from '@/api/userDefinedFields/userDefinedFields';
 import { DispatchSelectionModal } from '@/components/calls/dispatch-selection-modal';
+import { UdfFieldsRenderer } from '@/components/calls/udf-fields-renderer';
 import { Loading } from '@/components/common/loading';
 import FullScreenLocationPicker from '@/components/maps/full-screen-location-picker';
 import LocationPicker from '@/components/maps/location-picker';
@@ -18,6 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { useToast } from '@/components/ui/toast';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { type UdfFieldValueInput } from '@/models/v4/userDefinedFields/udfFieldValueInput';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -199,6 +202,8 @@ export default function EditCallWeb() {
     address?: string;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [udfValues, setUdfValues] = useState<UdfFieldValueInput[]>([]);
+  const [isAdditionalFieldsExpanded, setIsAdditionalFieldsExpanded] = useState(false);
 
   const isDark = colorScheme === 'dark';
   const isWideScreen = width >= 1024;
@@ -362,6 +367,14 @@ export default function EditCallWeb() {
         dispatchUnits: data.dispatchSelection?.units,
         dispatchEveryone: data.dispatchSelection?.everyone,
       });
+
+      if (udfValues.length > 0 && callId) {
+        try {
+          await saveUdfValues(0, callId, udfValues);
+        } catch (udfError) {
+          console.warn('Failed to save UDF values:', udfError);
+        }
+      }
 
       toast.show({
         placement: 'top',
@@ -651,6 +664,19 @@ export default function EditCallWeb() {
                     />
                   </View>
                 </View>
+              </Card>
+
+              {/* Additional Fields (UDF) */}
+              <Card style={StyleSheet.flatten([styles.card, isDark ? styles.cardDark : styles.cardLight])}>
+                <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }} onPress={() => setIsAdditionalFieldsExpanded((prev) => !prev)}>
+                  <Text style={StyleSheet.flatten([styles.sectionTitle, isDark ? styles.sectionTitleDark : styles.sectionTitleLight, { marginBottom: 0 }])}>{t('calls.additional_fields', 'Additional Fields')}</Text>
+                  <View>{isAdditionalFieldsExpanded ? <ChevronUpIcon size={20} color={isDark ? '#9ca3af' : '#6b7280'} /> : <ChevronDownIcon size={20} color={isDark ? '#9ca3af' : '#6b7280'} />}</View>
+                </Pressable>
+                {isAdditionalFieldsExpanded ? (
+                  <View style={{ marginTop: 16 }}>
+                    <UdfFieldsRenderer entityType={0} entityId={callId} onValuesChange={setUdfValues} isDark={isDark} />
+                  </View>
+                ) : null}
               </Card>
             </View>
 

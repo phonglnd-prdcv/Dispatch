@@ -1,3 +1,5 @@
+import { type UdfFieldValueResultData } from '../userDefinedFields/udfFieldValueResultData';
+
 export class PersonnelInfoResultData {
   public UserId: string = '';
   public IdentificationNumber: string = '';
@@ -19,4 +21,5 @@ export class PersonnelInfoResultData {
   public StaffingColor: string = '';
   public StaffingTimestamp: string = '';
   public Roles: string[] = [];
+  public UdfValues: UdfFieldValueResultData[] = [];
 }

@@ -3,7 +3,7 @@ import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import Map from '../map';
+import Map from '../../app/(app)/map';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { useLocationStore } from '@/stores/app/location-store';
 

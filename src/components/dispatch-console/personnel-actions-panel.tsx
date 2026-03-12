@@ -1,10 +1,11 @@
-import { Building2, Check, ChevronRight, Phone, Send, User, X, Zap } from 'lucide-react-native';
+import { Building2, Check, ChevronDown, ChevronRight, ChevronUp, Phone, Send, User, X, Zap } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { getAllGroups } from '@/api/groups/groups';
 import { getAllPersonnelStaffings, getAllPersonnelStatuses } from '@/api/satuses';
+import { UdfFieldsRenderer } from '@/components/calls/udf-fields-renderer';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
@@ -109,6 +110,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
   const [isStaffingSheetOpen, setIsStaffingSheetOpen] = useState(false);
   const [isDestinationSheetOpen, setIsDestinationSheetOpen] = useState(false);
   const [destinationTab, setDestinationTab] = useState<'calls' | 'stations'>('calls');
+  const [isAdditionalFieldsExpanded, setIsAdditionalFieldsExpanded] = useState(false);
 
   // Local state for selected status and staffing (to fix synchronization issues)
   const [localSelectedStatus, setLocalSelectedStatus] = useState<StatusesResultData | null>(null);
@@ -553,6 +555,18 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
                 </Button>
               </>
             ) : null}
+
+            {/* Additional Fields divider */}
+            <View className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+
+            {/* Additional Fields (UDF) */}
+            <Pressable onPress={() => setIsAdditionalFieldsExpanded((prev) => !prev)}>
+              <HStack className="items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+                <Text className="text-xs text-gray-500 dark:text-gray-400">{t('calls.additional_fields', 'Additional Fields')}</Text>
+                <Icon as={isAdditionalFieldsExpanded ? ChevronUp : ChevronDown} size="sm" className="text-gray-400" />
+              </HStack>
+            </Pressable>
+            {isAdditionalFieldsExpanded ? <UdfFieldsRenderer entityType={1} entityId={selectedPersonnel.UserId} onValuesChange={() => {}} readOnly={true} /> : null}
           </VStack>
         )}
       </Box>

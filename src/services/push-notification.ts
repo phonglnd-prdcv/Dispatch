@@ -5,7 +5,9 @@ import { Platform } from 'react-native';
 
 import { registerUnitDevice } from '@/api/devices/push';
 import { logger } from '@/lib/logging';
+import { isNativePushSupported } from '@/lib/platform';
 import { getDeviceUuid } from '@/lib/storage/app';
+import { electronNotificationService } from '@/services/electron-notification';
 import { useCoreStore } from '@/stores/app/core-store';
 import { usePushNotificationModalStore } from '@/stores/push-notification/store';
 import { securityStore } from '@/stores/security/store';
@@ -17,16 +19,19 @@ export interface PushNotificationData {
   data?: Record<string, unknown>;
 }
 
-// Configure notifications behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Configure notifications behavior – only on native platforms where
+// expo-notifications is fully supported (iOS / Android).
+if (isNativePushSupported()) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 class PushNotificationService {
   private static instance: PushNotificationService;
@@ -90,16 +95,26 @@ class PushNotificationService {
   }
 
   private async initialize(): Promise<void> {
-    // Set up Android notification channels
-    await this.setupAndroidNotificationChannels();
+    if (isNativePushSupported()) {
+      // Set up Android notification channels
+      await this.setupAndroidNotificationChannels();
 
-    // Set up notification listeners
-    this.notificationListener = Notifications.addNotificationReceivedListener(this.handleNotificationReceived);
-    this.responseListener = Notifications.addNotificationResponseReceivedListener(this.handleNotificationResponse);
+      // Set up notification listeners (native only)
+      this.notificationListener = Notifications.addNotificationReceivedListener(this.handleNotificationReceived);
+      this.responseListener = Notifications.addNotificationResponseReceivedListener(this.handleNotificationResponse);
 
-    logger.info({
-      message: 'Push notification service initialized',
-    });
+      logger.info({
+        message: 'Push notification service initialized (native)',
+      });
+    } else if (Platform.OS === 'web') {
+      // On web / Electron, initialize the electron notification service
+      // which uses the native OS Notification API.
+      await electronNotificationService.initialize();
+
+      logger.info({
+        message: 'Push notification service initialized (web/electron)',
+      });
+    }
   }
 
   private handleNotificationReceived = (notification: Notifications.Notification): void => {
@@ -114,7 +129,7 @@ class PushNotificationService {
 
     // Check if the notification has an eventCode and show modal
     // eventCode must be a string to be valid
-    if (data && data.eventCode && typeof data.eventCode === 'string') {
+    if (data?.eventCode && typeof data.eventCode === 'string') {
       const notificationData = {
         eventCode: data.eventCode as string,
         title: notification.request.content.title || undefined,
@@ -143,6 +158,22 @@ class PushNotificationService {
   };
 
   public async registerForPushNotifications(unitId: string, departmentCode: string): Promise<string | null> {
+    // On web / Electron, push token registration is not available.
+    // Desktop notifications are handled by ElectronNotificationService.
+    if (!isNativePushSupported()) {
+      logger.info({
+        message: 'Push token registration skipped – not a native platform',
+        context: { platform: Platform.OS },
+      });
+
+      // Ensure the electron notification service is initialized
+      if (Platform.OS === 'web') {
+        await electronNotificationService.initialize();
+      }
+
+      return null;
+    }
+
     if (!Device.isDevice) {
       logger.warn({
         message: 'Push notifications are not available on simulator/emulator',
@@ -234,6 +265,14 @@ class PushNotificationService {
   }
 
   public async sendTestNotification(): Promise<void> {
+    // On web / Electron, use the desktop notification service
+    if (!isNativePushSupported()) {
+      if (Platform.OS === 'web') {
+        electronNotificationService.sendTestNotification();
+      }
+      return;
+    }
+
     if (!this.pushToken) {
       logger.warn({
         message: 'Cannot send test notification - no push token available',
@@ -272,6 +311,17 @@ class PushNotificationService {
     if (this.responseListener) {
       this.responseListener.remove();
       this.responseListener = null;
+    }
+  }
+
+  /**
+   * Show a desktop notification on Electron. This is intended to be called
+   * from SignalR event handlers or other real-time event sources that want to
+   * surface an OS-level notification on desktop platforms.
+   */
+  public showDesktopNotification(title: string, body: string, eventCode?: string, data?: Record<string, unknown>): void {
+    if (Platform.OS === 'web') {
+      electronNotificationService.showNotification({ title, body, eventCode, data });
     }
   }
 }

@@ -1,3 +1,4 @@
+import { type UdfFieldValueResultData } from '../userDefinedFields/udfFieldValueResultData';
 import { type UnitRoleData } from './unitRoleData';
 
 export class UnitInfoResultData {
@@ -23,4 +24,5 @@ export class UnitInfoResultData {
   public Longitude: string = '';
   public Note: string = '';
   public Roles: UnitRoleData[] = [];
+  public UdfValues: UdfFieldValueResultData[] = [];
 }

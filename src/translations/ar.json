@@ -290,11 +290,48 @@
     "what3words_placeholder": "أدخل عنوان what3words (مثال: filled.count.soap)",
     "what3words_required": "يرجى إدخال عنوان what3words للبحث",
     "expand_map": "توسيع الخريطة",
+    "schedule_dispatch": "جدولة الإرسال",
+    "schedule_dispatch_description": "حدد تاريخاً ووقتاً مستقبليين لجدولة هذه المكالمة للإرسال لاحقاً",
+    "scheduled_on": "تاريخ ووقت الجدولة",
+    "scheduled_on_helper": "اتركه فارغاً للإرسال الفوري",
+    "scheduled_on_past_error": "يجب أن يكون وقت الجدولة في المستقبل",
     "contact_information": "معلومات الاتصال",
     "new_call_web_hint": "أكمل تفاصيل المكالمة أدناه. اضغط Ctrl+Enter للإنشاء.",
     "edit_call_web_hint": "حدّث تفاصيل المكالمة أدناه. اضغط Ctrl+S للحفظ.",
     "keyboard_shortcuts": "نصيحة: اضغط Ctrl+Enter للإنشاء، Escape للإلغاء",
-    "edit_keyboard_shortcuts": "نصيحة: اضغط Ctrl+S للحفظ، Escape للإلغاء"
+    "edit_keyboard_shortcuts": "نصيحة: اضغط Ctrl+S للحفظ، Escape للإلغاء",
+    "templates": {
+      "title": "قوالب المكالمات",
+      "select_template": "اختر قالبًا",
+      "search_placeholder": "البحث في القوالب...",
+      "none": "لا توجد قوالب متاحة",
+      "template_applied": "تم تطبيق القالب"
+    },
+    "form": {
+      "title": "نموذج المكالمة",
+      "no_form": "لم يتم تكوين نموذج مكالمة"
+    },
+    "linked_calls": {
+      "title": "مكالمة مرتبطة",
+      "select": "ربط بمكالمة موجودة",
+      "change": "تغيير المكالمة المرتبطة",
+      "none": "لا توجد مكالمات نشطة متاحة",
+      "search_placeholder": "البحث في المكالمات...",
+      "linked": "مرتبطة"
+    },
+    "contact_picker": {
+      "title": "اختر جهة اتصال",
+      "search_placeholder": "البحث في جهات الاتصال...",
+      "none": "لا توجد جهات اتصال متاحة"
+    },
+    "protocols": {
+      "title": "البروتوكولات",
+      "select": "اختر البروتوكولات",
+      "none": "لا توجد بروتوكولات متاحة",
+      "selected_count": "محدد",
+      "expand_questions": "عرض الأسئلة",
+      "collapse": "طي"
+    }
   },
   "common": {
     "add": "إضافة",
@@ -451,6 +488,29 @@
     "loadingData": "جاري تحميل البيانات...",
     "pleaseWait": "يرجى الانتظار",
     "processingRequest": "جاري معالجة طلبك..."
+  },
+  "sso": {
+    "authenticating": "جارٍ المصادقة...",
+    "back_to_login": "العودة إلى تسجيل الدخول",
+    "back_to_lookup": "تغيير المستخدم",
+    "continue_button": "متابعة",
+    "department_id_label": "معرف القسم",
+    "department_id_placeholder": "أدخل معرف القسم",
+    "error_generic": "فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+    "error_oidc_cancelled": "تم إلغاء تسجيل الدخول.",
+    "error_oidc_not_ready": "موفر SSO يتم تحميله، يرجى الانتظار.",
+    "error_sso_not_enabled": "تسجيل الدخول الموحد غير مفعل لهذا المستخدم.",
+    "error_token_exchange": "فشل إتمام تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+    "error_user_not_found": "المستخدم غير موجود. يرجى التحقق والمحاولة مرة أخرى.",
+    "looking_up": "جارٍ البحث...",
+    "optional": "اختياري",
+    "page_subtitle": "أدخل اسم المستخدم للبحث عن خيارات تسجيل الدخول الخاصة بمؤسستك.",
+    "page_title": "تسجيل الدخول الموحد",
+    "provider_oidc": "OpenID Connect (OIDC)",
+    "provider_saml": "SAML 2.0",
+    "sign_in_button": "تسجيل الدخول عبر SSO",
+    "sign_in_title": "تسجيل الدخول",
+    "sso_button": "تسجيل دخول SSO"
   },
   "login": {
     "branding_subtitle": "برنامج إرسال قوي للمستجيبين الأوائل والبحث والإنقاذ ومنظمات السلامة العامة.",

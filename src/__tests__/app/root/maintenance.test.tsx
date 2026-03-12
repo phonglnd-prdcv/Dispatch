@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { NavigationContainer } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
-import Maintenance from '../maintenance';
+import Maintenance from '../../../app/maintenance';
 import { Env } from '@/lib/env';
 
 // Mock dependencies

@@ -389,14 +389,26 @@ export default function LoginWeb() {
                 )}
               </Pressable>
 
-              {/* Server URL Button */}
-              <Pressable
-                style={({ pressed }) => StyleSheet.flatten([styles.serverUrlButton, isDark ? styles.serverUrlButtonDark : styles.serverUrlButtonLight, pressed ? styles.serverUrlButtonPressed : {}])}
-                onPress={() => setShowServerUrlModal(true)}
-              >
-                <Server size={16} color={isDark ? '#9ca3af' : '#6b7280'} />
-                <Text style={StyleSheet.flatten([styles.serverUrlButtonText, isDark ? styles.serverUrlButtonTextDark : styles.serverUrlButtonTextLight])}>{t('settings.server_url')}</Text>
-              </Pressable>
+              {/* Server URL and SSO Buttons */}
+              <View style={styles.actionButtonRow}>
+                <Pressable
+                  style={({ pressed }) =>
+                    StyleSheet.flatten([styles.serverUrlButton, styles.actionButtonFlex, isDark ? styles.serverUrlButtonDark : styles.serverUrlButtonLight, pressed ? styles.serverUrlButtonPressed : {}])
+                  }
+                  onPress={() => setShowServerUrlModal(true)}
+                >
+                  <Server size={16} color={isDark ? '#9ca3af' : '#6b7280'} />
+                  <Text style={StyleSheet.flatten([styles.serverUrlButtonText, isDark ? styles.serverUrlButtonTextDark : styles.serverUrlButtonTextLight])}>{t('settings.server_url')}</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) =>
+                    StyleSheet.flatten([styles.serverUrlButton, styles.actionButtonFlex, isDark ? styles.serverUrlButtonDark : styles.serverUrlButtonLight, pressed ? styles.serverUrlButtonPressed : {}])
+                  }
+                  onPress={() => router.push('/login/sso' as any)}
+                >
+                  <Text style={StyleSheet.flatten([styles.serverUrlButtonText, isDark ? styles.serverUrlButtonTextDark : styles.serverUrlButtonTextLight])}>{t('sso.sso_button')}</Text>
+                </Pressable>
+              </View>
             </Animated.View>
 
             {/* Footer */}
@@ -868,6 +880,16 @@ const styles = StyleSheet.create({
   },
 
   // Server URL Button
+  actionButtonRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  actionButtonFlex: {
+    flex: 1,
+    marginTop: 0,
+    marginLeft: 4,
+    marginRight: 4,
+  },
   serverUrlButton: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -28,11 +28,14 @@ class AudioService {
       return;
     }
 
+    // Skip initialization on the server (SSR) — audio is only available in the browser
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     try {
       // Create Web Audio API context
-      if (typeof window !== 'undefined') {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
       // Pre-load audio assets
       await this.preloadAudioAssets();

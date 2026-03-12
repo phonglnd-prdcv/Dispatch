@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net } = require('electron');
+const { app, BrowserWindow, protocol, net, Notification, ipcMain, session } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -31,9 +31,9 @@ function createWindow() {
         icon: path.join(__dirname, '../assets/icon.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            nodeIntegration: isDev,
-            contextIsolation: !isDev,
-            webSecurity: !isDev,
+            nodeIntegration: false,
+            contextIsolation: true,
+            webSecurity: true,
         },
     });
 
@@ -55,6 +55,43 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+    // ── Content Security Policy ───────────────────────────────────────
+    // Set a proper CSP to silence the Electron security warning about
+    // "unsafe-eval" / missing CSP.  In development we allow the local
+    // dev-server origin; in production only the custom app:// scheme.
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        let csp;
+        if (isDev) {
+            // Dev mode: Metro/webpack needs 'unsafe-eval' for source maps
+            // and hot-reload, blob: for dynamic chunks, ws: for HMR.
+            csp =
+                "default-src 'self' http://localhost:8081;" +
+                " script-src 'self' http://localhost:8081 'unsafe-inline' 'unsafe-eval' blob:;" +
+                " style-src 'self' http://localhost:8081 'unsafe-inline';" +
+                " img-src 'self' http://localhost:8081 data: https: blob:;" +
+                " font-src 'self' http://localhost:8081 data:;" +
+                " connect-src 'self' http://localhost:8081 https: wss: ws:;" +
+                " media-src 'self' http://localhost:8081 data: blob:;" +
+                " worker-src 'self' blob:;";
+        } else {
+            csp =
+                "default-src 'self' app:;" +
+                " script-src 'self' app: 'unsafe-inline';" +
+                " style-src 'self' app: 'unsafe-inline';" +
+                " img-src 'self' app: data: https:;" +
+                " font-src 'self' app: data:;" +
+                " connect-src 'self' app: https: wss:;" +
+                " media-src 'self' app: data:;" +
+                " worker-src 'self' blob:;";
+        }
+
+        callback({
+            responseHeaders: {
+                ...details.responseHeaders,
+                'Content-Security-Policy': [csp],
+            },
+        });
+    });
     // Register the custom app:// protocol handler for production builds.
     // This serves all files from the dist/ directory so that absolute asset
     // paths in the bundled HTML/JS/CSS resolve correctly.
@@ -76,6 +113,47 @@ app.whenReady().then(() => {
     }
 
     createWindow();
+
+    // ── Notification IPC handlers ──────────────────────────────────────
+    // Allow the renderer to request native Electron Notification objects
+    // which map to macOS Notification Center, Windows Toast & Linux
+    // libnotify/notify-send automatically.
+
+    ipcMain.handle('notifications:isSupported', () => {
+        return Notification.isSupported();
+    });
+
+    ipcMain.handle('notifications:show', (_event, payload) => {
+        if (!Notification.isSupported()) {
+            console.warn('Native notifications are not supported on this platform');
+            return false;
+        }
+
+        try {
+            const notification = new Notification({
+                title: payload.title || 'Resgrid Dispatch',
+                body: payload.body || '',
+                icon: path.join(__dirname, '../assets/icon.png'),
+                silent: false,
+            });
+
+            notification.on('click', () => {
+                // Focus / restore the main window when the notification is clicked
+                const windows = BrowserWindow.getAllWindows();
+                if (windows.length > 0) {
+                    const win = windows[0];
+                    if (win.isMinimized()) win.restore();
+                    win.focus();
+                }
+            });
+
+            notification.show();
+            return true;
+        } catch (err) {
+            console.error('Failed to show native notification:', err);
+            return false;
+        }
+    });
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

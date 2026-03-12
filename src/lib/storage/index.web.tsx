@@ -1,17 +1,42 @@
 import { type StateStorage } from 'zustand/middleware';
 
+const isLocalStorageAvailable = typeof localStorage !== 'undefined';
+
 // Mock MMKV class for web to satisfy type requirements if needed,
 // but we won't export 'storage' as MMKV type to avoid importing the native library if possible.
 // However, other files might expect 'storage' to be exported.
 // Let's export a dummy object or just 'any'.
 export const storage: any = {
-  getString: (key: string) => localStorage.getItem(key),
-  set: (key: string, value: string) => localStorage.setItem(key, value),
-  delete: (key: string) => localStorage.removeItem(key),
+  getString: (key: string) => {
+    if (!isLocalStorageAvailable) return null;
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.warn('localStorage.getItem failed', e);
+      return null;
+    }
+  },
+  set: (key: string, value: string) => {
+    if (!isLocalStorageAvailable) return;
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.warn('localStorage.setItem failed', e);
+    }
+  },
+  delete: (key: string) => {
+    if (!isLocalStorageAvailable) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.warn('localStorage.removeItem failed', e);
+    }
+  },
 };
 
 export function getItem<T>(key: string): T | null {
   try {
+    if (!isLocalStorageAvailable) return null;
     const value = localStorage.getItem(key);
     return value ? JSON.parse(value) : null;
   } catch (e) {
@@ -22,6 +47,7 @@ export function getItem<T>(key: string): T | null {
 
 export async function setItem<T>(key: string, value: T) {
   try {
+    if (!isLocalStorageAvailable) return;
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
     console.error('Error writing to localStorage', e);
@@ -30,6 +56,7 @@ export async function setItem<T>(key: string, value: T) {
 
 export async function removeItem(key: string) {
   try {
+    if (!isLocalStorageAvailable) return;
     localStorage.removeItem(key);
   } catch (e) {
     console.error('Error removing from localStorage', e);
@@ -39,16 +66,27 @@ export async function removeItem(key: string) {
 export const zustandStorage: StateStorage = {
   setItem: (name, value) => {
     try {
-      localStorage.setItem(name, value);
+      if (isLocalStorageAvailable) localStorage.setItem(name, value);
     } catch (e) {
       console.error('Local storage setItem failed', e);
     }
   },
   getItem: (name) => {
-    return localStorage.getItem(name);
+    if (!isLocalStorageAvailable) return null;
+    try {
+      return localStorage.getItem(name);
+    } catch (e) {
+      console.warn('localStorage.getItem failed', e);
+      return null;
+    }
   },
   removeItem: (name) => {
-    localStorage.removeItem(name);
+    if (!isLocalStorageAvailable) return;
+    try {
+      localStorage.removeItem(name);
+    } catch (e) {
+      console.warn('localStorage.removeItem failed', e);
+    }
   },
 };
 

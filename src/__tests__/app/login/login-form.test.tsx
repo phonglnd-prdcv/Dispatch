@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 
 // Mock the entire login-form module to replace the schema creation
-jest.mock('../login-form', () => {
+jest.mock('../../../app/login/login-form', () => {
   const React = require('react');
   const { View, Text, TouchableOpacity, TextInput } = require('react-native');
 
@@ -60,7 +60,7 @@ jest.mock('../login-form', () => {
   };
 });
 
-import { LoginForm } from '../login-form';
+import { LoginForm } from '../../../app/login/login-form';
 
 // Mock react-i18next
 jest.mock('react-i18next', () => ({

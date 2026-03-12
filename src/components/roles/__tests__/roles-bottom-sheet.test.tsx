@@ -128,6 +128,7 @@ describe('RolesBottomSheet', () => {
       StaffingColor: '',
       StaffingTimestamp: '',
       Roles: [],
+      UdfValues: [],
     },
   ];
 

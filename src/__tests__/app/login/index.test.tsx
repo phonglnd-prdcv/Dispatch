@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { View, Text, TouchableOpacity } from 'react-native';
 
-import Login from '../index';
+import Login from '../../../app/login/index';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -71,7 +71,7 @@ jest.mock('@/components/settings/server-url-bottom-sheet', () => {
   };
 });
 
-jest.mock('../login-form', () => {
+jest.mock('../../../app/login/login-form', () => {
   const React = require('react');
   const { View, TouchableOpacity, Text } = require('react-native');
 

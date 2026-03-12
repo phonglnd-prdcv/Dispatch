@@ -1,5 +1,6 @@
 import { Env } from '@env';
 import axios from 'axios';
+import { randomUUID } from 'expo-crypto';
 import queryString from 'query-string';
 
 import { logger } from '@/lib/logging';
@@ -77,6 +78,43 @@ export const loginRequest = async (credentials: LoginCredentials): Promise<Login
     return {
       successful: false,
       message: error instanceof Error ? error.message : 'Login failed',
+      authResponse: null,
+    };
+  }
+};
+
+export const externalTokenRequest = async (provider: 'oidc' | 'saml2', externalToken: string, username: string, departmentId?: number): Promise<LoginResponse> => {
+  const requestId = randomUUID();
+  try {
+    const data: Record<string, string> = {
+      provider,
+      external_token: externalToken,
+      username,
+      scope: Env.IS_MOBILE_APP ? 'openid profile offline_access mobile' : 'openid profile offline_access',
+    };
+
+    if (departmentId) {
+      data.department_id = String(departmentId);
+    }
+
+    logger.info({
+      message: 'API: Sending SSO external token request',
+      context: { provider, requestId },
+    });
+
+    const response = await authApi.post<AuthResponse>('/connect/external-token', queryString.stringify(data));
+
+    if (response.status === 200) {
+      logger.info({ message: 'SSO: External token exchange successful', context: { requestId } });
+      return { successful: true, message: 'SSO login successful', authResponse: response.data };
+    }
+
+    return { successful: false, message: 'SSO login failed', authResponse: null };
+  } catch (error) {
+    logger.error({ message: 'SSO: External token request failed', context: { error, requestId } });
+    return {
+      successful: false,
+      message: error instanceof Error ? error.message : 'SSO login failed',
       authResponse: null,
     };
   }
