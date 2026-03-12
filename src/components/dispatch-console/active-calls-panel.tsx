@@ -295,14 +295,19 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
     Promise.all(
       toFetch.map((callId) =>
         getCallExtraData(callId)
-          .then((res) => ({ callId, dispatches: res?.Data?.Dispatches ?? [] }))
-          .catch(() => ({ callId, dispatches: [] as DispatchedEventResultData[] }))
+          .then((res) => ({ callId, dispatches: res?.Data?.Dispatches ?? ([] as DispatchedEventResultData[]) }))
+          .catch(() => ({ callId, dispatches: null as DispatchedEventResultData[] | null }))
       )
     ).then((results) => {
       setCallDispatchesMap((prev) => {
         const next = { ...prev };
         results.forEach(({ callId, dispatches }) => {
-          next[callId] = dispatches;
+          if (dispatches !== null) {
+            next[callId] = dispatches;
+          } else {
+            // Fetch failed – remove from the fetched set so the next refresh can retry
+            fetchedCallIdsRef.current.delete(callId);
+          }
         });
         return next;
       });
@@ -355,6 +360,9 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
+    // Clear tracking state so all active calls get their dispatches re-fetched
+    fetchedCallIdsRef.current = new Set();
+    setLoadingCallIds(new Set());
     fetchCalls();
     fetchCallPriorities();
   }, [fetchCalls, fetchCallPriorities]);

@@ -1,6 +1,10 @@
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
+
+import formRenderSource from '@/lib/form-render/form-render-source';
+import jquerySource from '@/lib/form-render/jquery-source';
 
 interface CallFormRendererProps {
   formSchemaJson: string;
@@ -12,7 +16,7 @@ function escapeHtmlAttr(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function buildHtml(formSchemaJson: string, isDark: boolean): string {
+function buildHtml(formSchemaJson: string, isDark: boolean, title: string): string {
   const bg = isDark ? '#171717' : '#ffffff';
   const text = isDark ? '#f3f4f6' : '#111827';
   const border = isDark ? '#404040' : '#d1d5db';
@@ -25,9 +29,9 @@ function buildHtml(formSchemaJson: string, isDark: boolean): string {
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Call Form</title>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://formbuilder.online/assets/js/form-render.min.js"></script>
+<title>${title}</title>
+<script>${jquerySource}</script>
+<script>${formRenderSource}</script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -72,9 +76,17 @@ function buildHtml(formSchemaJson: string, isDark: boolean): string {
 
     function sendData() {
       var data = {};
-      var fields = document.querySelectorAll('#callForm input, #callForm select, #callForm textarea');
-      fields.forEach(function(el) {
-        if (el.name) data[el.name] = el.value;
+      var formEl = document.getElementById('callForm');
+      var fd = new FormData(formEl);
+      fd.forEach(function(value, name) {
+        if (Object.prototype.hasOwnProperty.call(data, name)) {
+          if (!Array.isArray(data[name])) {
+            data[name] = [data[name]];
+          }
+          data[name].push(value);
+        } else {
+          data[name] = value;
+        }
       });
       // Use window.location.origin (same as parent because sandbox uses
       // allow-same-origin) instead of '*' to prevent leaking form data to
@@ -91,16 +103,20 @@ function buildHtml(formSchemaJson: string, isDark: boolean): string {
 
 export const CallFormRenderer: React.FC<CallFormRendererProps> = ({ formSchemaJson, onFormDataChange, height = 400 }) => {
   const { colorScheme } = useColorScheme();
+  const { t } = useTranslation();
   const isDark = colorScheme === 'dark';
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const html = buildHtml(formSchemaJson, isDark);
+  const html = buildHtml(formSchemaJson, isDark, t('calls.form.title', 'Call Form'));
 
   useEffect(() => {
     const handler = (event: MessageEvent) => {
       // Reject messages from unexpected origins (the iframe uses allow-same-origin
       // so legitimate messages will always come from window.location.origin).
       if (event.origin !== window.location.origin) return;
+      // Reject messages that do not originate from this specific iframe to
+      // prevent other frames or scripts on the page spoofing form data.
+      if (event.source !== iframeRef.current?.contentWindow) return;
       if (typeof event.data === 'string') {
         onFormDataChange(event.data);
       }
@@ -111,7 +127,7 @@ export const CallFormRenderer: React.FC<CallFormRendererProps> = ({ formSchemaJs
 
   return (
     <View style={StyleSheet.flatten([styles.container, { height }, isDark ? styles.containerDark : styles.containerLight])}>
-      <iframe ref={iframeRef} srcDoc={html} style={{ width: '100%', height: '100%', border: 'none' }} title="Call Form" sandbox="allow-scripts allow-same-origin" />
+      <iframe ref={iframeRef} srcDoc={html} style={{ width: '100%', height: '100%', border: 'none' }} title={t('calls.form.title', 'Call Form')} sandbox="allow-scripts allow-same-origin" />
     </View>
   );
 };

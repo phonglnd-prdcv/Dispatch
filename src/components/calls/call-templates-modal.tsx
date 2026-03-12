@@ -33,6 +33,8 @@ export const CallTemplatesModal: React.FC<CallTemplatesModalProps> = ({ isVisibl
   useEffect(() => {
     if (isVisible) {
       loadTemplates();
+    } else {
+      setSearchQuery('');
     }
   }, [isVisible]);
 
