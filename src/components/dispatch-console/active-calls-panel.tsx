@@ -252,6 +252,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
   const [callDispatchesMap, setCallDispatchesMap] = useState<Record<string, DispatchedEventResultData[]>>({});
   const [loadingCallIds, setLoadingCallIds] = useState<Set<string>>(new Set());
   const fetchedCallIdsRef = useRef<Set<string>>(new Set());
+  const fetchEpochRef = useRef(0);
 
   // Keep selected call's dispatches fresh via dispatch console store (updated by SignalR)
   const selectedCallExtraData = useDispatchConsoleStore((state) => state.selectedCallExtraData);
@@ -292,6 +293,9 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
       return next;
     });
 
+    fetchEpochRef.current += 1;
+    const epoch = fetchEpochRef.current;
+
     Promise.all(
       toFetch.map((callId) =>
         getCallExtraData(callId)
@@ -299,6 +303,8 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
           .catch(() => ({ callId, dispatches: null as DispatchedEventResultData[] | null }))
       )
     ).then((results) => {
+      if (epoch !== fetchEpochRef.current) return;
+
       setCallDispatchesMap((prev) => {
         const next = { ...prev };
         results.forEach(({ callId, dispatches }) => {
@@ -360,6 +366,8 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
 
   // Handle refresh
   const handleRefresh = useCallback(() => {
+    // Invalidate any in-flight fetch batch before resetting state
+    fetchEpochRef.current += 1;
     // Clear tracking state so all active calls get their dispatches re-fetched
     fetchedCallIdsRef.current = new Set();
     setLoadingCallIds(new Set());
