@@ -437,7 +437,7 @@ export default function NewCallWeb() {
         }
 
         toast.success(t('calls.create_success'));
-        router.push('/calls' as Href);
+        router.push('/(app)/home' as Href);
       } catch (err) {
         console.error('Error creating call:', err);
         toast.error(t('calls.create_error'));

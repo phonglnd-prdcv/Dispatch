@@ -211,12 +211,21 @@ function Providers({ children }: { children: React.ReactNode }) {
     <APIProvider>
       <GluestackUIProvider mode={(colorScheme ?? 'light') as 'light' | 'dark'}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <BottomSheetModalProvider>
-            {children}
-            <PushNotificationModal />
-            <FlashMessage position="top" />
-            <ToastContainer />
-          </BottomSheetModalProvider>
+          {Platform.OS === 'web' ? (
+            <>
+              {children}
+              <PushNotificationModal />
+              <FlashMessage position="top" />
+              <ToastContainer />
+            </>
+          ) : (
+            <BottomSheetModalProvider>
+              {children}
+              <PushNotificationModal />
+              <FlashMessage position="top" />
+              <ToastContainer />
+            </BottomSheetModalProvider>
+          )}
         </ThemeProvider>
       </GluestackUIProvider>
     </APIProvider>

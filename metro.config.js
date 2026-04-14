@@ -3,7 +3,7 @@
 const _ = require('lodash');
 const path = require('path');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
-const exclusionList = require('metro-config/src/defaults/exclusionList');
+const { default: exclusionList } = require('metro-config/private/defaults/exclusionList');
 //const { getDefaultConfig } = require('expo/metro-config');
 //const path = require('path');
 const { withNativeWind } = require('nativewind/metro');
@@ -45,6 +45,21 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       return {
         type: 'sourceFile',
         filePath: path.resolve(__dirname, '__mocks__/react-native-mmkv.ts'),
+      };
+    }
+
+    // @gorhom/bottom-sheet depends on reanimated worklets - not available on web
+    if (moduleName === '@gorhom/bottom-sheet') {
+      return {
+        type: 'sourceFile',
+        filePath: path.resolve(__dirname, '__mocks__/@gorhom/bottom-sheet.web.js'),
+      };
+    }
+
+    // NetInfo - not needed on web, use navigator.onLine instead
+    if (moduleName === '@react-native-community/netinfo') {
+      return {
+        type: 'empty',
       };
     }
 

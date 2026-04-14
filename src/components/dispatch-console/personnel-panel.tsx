@@ -138,14 +138,31 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
     let filtered = personnel;
 
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
-      // Get personnel names from dispatches (dispatches contain personnel info by name)
-      const dispatchedPersonnelNames = callDispatches.filter((d) => d.Type === 'Personnel' || d.Type === 'p').map((d) => d.Name.toLowerCase());
+      // Log dispatch types for debugging
+      if (__DEV__) {
+        console.log('[PersonnelPanel] callDispatches types:', callDispatches.map((d) => ({ Type: d.Type, Name: d.Name })));
+      }
+
+      // Get personnel names from dispatches — match common type values for personnel
+      const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
+      const dispatchedPersonnelNames = callDispatches
+        .filter((d) => personnelTypes.has(d.Type))
+        .map((d) => d.Name.toLowerCase());
 
       // Also check personnel whose StatusDestinationId matches the call
       filtered = personnel.filter((p) => {
         const fullName = `${p.FirstName} ${p.LastName}`.toLowerCase();
         return dispatchedPersonnelNames.includes(fullName) || (selectedCallId && p.StatusDestinationId === selectedCallId);
       });
+
+      // If strict type matching found nothing, try matching ALL dispatch names against personnel as fallback
+      if (filtered.length === 0) {
+        const allDispatchNames = callDispatches.map((d) => d.Name.toLowerCase());
+        filtered = personnel.filter((p) => {
+          const fullName = `${p.FirstName} ${p.LastName}`.toLowerCase();
+          return allDispatchNames.includes(fullName) || (selectedCallId && p.StatusDestinationId === selectedCallId);
+        });
+      }
     }
 
     // Apply search filter
@@ -167,7 +184,13 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
   // Get list of personnel names that are dispatched to the call
   const dispatchedPersonnelNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    return new Set(callDispatches.filter((d) => d.Type === 'Personnel' || d.Type === 'p').map((d) => d.Name.toLowerCase()));
+    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
+    const byType = new Set(callDispatches.filter((d) => personnelTypes.has(d.Type)).map((d) => d.Name.toLowerCase()));
+    // If no type matches, include all dispatch names as fallback
+    if (byType.size === 0) {
+      return new Set(callDispatches.map((d) => d.Name.toLowerCase()));
+    }
+    return byType;
   }, [callDispatches]);
 
   // Count on-duty personnel

@@ -1,12 +1,14 @@
 import { format } from 'date-fns';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon } from 'lucide-react-native';
+import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 
+import { VideoFeedsTab } from '@/components/callVideoFeeds/video-feeds-tab';
+import { CheckInTab } from '@/components/checkIn/check-in-tab';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 // Import a static map component instead of react-native-maps
@@ -25,6 +27,7 @@ import { openMapsWithDirections } from '@/lib/navigation';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useCheckInStore } from '@/stores/checkIn/store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
@@ -468,6 +471,29 @@ export default function CallDetail() {
         ),
       },
     ];
+
+    // Video feeds tab
+    tabs.push({
+      key: 'video',
+      title: t('call_detail.tabs.video'),
+      icon: <VideoIcon size={16} />,
+      content: <VideoFeedsTab callId={call.CallId} canEdit={canUserCreateCalls ?? false} />,
+    });
+
+    if (call?.CheckInTimersEnabled) {
+      const checkInStatuses = useCheckInStore.getState().timerStatuses;
+      const overdueCount = checkInStatuses.filter((s) => s.Status === 'Overdue').length;
+      const warningCount = checkInStatuses.filter((s) => s.Status === 'Warning').length;
+      const badgeCount = overdueCount + warningCount;
+
+      tabs.push({
+        key: 'checkin',
+        title: t('check_in.tab_title'),
+        icon: <ShieldCheckIcon size={16} />,
+        badge: badgeCount,
+        content: <CheckInTab callId={parseInt(call.CallId)} checkInTimersEnabled={true} />,
+      });
+    }
 
     return tabs;
   };

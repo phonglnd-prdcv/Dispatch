@@ -177,7 +177,8 @@
       "dispatched": "Despachadas",
       "info": "Información",
       "protocols": "Protocolos",
-      "timeline": "Actividad"
+      "timeline": "Actividad",
+      "video": "Video"
     },
     "timestamp": "Marca de tiempo",
     "title": "Detalles de la llamada",
@@ -545,6 +546,27 @@
     "username_placeholder": "Introduce tu nombre de usuario",
     "welcome_title": "Bienvenido de Nuevo"
   },
+  "lockscreen": {
+    "message": "Ingrese su contraseña para desbloquear la pantalla",
+    "not_you": "¿No eres tú? Volver al inicio de sesión",
+    "password": "Contraseña",
+    "password_placeholder": "Ingrese su contraseña",
+    "title": "Pantalla de Bloqueo",
+    "unlock_button": "Desbloquear",
+    "unlock_failed": "Error al desbloquear. Por favor, inténtelo de nuevo.",
+    "unlocking": "Desbloqueando...",
+    "welcome_back": "Bienvenido de Nuevo"
+  },
+  "maintenance": {
+    "downtime_message": "Estamos trabajando arduamente para completar el mantenimiento lo antes posible. Por favor, vuelva pronto.",
+    "downtime_title": "¿Cuál es el tiempo de inactividad?",
+    "message": "Por favor, vuelva en algún momento.",
+    "support_message": "Si necesita asistencia, contáctenos en",
+    "support_title": "¿Necesita soporte?",
+    "title": "Sitio en Mantenimiento",
+    "why_down_message": "Estamos realizando mantenimiento programado para mejorar su experiencia. Nos disculpamos por cualquier inconveniente.",
+    "why_down_title": "¿Por qué está el sitio inactivo?"
+  },
   "map": {
     "call_set_as_current": "Llamada establecida como llamada actual",
     "failed_to_open_maps": "Error al abrir la aplicación de mapas",
@@ -558,7 +580,11 @@
     "search_personnel_placeholder": "Buscar personal...",
     "search_calls_placeholder": "Buscar llamadas...",
     "search_units_placeholder": "Buscar unidades...",
-    "search_notes_placeholder": "Buscar notas..."
+    "search_notes_placeholder": "Buscar notas...",
+    "layers": "Capas del Mapa",
+    "no_layers": "No hay capas disponibles",
+    "show_all": "Mostrar Todo",
+    "hide_all": "Ocultar Todo"
   },
   "notes": {
     "actions": {
@@ -591,7 +617,8 @@
     "personnel": "Personal",
     "protocols": "Protocolos",
     "settings": "Configuración",
-    "units": "Unidades"
+    "units": "Unidades",
+    "weatherAlerts": "Alertas Meteorológicas"
   },
   "onboarding": {
     "screen1": {
@@ -673,7 +700,11 @@
     "background_location": "Ubicación en segundo plano",
     "contact_us": "Contáctanos",
     "current_unit": "Unidad Actual",
+    "arabic": "Árabe",
     "english": "Inglés",
+    "french": "Francés",
+    "german": "Alemán",
+    "italian": "Italiano",
     "enter_password": "Introduce tu contraseña",
     "enter_server_url": "Introduce la URL de la API de Resgrid (ej: https://api.resgrid.com)",
     "enter_username": "Introduce tu nombre de usuario",
@@ -706,7 +737,10 @@
     "server_url_note": "Nota: Esta es la URL de la API de Resgrid. Se utiliza para conectarse al servidor de Resgrid. No incluyas /api/v4 en la URL ni una barra diagonal al final.",
     "set_active_unit": "Establecer unidad activa",
     "share": "Compartir",
+    "polish": "Polaco",
     "spanish": "Español",
+    "swedish": "Sueco",
+    "ukrainian": "Ucraniano",
     "status_page": "Estado del sistema",
     "support": "Soporte",
     "support_us": "Apóyanos",
@@ -760,7 +794,8 @@
     "notes": "Notas",
     "protocols": "Protocolos",
     "settings": "Configuración",
-    "shifts": "Turnos"
+    "shifts": "Turnos",
+    "personnel": "Personal"
   },
   "dispatch": {
     "active_calls": "Llamadas Activas",
@@ -853,6 +888,8 @@
     "calls_updated": "Llamadas actualizadas",
     "call_added": "Nueva llamada añadida",
     "call_closed": "Llamada cerrada",
+    "check_ins": "Registros",
+    "no_check_ins": "No hay llamadas con temporizadores de registro",
     "radio_log": "Registro de Radio",
     "radio": "Radio",
     "activity": "Actividad",
@@ -903,7 +940,186 @@
     "set_status": "Estado",
     "set_staffing": "Dotación",
     "dispatch": "Despachar",
-    "select_items_for_actions": "Selecciona una llamada, unidad o personal para habilitar acciones contextuales"
+    "select_items_for_actions": "Selecciona una llamada, unidad o personal para habilitar acciones contextuales",
+    "weather": {
+      "clear": "Despejado",
+      "mainly_clear": "Mayormente Despejado",
+      "partly_cloudy": "Parcialmente Nublado",
+      "overcast": "Nublado",
+      "fog": "Niebla",
+      "drizzle": "Llovizna",
+      "freezing_drizzle": "Llovizna Helada",
+      "rain": "Lluvia",
+      "freezing_rain": "Lluvia Helada",
+      "snow": "Nieve",
+      "rain_showers": "Chubascos",
+      "snow_showers": "Nevadas",
+      "thunderstorm": "Tormenta Eléctrica",
+      "thunderstorm_hail": "Tormenta con Granizo",
+      "unknown": "Desconocido"
+    }
+  },
+  "check_in": {
+    "tab_title": "Registro",
+    "timer_status": "Estado del Temporizador",
+    "perform_check_in": "Registrar",
+    "check_in_success": "Registro realizado exitosamente",
+    "check_in_error": "Error al realizar el registro",
+    "checked_in_by": "por {{name}}",
+    "last_check_in": "Último registro",
+    "elapsed": "Transcurrido",
+    "duration": "Duración",
+    "status_ok": "OK",
+    "status_green": "OK",
+    "status_warning": "Advertencia",
+    "status_yellow": "Advertencia",
+    "status_overdue": "Vencido",
+    "status_red": "Vencido",
+    "status_critical": "Crítico",
+    "history": "Historial de Registros",
+    "no_timers": "No hay temporizadores de registro configurados",
+    "timers_disabled": "Los temporizadores de registro están desactivados para esta llamada",
+    "type_personnel": "Personal",
+    "type_unit": "Unidad",
+    "type_ic": "Comandante de Incidente",
+    "type_par": "PAR",
+    "type_hazmat": "Exposición a Materiales Peligrosos",
+    "type_sector_rotation": "Rotación de Sector",
+    "type_rehab": "Rehabilitación",
+    "add_note": "Agregar Nota (Opcional)",
+    "confirm": "Confirmar Registro",
+    "minutes_ago": "hace {{count}} min",
+    "select_target": "Seleccionar Entidad para Registrar",
+    "overdue_count": "{{count}} Vencidos",
+    "warning_count": "{{count}} Advertencias",
+    "enable_timers": "Activar Temporizadores",
+    "disable_timers": "Desactivar Temporizadores",
+    "summary": "{{overdue}} vencidos, {{warning}} advertencias, {{ok}} ok"
+  },
+  "units": {
+    "title": "Unidades"
+  },
+  "weatherAlerts": {
+    "title": "Alertas Meteorológicas",
+    "activeAlerts": "Alertas Activas",
+    "noActiveAlerts": "No hay alertas meteorológicas activas",
+    "moreAlerts": "+{{count}} más",
+    "severity": {
+      "extreme": "Extrema",
+      "severe": "Severa",
+      "moderate": "Moderada",
+      "minor": "Menor",
+      "unknown": "Desconocida"
+    },
+    "category": {
+      "met": "Meteorológica",
+      "fire": "Incendio",
+      "health": "Salud",
+      "env": "Ambiental",
+      "other": "Otra"
+    },
+    "urgency": {
+      "immediate": "Inmediata",
+      "expected": "Esperada",
+      "future": "Futura",
+      "past": "Pasada",
+      "unknown": "Desconocida"
+    },
+    "certainty": {
+      "observed": "Observada",
+      "likely": "Probable",
+      "possible": "Posible",
+      "unlikely": "Improbable",
+      "unknown": "Desconocida"
+    },
+    "status": {
+      "active": "Activa",
+      "updated": "Actualizada",
+      "expired": "Expirada",
+      "cancelled": "Cancelada"
+    },
+    "detail": {
+      "headline": "Titular",
+      "description": "Descripción",
+      "instruction": "Instrucciones",
+      "area": "Área Afectada",
+      "effective": "Vigente",
+      "onset": "Inicio",
+      "expires": "Expira",
+      "sent": "Enviado",
+      "sender": "Fuente",
+      "urgency": "Urgencia",
+      "certainty": "Certeza"
+    },
+    "filter": {
+      "all": "Todas",
+      "nearby": "Cercanas"
+    },
+    "sort": {
+      "severity": "Severidad",
+      "expires": "Próximas a Expirar",
+      "newest": "Más Recientes"
+    },
+    "banner": {
+      "viewAll": "Ver Todas"
+    }
+  },
+  "videoFeeds": {
+    "title": "Transmisiones de Video",
+    "noFeeds": "No hay transmisiones de video para esta llamada",
+    "addFeed": "Agregar Transmisión",
+    "editFeed": "Editar Transmisión",
+    "deleteFeed": "Eliminar Transmisión",
+    "deleteConfirm": "¿Está seguro de que desea eliminar esta transmisión de video?",
+    "watch": "Ver",
+    "goLive": "Transmitir",
+    "stopLive": "Detener",
+    "flipCamera": "Voltear Cámara",
+    "feedAdded": "Transmisión de video agregada",
+    "feedUpdated": "Transmisión de video actualizada",
+    "feedDeleted": "Transmisión de video eliminada",
+    "feedError": "Error al cargar la transmisión de video",
+    "unsupportedFormat": "Este formato de transmisión no es compatible en dispositivos móviles",
+    "copyUrl": "Copiar URL",
+    "form": {
+      "name": "Nombre de la Transmisión",
+      "namePlaceholder": "ej. Dron Motor 1",
+      "url": "URL de Transmisión",
+      "urlPlaceholder": "ej. https://stream.example.com/live.m3u8",
+      "feedType": "Tipo de Cámara",
+      "feedFormat": "Formato de Transmisión",
+      "description": "Descripción",
+      "descriptionPlaceholder": "Descripción opcional",
+      "status": "Estado",
+      "sortOrder": "Orden",
+      "cameraLocation": "Ubicación de la Cámara",
+      "useCurrentLocation": "Usar Ubicación Actual"
+    },
+    "type": {
+      "drone": "Dron",
+      "fixedCamera": "Cámara Fija",
+      "bodyCam": "Cámara Corporal",
+      "trafficCam": "Cámara de Tráfico",
+      "weatherCam": "Cámara Meteorológica",
+      "satelliteFeed": "Transmisión Satelital",
+      "webCam": "Cámara Web",
+      "other": "Otro"
+    },
+    "format": {
+      "rtsp": "RTSP",
+      "hls": "HLS",
+      "mjpeg": "MJPEG",
+      "youtubeLive": "YouTube Live",
+      "webrtc": "WebRTC",
+      "dash": "DASH",
+      "embed": "Embed",
+      "other": "Otro"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "error": "Error"
+    }
   },
   "welcome": "Bienvenido al sitio de la aplicación obytes"
 }

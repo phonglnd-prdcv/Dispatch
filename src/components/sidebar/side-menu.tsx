@@ -1,5 +1,5 @@
 import { type Href, useRouter } from 'expo-router';
-import { Contact, FileText, Home, List, type LucideIcon, Map as MapIcon, MessageCircle, Phone, Plus, Settings, Truck, Users } from 'lucide-react-native';
+import { CloudLightning, Contact, FileText, Home, List, type LucideIcon, Map as MapIcon, MessageCircle, Phone, Plus, Settings, Truck, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -31,6 +31,7 @@ const getMenuItems = (t: (key: string) => string): MenuItem[] => [
   { id: 'map', label: t('menu.map'), icon: MapIcon, route: '/map' },
   { id: 'personnel', label: t('menu.personnel'), icon: Users, route: '/personnel' },
   { id: 'units', label: t('menu.units'), icon: Truck, route: '/units' },
+  { id: 'weather-alerts', label: t('menu.weatherAlerts'), icon: CloudLightning, route: '/weather-alerts' },
   { id: 'protocols', label: t('menu.protocols'), icon: FileText, route: '/protocols' },
   { id: 'contacts', label: t('menu.contacts'), icon: Contact, route: '/contacts' },
   { id: 'settings', label: t('menu.settings'), icon: Settings, route: '/settings' },

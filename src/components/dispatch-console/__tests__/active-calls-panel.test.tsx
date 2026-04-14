@@ -151,6 +151,7 @@ const mockCalls: CallResultData[] = [
     DispatchedOnUtc: '2024-01-15T10:05:00Z',
     Latitude: '40.7128',
     Longitude: '-74.0060',
+    CheckInTimersEnabled: false,
   },
   {
     CallId: 'call-2',
@@ -180,6 +181,7 @@ const mockCalls: CallResultData[] = [
     DispatchedOnUtc: '2024-01-15T11:05:00Z',
     Latitude: '40.7589',
     Longitude: '-73.9851',
+    CheckInTimersEnabled: false,
   },
   {
     CallId: 'call-3',
@@ -209,6 +211,7 @@ const mockCalls: CallResultData[] = [
     DispatchedOnUtc: '2024-01-15T09:05:00Z',
     Latitude: '',
     Longitude: '',
+    CheckInTimersEnabled: false,
   },
 ];
 

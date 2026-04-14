@@ -277,8 +277,8 @@ export default function NewCall() {
       // Show success toast
       toast.success(t('calls.create_success'));
 
-      // Navigate back to calls list
-      router.push('/calls' as Href);
+      // Navigate back to home dashboard
+      router.push('/(app)/home' as Href);
     } catch (error) {
       console.error('Error creating call:', error);
 

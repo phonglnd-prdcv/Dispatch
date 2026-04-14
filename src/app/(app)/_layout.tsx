@@ -33,6 +33,7 @@ import useLockscreenStore from '@/stores/lockscreen/store';
 import { useRolesStore } from '@/stores/roles/store';
 import { securityStore } from '@/stores/security/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
+import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -156,6 +157,24 @@ export default function TabLayout() {
             context: { error, platform: Platform.OS },
           });
           // Don't fail initialization if SignalR connection fails
+        }
+
+        // Initialize weather alerts
+        try {
+          await useWeatherAlertsStore.getState().fetchSettings();
+          const weatherSettings = useWeatherAlertsStore.getState().settings;
+          if (weatherSettings?.WeatherAlertsEnabled) {
+            await useWeatherAlertsStore.getState().fetchActiveAlerts();
+          }
+          logger.info({
+            message: 'Weather alerts initialized',
+            context: { enabled: weatherSettings?.WeatherAlertsEnabled ?? false },
+          });
+        } catch (error) {
+          logger.error({
+            message: 'Failed to initialize weather alerts',
+            context: { error, platform: Platform.OS },
+          });
         }
 
         hasInitialized.current = true;

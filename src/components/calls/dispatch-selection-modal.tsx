@@ -69,7 +69,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
     >
       {/* Header */}
       <Box className={`flex-row items-center justify-between p-4 ${colorScheme === 'dark' ? 'border-b border-neutral-800 bg-neutral-900' : 'border-b border-neutral-200 bg-white'}`}>
-        <HStack className="items-center space-x-3">
+        <HStack className="items-center gap-3">
           <UsersIcon size={24} className={colorScheme === 'dark' ? 'text-white' : 'text-neutral-900'} />
           <Text className="pl-4 text-xl font-bold">{t('calls.select_dispatch_recipients')}</Text>
         </HStack>
@@ -98,7 +98,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
           {/* Everyone Option */}
           <Card className={`mb-4 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
             <TouchableOpacity onPress={toggleEveryone}>
-              <HStack className="items-center space-x-3">
+              <HStack className="items-center gap-3">
                 <Box className={`size-6 items-center justify-center rounded border-2 ${selection.everyone ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'}`}>
                   {selection.everyone && <CheckIcon size={16} className="text-white" />}
                 </Box>
@@ -119,7 +119,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               {filteredData.users.map((user) => (
                 <Card key={`user-${user.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
                   <TouchableOpacity onPress={() => toggleUser(user.Id)}>
-                    <HStack className="items-center space-x-3">
+                    <HStack className="items-center gap-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${
                           selection.users.includes(user.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
@@ -146,7 +146,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               {filteredData.groups.map((group) => (
                 <Card key={`group-${group.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
                   <TouchableOpacity onPress={() => toggleGroup(group.Id)}>
-                    <HStack className="items-center space-x-3">
+                    <HStack className="items-center gap-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${
                           selection.groups.includes(group.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
@@ -173,7 +173,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               {filteredData.roles.map((role) => (
                 <Card key={`role-${role.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
                   <TouchableOpacity onPress={() => toggleRole(role.Id)}>
-                    <HStack className="items-center space-x-3">
+                    <HStack className="items-center gap-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${
                           selection.roles.includes(role.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
@@ -200,7 +200,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
               {filteredData.units.map((unit) => (
                 <Card key={`unit-${unit.Id}`} className={`mb-2 rounded-lg border p-3 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
                   <TouchableOpacity onPress={() => toggleUnit(unit.Id)}>
-                    <HStack className="items-center space-x-3">
+                    <HStack className="items-center gap-3">
                       <Box
                         className={`size-5 items-center justify-center rounded border-2 ${
                           selection.units.includes(unit.Id) ? 'border-blue-500 bg-blue-500' : colorScheme === 'dark' ? 'border-neutral-600' : 'border-neutral-300'
@@ -232,7 +232,7 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
         <Text className="text-sm text-neutral-500">
           {getSelectionCount()} {t('calls.selected')}
         </Text>
-        <HStack className="space-x-3 pl-4">
+        <HStack className="gap-3 pl-4">
           <Button variant="outline" onPress={handleCancel} className="mr-10 flex-1">
             <ButtonText>{t('common.cancel')}</ButtonText>
           </Button>

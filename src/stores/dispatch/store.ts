@@ -69,6 +69,8 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
     try {
       const recipients = await getRecipients(false, true);
 
+      const recipientList = recipients?.Data ?? [];
+
       // Initialize arrays for categorized recipients
       const categorizedUsers: RecipientsResultData[] = [];
       const categorizedGroups: RecipientsResultData[] = [];
@@ -76,7 +78,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
       const categorizedUnits: RecipientsResultData[] = [];
 
       // Categorize recipients based on Type field
-      recipients.Data.forEach((recipient) => {
+      recipientList.forEach((recipient) => {
         if (recipient.Type === 'Personnel') {
           categorizedUsers.push(recipient);
         } else if (recipient.Type === 'Groups') {
@@ -98,6 +100,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
+      console.error('fetchDispatchData failed:', error);
       set({
         error: 'Failed to fetch dispatch data',
         isLoading: false,

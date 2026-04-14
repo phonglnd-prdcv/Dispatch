@@ -177,7 +177,8 @@
       "dispatched": "المرسلة",
       "info": "المعلومات",
       "protocols": "البروتوكولات",
-      "timeline": "النشاط"
+      "timeline": "النشاط",
+      "video": "فيديو"
     },
     "timestamp": "الطابع الزمني",
     "title": "تفاصيل المكالمة",
@@ -578,7 +579,8 @@
     "personnel": "الموظفون",
     "protocols": "البروتوكولات",
     "settings": "الإعدادات",
-    "units": "الوحدات"
+    "units": "الوحدات",
+    "weatherAlerts": "تنبيهات الطقس"
   },
   "map": {
     "call_set_as_current": "تم تعيين المكالمة كمكالمة حالية",
@@ -589,7 +591,11 @@
     "recenter_map": "إعادة توسيط الخريطة",
     "set_as_current_call": "تعيين كمكالمة حالية",
     "view_call_details": "عرض تفاصيل المكالمة",
-    "dispatched_resources": "المرسلون"
+    "dispatched_resources": "المرسلون",
+    "layers": "طبقات الخريطة",
+    "no_layers": "لا توجد طبقات متاحة",
+    "show_all": "إظهار الكل",
+    "hide_all": "إخفاء الكل"
   },
   "notes": {
     "actions": {
@@ -690,7 +696,11 @@
     "background_location": "الموقع في الخلفية",
     "contact_us": "اتصل بنا",
     "current_unit": "الوحدة الحالية",
+    "arabic": "عربي",
     "english": "إنجليزي",
+    "french": "فرنسي",
+    "german": "ألماني",
+    "italian": "إيطالي",
     "enter_password": "أدخل كلمة المرور الخاصة بك",
     "enter_server_url": "أدخل عنوان URL لواجهة برمجة تطبيقات Resgrid (مثال: https://api.resgrid.com)",
     "enter_username": "أدخل اسم المستخدم الخاص بك",
@@ -723,7 +733,10 @@
     "server_url_note": "ملاحظة: هذا هو عنوان URL لواجهة برمجة تطبيقات Resgrid. يتم استخدامه للاتصال بخادم Resgrid. لا تقم بتضمين /api/v4 في عنوان URL أو شرطة مائلة في النهاية.",
     "set_active_unit": "تعيين الوحدة النشطة",
     "share": "مشاركة",
+    "polish": "بولندي",
     "spanish": "إسباني",
+    "swedish": "سويدي",
+    "ukrainian": "أوكراني",
     "status_page": "حالة النظام",
     "support": "الدعم",
     "support_us": "ادعمنا",
@@ -777,7 +790,8 @@
     "notes": "الملاحظات",
     "protocols": "البروتوكولات",
     "settings": "الإعدادات",
-    "shifts": "المناوبات"
+    "shifts": "المناوبات",
+    "personnel": "الموظفون"
   },
   "dispatch": {
     "active_calls": "المكالمات النشطة",
@@ -870,6 +884,8 @@
     "calls_updated": "تم تحديث المكالمات",
     "call_added": "تمت إضافة مكالمة جديدة",
     "call_closed": "تم إغلاق المكالمة",
+    "check_ins": "تسجيلات الحضور",
+    "no_check_ins": "لا توجد مكالمات بمؤقتات تسجيل الحضور",
     "radio_log": "سجل الراديو",
     "radio": "الراديو",
     "activity": "النشاط",
@@ -920,7 +936,186 @@
     "set_status": "تعيين الحالة",
     "set_staffing": "التعيين",
     "dispatch": "إرسال",
-    "select_items_for_actions": "حدد مكالمة أو وحدة أو موظف لتفعيل الإجراءات السياقية"
+    "select_items_for_actions": "حدد مكالمة أو وحدة أو موظف لتفعيل الإجراءات السياقية",
+    "weather": {
+      "clear": "صافٍ",
+      "mainly_clear": "صافٍ غالبًا",
+      "partly_cloudy": "غائم جزئيًا",
+      "overcast": "غائم",
+      "fog": "ضباب",
+      "drizzle": "رذاذ",
+      "freezing_drizzle": "رذاذ متجمد",
+      "rain": "مطر",
+      "freezing_rain": "مطر متجمد",
+      "snow": "ثلج",
+      "rain_showers": "زخات مطر",
+      "snow_showers": "زخات ثلج",
+      "thunderstorm": "عاصفة رعدية",
+      "thunderstorm_hail": "عاصفة رعدية مع بَرَد",
+      "unknown": "غير معروف"
+    }
+  },
+  "check_in": {
+    "tab_title": "تسجيل الحضور",
+    "timer_status": "حالة المؤقت",
+    "perform_check_in": "تسجيل",
+    "check_in_success": "تم تسجيل الحضور بنجاح",
+    "check_in_error": "فشل في تسجيل الحضور",
+    "checked_in_by": "بواسطة {{name}}",
+    "last_check_in": "آخر تسجيل",
+    "elapsed": "المنقضي",
+    "duration": "المدة",
+    "status_ok": "جيد",
+    "status_green": "جيد",
+    "status_warning": "تحذير",
+    "status_yellow": "تحذير",
+    "status_overdue": "متأخر",
+    "status_red": "متأخر",
+    "status_critical": "حرج",
+    "history": "سجل التسجيلات",
+    "no_timers": "لم يتم تكوين مؤقتات تسجيل الحضور",
+    "timers_disabled": "مؤقتات تسجيل الحضور معطلة لهذه المكالمة",
+    "type_personnel": "الأفراد",
+    "type_unit": "الوحدة",
+    "type_ic": "قائد الحادث",
+    "type_par": "PAR",
+    "type_hazmat": "التعرض للمواد الخطرة",
+    "type_sector_rotation": "تدوير القطاع",
+    "type_rehab": "إعادة التأهيل",
+    "add_note": "إضافة ملاحظة (اختياري)",
+    "confirm": "تأكيد التسجيل",
+    "minutes_ago": "منذ {{count}} دقيقة",
+    "select_target": "حدد الكيان للتسجيل",
+    "overdue_count": "{{count}} متأخر",
+    "warning_count": "{{count}} تحذير",
+    "enable_timers": "تفعيل المؤقتات",
+    "disable_timers": "تعطيل المؤقتات",
+    "summary": "{{overdue}} متأخر، {{warning}} تحذير، {{ok}} جيد"
+  },
+  "units": {
+    "title": "الوحدات"
+  },
+  "weatherAlerts": {
+    "title": "تنبيهات الطقس",
+    "activeAlerts": "التنبيهات النشطة",
+    "noActiveAlerts": "لا توجد تنبيهات طقس نشطة",
+    "moreAlerts": "+{{count}} أخرى",
+    "severity": {
+      "extreme": "شديدة للغاية",
+      "severe": "شديدة",
+      "moderate": "معتدلة",
+      "minor": "طفيفة",
+      "unknown": "غير معروفة"
+    },
+    "category": {
+      "met": "أرصاد جوية",
+      "fire": "حريق",
+      "health": "صحة",
+      "env": "بيئية",
+      "other": "أخرى"
+    },
+    "urgency": {
+      "immediate": "فورية",
+      "expected": "متوقعة",
+      "future": "مستقبلية",
+      "past": "سابقة",
+      "unknown": "غير معروفة"
+    },
+    "certainty": {
+      "observed": "مرصودة",
+      "likely": "محتملة",
+      "possible": "ممكنة",
+      "unlikely": "غير محتملة",
+      "unknown": "غير معروفة"
+    },
+    "status": {
+      "active": "نشطة",
+      "updated": "محدّثة",
+      "expired": "منتهية",
+      "cancelled": "ملغاة"
+    },
+    "detail": {
+      "headline": "العنوان",
+      "description": "الوصف",
+      "instruction": "التعليمات",
+      "area": "المنطقة المتأثرة",
+      "effective": "سارية المفعول",
+      "onset": "البداية",
+      "expires": "تنتهي",
+      "sent": "أُرسلت",
+      "sender": "المصدر",
+      "urgency": "الاستعجال",
+      "certainty": "اليقين"
+    },
+    "filter": {
+      "all": "الكل",
+      "nearby": "قريبة"
+    },
+    "sort": {
+      "severity": "الشدة",
+      "expires": "قريبة الانتهاء",
+      "newest": "الأحدث"
+    },
+    "banner": {
+      "viewAll": "عرض الكل"
+    }
+  },
+  "videoFeeds": {
+    "title": "بث الفيديو",
+    "noFeeds": "لا توجد بثوث فيديو لهذه المكالمة",
+    "addFeed": "إضافة بث فيديو",
+    "editFeed": "تعديل بث الفيديو",
+    "deleteFeed": "حذف بث الفيديو",
+    "deleteConfirm": "هل أنت متأكد أنك تريد إزالة بث الفيديو هذا؟",
+    "watch": "مشاهدة",
+    "goLive": "بث مباشر",
+    "stopLive": "إيقاف البث",
+    "flipCamera": "عكس الكاميرا",
+    "feedAdded": "تمت إضافة بث الفيديو",
+    "feedUpdated": "تم تحديث بث الفيديو",
+    "feedDeleted": "تم حذف بث الفيديو",
+    "feedError": "فشل في تحميل بث الفيديو",
+    "unsupportedFormat": "تنسيق البث هذا غير مدعوم على الأجهزة المحمولة",
+    "copyUrl": "نسخ الرابط",
+    "form": {
+      "name": "اسم البث",
+      "namePlaceholder": "مثال: طائرة محرك 1",
+      "url": "رابط البث",
+      "urlPlaceholder": "مثال: https://stream.example.com/live.m3u8",
+      "feedType": "نوع الكاميرا",
+      "feedFormat": "تنسيق البث",
+      "description": "الوصف",
+      "descriptionPlaceholder": "وصف اختياري",
+      "status": "الحالة",
+      "sortOrder": "الترتيب",
+      "cameraLocation": "موقع الكاميرا",
+      "useCurrentLocation": "استخدام الموقع الحالي"
+    },
+    "type": {
+      "drone": "طائرة بدون طيار",
+      "fixedCamera": "كاميرا ثابتة",
+      "bodyCam": "كاميرا جسدية",
+      "trafficCam": "كاميرا مرور",
+      "weatherCam": "كاميرا طقس",
+      "satelliteFeed": "بث فضائي",
+      "webCam": "كاميرا ويب",
+      "other": "أخرى"
+    },
+    "format": {
+      "rtsp": "RTSP",
+      "hls": "HLS",
+      "mjpeg": "MJPEG",
+      "youtubeLive": "YouTube Live",
+      "webrtc": "WebRTC",
+      "dash": "DASH",
+      "embed": "مضمن",
+      "other": "أخرى"
+    },
+    "status": {
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "error": "خطأ"
+    }
   },
   "welcome": "مرحبًا بك في موقع تطبيق obytes"
 }
