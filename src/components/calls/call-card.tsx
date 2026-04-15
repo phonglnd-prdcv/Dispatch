@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, MapPin } from 'lucide-react-native';
+import { AlertTriangle, Clock, MapPin, ShieldCheck } from 'lucide-react-native';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -48,6 +48,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(({ call, priority })
           </Text>
         </HStack>
         <HStack style={styles.timeGroup}>
+          {call.CheckInTimersEnabled && <ShieldCheck size={12} color={textColor} style={styles.clockIcon} />}
           <Clock size={10} color={textColor} style={styles.clockIcon} />
           <Text style={[styles.timeText, { color: textColor }]}>{getTimeAgoUtc(call.LoggedOnUtc)}</Text>
         </HStack>

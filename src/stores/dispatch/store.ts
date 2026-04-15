@@ -1,15 +1,8 @@
 import { create } from 'zustand';
 
 import { getAllGroups } from '@/api/groups/groups';
-import { getRecipients } from '@/api/messaging/messages';
 import { getAllPersonnelInfos } from '@/api/personnel/personnel';
-import { getAllUnitRolesAndAssignmentsForDepartment } from '@/api/units/unitRoles';
 import { getUnits } from '@/api/units/units';
-import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
-import { type RecipientsResultData } from '@/models/v4/messages/recipientsResultData';
-import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
-import { type UnitRoleResultData } from '@/models/v4/unitRoles/unitRoleResultData';
-import { type UnitResultData } from '@/models/v4/units/unitResultData';
 
 export interface DispatchSelection {
   everyone: boolean;
@@ -19,11 +12,16 @@ export interface DispatchSelection {
   units: string[];
 }
 
+export interface DispatchItem {
+  Id: string;
+  Name: string;
+}
+
 export interface DispatchData {
-  users: RecipientsResultData[];
-  groups: RecipientsResultData[];
-  roles: RecipientsResultData[];
-  units: RecipientsResultData[];
+  users: DispatchItem[];
+  groups: DispatchItem[];
+  roles: DispatchItem[];
+  units: DispatchItem[];
 }
 
 interface DispatchState {
@@ -67,37 +65,45 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
   fetchDispatchData: async () => {
     set({ isLoading: true, error: null });
     try {
-      const recipients = await getRecipients(false, true);
+      const [personnelResult, groupsResult, unitsResult] = await Promise.all([getAllPersonnelInfos(''), getAllGroups(), getUnits()]);
 
-      // Initialize arrays for categorized recipients
-      const categorizedUsers: RecipientsResultData[] = [];
-      const categorizedGroups: RecipientsResultData[] = [];
-      const categorizedRoles: RecipientsResultData[] = [];
-      const categorizedUnits: RecipientsResultData[] = [];
+      const users: DispatchItem[] = (personnelResult?.Data ?? []).map((p) => ({
+        Id: p.UserId,
+        Name: `${p.FirstName} ${p.LastName}`.trim(),
+      }));
 
-      // Categorize recipients based on Type field
-      recipients.Data.forEach((recipient) => {
-        if (recipient.Type === 'Personnel') {
-          categorizedUsers.push(recipient);
-        } else if (recipient.Type === 'Groups') {
-          categorizedGroups.push(recipient);
-        } else if (recipient.Type === 'Roles') {
-          categorizedRoles.push(recipient);
-        } else if (recipient.Type === 'Unit') {
-          categorizedUnits.push(recipient);
+      const groups: DispatchItem[] = (groupsResult?.Data ?? []).map((g) => ({
+        Id: g.GroupId,
+        Name: g.Name,
+      }));
+
+      const units: DispatchItem[] = (unitsResult?.Data ?? []).map((u) => ({
+        Id: u.UnitId,
+        Name: u.Name,
+      }));
+
+      // Extract unique roles from personnel data
+      const roleSet = new Map<string, string>();
+      (personnelResult?.Data ?? []).forEach((p) => {
+        if (p.Roles) {
+          p.Roles.forEach((role) => {
+            if (role && !roleSet.has(role)) {
+              roleSet.set(role, role);
+            }
+          });
         }
       });
+      const roles: DispatchItem[] = Array.from(roleSet.entries()).map(([name]) => ({
+        Id: name,
+        Name: name,
+      }));
 
       set({
-        data: {
-          users: categorizedUsers,
-          groups: categorizedGroups,
-          roles: categorizedRoles,
-          units: categorizedUnits,
-        },
+        data: { users, groups, roles, units },
         isLoading: false,
       });
     } catch (error) {
+      console.error('fetchDispatchData failed:', error);
       set({
         error: 'Failed to fetch dispatch data',
         isLoading: false,
@@ -112,7 +118,6 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
   toggleEveryone: () => {
     const { selection } = get();
     if (selection.everyone) {
-      // If everyone was selected, deselect it
       set({
         selection: {
           ...selection,
@@ -120,7 +125,6 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
         },
       });
     } else {
-      // If everyone wasn't selected, select it and clear all others
       set({
         selection: {
           everyone: true,
@@ -140,7 +144,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
     set({
       selection: {
         ...selection,
-        everyone: false, // Deselect everyone when selecting specific items
+        everyone: false,
         users: isSelected ? selection.users.filter((id) => id !== userId) : [...selection.users, userId],
       },
     });
@@ -153,7 +157,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
     set({
       selection: {
         ...selection,
-        everyone: false, // Deselect everyone when selecting specific items
+        everyone: false,
         groups: isSelected ? selection.groups.filter((id) => id !== groupId) : [...selection.groups, groupId],
       },
     });
@@ -166,7 +170,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
     set({
       selection: {
         ...selection,
-        everyone: false, // Deselect everyone when selecting specific items
+        everyone: false,
         roles: isSelected ? selection.roles.filter((id) => id !== roleId) : [...selection.roles, roleId],
       },
     });
@@ -179,7 +183,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
     set({
       selection: {
         ...selection,
-        everyone: false, // Deselect everyone when selecting specific items
+        everyone: false,
         units: isSelected ? selection.units.filter((id) => id !== unitId) : [...selection.units, unitId],
       },
     });

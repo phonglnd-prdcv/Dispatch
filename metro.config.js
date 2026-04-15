@@ -3,9 +3,6 @@
 const _ = require('lodash');
 const path = require('path');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
-const exclusionList = require('metro-config/src/defaults/exclusionList');
-//const { getDefaultConfig } = require('expo/metro-config');
-//const path = require('path');
 const { withNativeWind } = require('nativewind/metro');
 
 const config = getSentryExpoConfig(__dirname, {
@@ -14,9 +11,11 @@ const config = getSentryExpoConfig(__dirname, {
 
 // Exclude electron directory from Metro bundler for Android/iOS
 // Electron files use Node.js APIs that don't exist in React Native
-config.resolver.blockList = exclusionList([
-  /electron\/.*/,
-]);
+const existingBlockList = config.resolver.blockList;
+const extraBlocked = [/electron\/.*/];
+config.resolver.blockList = existingBlockList
+  ? [...(Array.isArray(existingBlockList) ? existingBlockList : [existingBlockList]), ...extraBlocked]
+  : extraBlocked;
 
 // 1. Watch all files within the monorepo
 // 2. Let Metro know where to resolve packages and in what order
@@ -45,6 +44,21 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       return {
         type: 'sourceFile',
         filePath: path.resolve(__dirname, '__mocks__/react-native-mmkv.ts'),
+      };
+    }
+
+    // @gorhom/bottom-sheet depends on reanimated worklets - not available on web
+    if (moduleName === '@gorhom/bottom-sheet') {
+      return {
+        type: 'sourceFile',
+        filePath: path.resolve(__dirname, '__mocks__/@gorhom/bottom-sheet.web.js'),
+      };
+    }
+
+    // NetInfo - not needed on web, use navigator.onLine instead
+    if (moduleName === '@react-native-community/netinfo') {
+      return {
+        type: 'empty',
       };
     }
 

@@ -9,11 +9,13 @@ import { getCallNotes, saveCallNote } from '@/api/calls/callNotes';
 import { getCallExtraData } from '@/api/calls/calls';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { AudioStreamBottomSheet } from '@/components/audio-stream/audio-stream-bottom-sheet';
+import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
 import { ActiveCallFilterBanner, ActiveCallsPanel, ActivityLogPanel, AddNoteBottomSheet, MapWidget, NotesPanel, PersonnelPanel, PTTInterface, StatsHeader, UnitsPanel } from '@/components/dispatch-console';
 import { Box } from '@/components/ui/box';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { VStack } from '@/components/ui/vstack';
+import { WeatherAlertBanner } from '@/components/weatherAlerts/weather-alert-banner';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { isCallActive, isCallPending, isCallScheduled } from '@/lib/utils';
@@ -27,6 +29,7 @@ import { useNotesStore } from '@/stores/notes/store';
 import { usePersonnelStore } from '@/stores/personnel/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 import { useUnitsStore } from '@/stores/units/store';
+import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
 
 export default function DispatchConsole() {
   const { t } = useTranslation();
@@ -42,8 +45,11 @@ export default function DispatchConsole() {
   const { units, isLoading: unitsLoading, fetchUnits } = useUnitsStore();
   const { personnel, isLoading: personnelLoading, fetchPersonnel } = usePersonnelStore();
   const { notes, isLoading: notesLoading, fetchNotes } = useNotesStore();
-  const { lastUpdateTimestamp } = useSignalRStore();
+  const { lastPersonnelUpdateTimestamp, lastUnitsUpdateTimestamp, lastCallsUpdateTimestamp, lastEventType } = useSignalRStore();
   const { userId } = useAuthStore();
+
+  // Weather alerts
+  const { alerts: weatherAlerts, settings: weatherSettings, fetchActiveAlerts: fetchWeatherAlerts } = useWeatherAlertsStore();
 
   // Dispatch console store
   const {
@@ -79,6 +85,7 @@ export default function DispatchConsole() {
   const [isAddNoteSheetOpen, setIsAddNoteSheetOpen] = useState(false);
   const [selectedPersonnelData, setSelectedPersonnelData] = useState<PersonnelInfoResultData | null>(null);
   const [selectedUnitData, setSelectedUnitData] = useState<UnitInfoResultData | null>(null);
+  const [isCloseCallSheetOpen, setIsCloseCallSheetOpen] = useState(false);
 
   // Update time every second
   useEffect(() => {
@@ -98,6 +105,7 @@ export default function DispatchConsole() {
     fetchPersonnel();
     fetchNotes();
     fetchMapCenter();
+    fetchWeatherAlerts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -120,7 +128,7 @@ export default function DispatchConsole() {
     }
   };
 
-  // Track analytics when view becomes visible
+  // Refresh data and track analytics when view becomes visible
   useFocusEffect(
     useCallback(() => {
       trackEvent('dispatch_console_viewed', {
@@ -128,23 +136,48 @@ export default function DispatchConsole() {
         isLandscape,
         isTablet,
       });
-    }, [trackEvent, isLandscape, isTablet])
+      // Re-fetch core data so downstream panels (including check-in timers) refresh
+      fetchCalls();
+      fetchUnits();
+      fetchPersonnel();
+    }, [trackEvent, isLandscape, isTablet, fetchCalls, fetchUnits, fetchPersonnel])
   );
 
-  // Listen for SignalR updates and refresh data
+  // Listen for SignalR personnel updates
   useEffect(() => {
-    if (lastUpdateTimestamp > 0) {
-      // Add activity log entry for update
+    if (lastPersonnelUpdateTimestamp > 0) {
+      fetchPersonnel();
       addActivityLogEntry({
         type: 'system',
         action: t('dispatch.system_update'),
         description: t('dispatch.data_refreshed'),
       });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastPersonnelUpdateTimestamp]);
 
-      // Refresh data
-      fetchCalls();
+  // Listen for SignalR unit updates
+  useEffect(() => {
+    if (lastUnitsUpdateTimestamp > 0) {
       fetchUnits();
-      fetchPersonnel();
+      addActivityLogEntry({
+        type: 'system',
+        action: t('dispatch.system_update'),
+        description: t('dispatch.data_refreshed'),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastUnitsUpdateTimestamp]);
+
+  // Listen for SignalR call updates
+  useEffect(() => {
+    if (lastCallsUpdateTimestamp > 0) {
+      fetchCalls();
+      addActivityLogEntry({
+        type: 'system',
+        action: t('dispatch.system_update'),
+        description: t('dispatch.data_refreshed'),
+      });
 
       // Refresh call data if filter is active
       if (isCallFilterActive && selectedCallId) {
@@ -152,7 +185,7 @@ export default function DispatchConsole() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastUpdateTimestamp]);
+  }, [lastCallsUpdateTimestamp]);
 
   // Fetch call extra data and notes when a call is selected for filtering
   useEffect(() => {
@@ -290,6 +323,29 @@ export default function DispatchConsole() {
   const handleOpenAddNoteSheet = () => {
     setIsAddNoteSheetOpen(true);
   };
+
+  // Call action handlers for the actions panel
+  const handleCreateCall = useCallback(() => {
+    router.push('/call/new' as Href);
+  }, []);
+
+  const handleViewCallDetails = useCallback(() => {
+    if (selectedCallId) {
+      router.push(`/call/${selectedCallId}` as Href);
+    }
+  }, [selectedCallId]);
+
+  const handleCloseCallAction = useCallback(() => {
+    if (selectedCallId) {
+      setIsCloseCallSheetOpen(true);
+    }
+  }, [selectedCallId]);
+
+  const handleAddCallNoteAction = useCallback(() => {
+    if (selectedCallId) {
+      setIsAddNoteSheetOpen(true);
+    }
+  }, [selectedCallId]);
 
   // Handle note added from bottom sheet
   const handleNoteAdded = () => {
@@ -435,6 +491,10 @@ export default function DispatchConsole() {
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
               onUnitStatusUpdated={handleUnitStatusUpdated}
+              onCreateCall={handleCreateCall}
+              onViewCallDetails={handleViewCallDetails}
+              onCloseCall={handleCloseCallAction}
+              onAddCallNote={handleAddCallNoteAction}
             />
           </VStack>
 
@@ -527,6 +587,10 @@ export default function DispatchConsole() {
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
               onUnitStatusUpdated={handleUnitStatusUpdated}
+              onCreateCall={handleCreateCall}
+              onViewCallDetails={handleViewCallDetails}
+              onCloseCall={handleCloseCallAction}
+              onAddCallNote={handleAddCallNoteAction}
             />
           </VStack>
         </HStack>
@@ -598,6 +662,10 @@ export default function DispatchConsole() {
             onStatusUpdated={handleStatusUpdated}
             onStaffingUpdated={handleStaffingUpdated}
             onUnitStatusUpdated={handleUnitStatusUpdated}
+            onCreateCall={handleCreateCall}
+            onViewCallDetails={handleViewCallDetails}
+            onCloseCall={handleCloseCallAction}
+            onAddCallNote={handleAddCallNoteAction}
           />
         </VStack>
       </ScrollView>
@@ -623,6 +691,9 @@ export default function DispatchConsole() {
         weatherLongitude={mapCenterLongitude}
       />
 
+      {/* Weather Alert Banner */}
+      {weatherSettings?.WeatherAlertsEnabled !== false && weatherAlerts.length > 0 && <WeatherAlertBanner alerts={weatherAlerts} onPress={() => router.push('/(app)/weather-alerts' as Href)} />}
+
       {/* Active Call Filter Banner */}
       {isCallFilterActive && selectedCall && <ActiveCallFilterBanner call={selectedCall} priority={selectedCallPriority} onClearFilter={handleClearCallFilter} />}
 
@@ -634,6 +705,9 @@ export default function DispatchConsole() {
 
       {/* Add Note Bottom Sheet */}
       <AddNoteBottomSheet isOpen={isAddNoteSheetOpen} onClose={() => setIsAddNoteSheetOpen(false)} onNoteAdded={handleNoteAdded} />
+
+      {/* Close Call Bottom Sheet */}
+      {selectedCallId && <CloseCallBottomSheet isOpen={isCloseCallSheetOpen} onClose={() => setIsCloseCallSheetOpen(false)} callId={selectedCallId} />}
     </View>
   );
 }

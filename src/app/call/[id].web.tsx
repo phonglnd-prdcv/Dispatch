@@ -1,12 +1,14 @@
 import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, EditIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, MapPinIcon, PaperclipIcon, RouteIcon, UserIcon, UsersIcon, XCircleIcon } from 'lucide-react-native';
+import { ClockIcon, EditIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, MapPinIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon, XCircleIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { VideoFeedsTab } from '@/components/callVideoFeeds/video-feeds-tab';
+import { CheckInTab } from '@/components/checkIn/check-in-tab';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import StaticMap from '@/components/maps/static-map';
@@ -21,6 +23,7 @@ import { openMapsWithDirections } from '@/lib/navigation';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useCheckInStore } from '@/stores/checkIn/store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
@@ -32,7 +35,7 @@ import CallNotesModal from '../../components/calls/call-notes-modal';
 import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-sheet';
 import { StatusBottomSheet } from '../../components/status/status-bottom-sheet';
 
-type TabKey = 'info' | 'contact' | 'protocols' | 'dispatched' | 'timeline';
+type TabKey = 'info' | 'contact' | 'protocols' | 'dispatched' | 'timeline' | 'video' | 'checkin';
 
 export default function CallDetailWeb() {
   const { id } = useLocalSearchParams();
@@ -137,8 +140,8 @@ export default function CallDetailWeb() {
         handleEditCall();
       }
       // Tab navigation with number keys
-      if (e.key >= '1' && e.key <= '5' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tabs: TabKey[] = ['info', 'contact', 'protocols', 'dispatched', 'timeline'];
+      if (e.key >= '1' && e.key <= '7' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tabs: TabKey[] = ['info', 'contact', 'protocols', 'dispatched', 'timeline', 'video', 'checkin'];
         const index = parseInt(e.key) - 1;
         if (tabs[index]) setActiveTab(tabs[index]);
       }
@@ -162,16 +165,29 @@ export default function CallDetailWeb() {
     }
   };
 
-  const tabs = useMemo(
-    () => [
-      { key: 'info' as const, title: t('call_detail.tabs.info'), icon: InfoIcon },
-      { key: 'contact' as const, title: t('call_detail.tabs.contact'), icon: UserIcon },
-      { key: 'protocols' as const, title: t('call_detail.tabs.protocols'), icon: FileTextIcon },
-      { key: 'dispatched' as const, title: t('call_detail.tabs.dispatched'), icon: UsersIcon },
-      { key: 'timeline' as const, title: t('call_detail.tabs.timeline'), icon: ClockIcon, badge: callExtraData?.Activity?.length || 0 },
-    ],
-    [t, callExtraData?.Activity?.length]
-  );
+  const checkInStatuses = useCheckInStore((s) => s.timerStatuses);
+  const overdueCount = checkInStatuses.filter((s) => s.Status === 'Overdue').length;
+  const warningCount = checkInStatuses.filter((s) => s.Status === 'Warning').length;
+
+  const tabs = useMemo(() => {
+    const baseTabs: { key: TabKey; title: string; icon: typeof InfoIcon; badge?: number }[] = [
+      { key: 'info', title: t('call_detail.tabs.info'), icon: InfoIcon },
+      { key: 'contact', title: t('call_detail.tabs.contact'), icon: UserIcon },
+      { key: 'protocols', title: t('call_detail.tabs.protocols'), icon: FileTextIcon },
+      { key: 'dispatched', title: t('call_detail.tabs.dispatched'), icon: UsersIcon },
+      { key: 'timeline', title: t('call_detail.tabs.timeline'), icon: ClockIcon, badge: callExtraData?.Activity?.length || 0 },
+      { key: 'video', title: t('call_detail.tabs.video'), icon: VideoIcon },
+    ];
+    if (call?.CheckInTimersEnabled) {
+      baseTabs.push({
+        key: 'checkin' as const,
+        title: t('check_in.tab_title'),
+        icon: ShieldCheckIcon,
+        badge: overdueCount + warningCount,
+      });
+    }
+    return baseTabs;
+  }, [t, callExtraData?.Activity?.length, call?.CheckInTimersEnabled, overdueCount, warningCount]);
 
   if (isLoading) {
     return (
@@ -279,6 +295,18 @@ export default function CallDetailWeb() {
             )}
           </View>
         );
+      case 'video':
+        return (
+          <View style={styles.tabContent}>
+            <VideoFeedsTab callId={call.CallId} canEdit={canUserCreateCalls ?? false} />
+          </View>
+        );
+      case 'checkin':
+        return call?.CheckInTimersEnabled ? (
+          <View style={styles.tabContent}>
+            <CheckInTab callId={parseInt(call.CallId)} checkInTimersEnabled={true} />
+          </View>
+        ) : null;
       case 'timeline':
         return (
           <View style={styles.tabContent}>

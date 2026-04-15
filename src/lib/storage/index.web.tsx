@@ -32,6 +32,28 @@ export const storage: any = {
       console.warn('localStorage.removeItem failed', e);
     }
   },
+  getAllKeys: (): string[] => {
+    if (!isLocalStorageAvailable) return [];
+    try {
+      const keys: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) keys.push(key);
+      }
+      return keys;
+    } catch (e) {
+      console.warn('localStorage.getAllKeys failed', e);
+      return [];
+    }
+  },
+  contains: (key: string): boolean => {
+    if (!isLocalStorageAvailable) return false;
+    try {
+      return localStorage.getItem(key) !== null;
+    } catch (e) {
+      return false;
+    }
+  },
 };
 
 export function getItem<T>(key: string): T | null {

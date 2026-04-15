@@ -250,7 +250,7 @@ export default function NewCall() {
         name: data.name,
         nature: data.nature,
         priority: priority.Id,
-        type: type.Id,
+        type: type.Name,
         note: data.note,
         address: data.address,
         latitude: data.latitude,
@@ -277,8 +277,8 @@ export default function NewCall() {
       // Show success toast
       toast.success(t('calls.create_success'));
 
-      // Navigate back to calls list
-      router.push('/calls' as Href);
+      // Navigate back to home dashboard
+      router.push('/(app)/home' as Href);
     } catch (error) {
       console.error('Error creating call:', error);
 

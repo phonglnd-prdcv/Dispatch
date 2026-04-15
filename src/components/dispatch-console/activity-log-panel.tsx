@@ -1,6 +1,7 @@
-import { AlertTriangle, ArrowRight, Clock, Filter, Info, Mic, Phone, Plus, Radio, Settings, Truck, User, Zap } from 'lucide-react-native';
+import { type Href, router } from 'expo-router';
+import { AlertTriangle, ArrowRight, ChevronRight, Clock, CloudLightning, Filter, Info, Mic, Phone, Plus, Radio, Settings, ShieldCheck, Truck, User, Zap } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -13,10 +14,16 @@ import { VStack } from '@/components/ui/vstack';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
+import { SEVERITY_COLORS, WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
+import { useCallsStore } from '@/stores/calls/store';
+import { useCheckInStore } from '@/stores/checkIn/store';
 import { type RadioLogEntry } from '@/stores/dispatch/dispatch-console-store';
 import { usePersonnelActionsStore } from '@/stores/dispatch/personnel-actions-store';
 import { useUnitActionsStore } from '@/stores/dispatch/unit-actions-store';
+import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
 
+import { CheckInBottomSheet } from '../checkIn/check-in-bottom-sheet';
+import { CheckInTimerCard } from '../checkIn/check-in-timer-card';
 import { PanelHeader } from './panel-header';
 import { PersonnelActionsPanel } from './personnel-actions-panel';
 import { UnitActionsPanel } from './unit-actions-panel';
@@ -35,7 +42,7 @@ export interface ActivityLogEntry {
   };
 }
 
-type TabType = 'activity' | 'radio' | 'actions';
+type TabType = 'activity' | 'radio' | 'actions' | 'checkins' | 'weather';
 
 interface ActivityLogPanelProps {
   entries: ActivityLogEntry[];
@@ -311,6 +318,13 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   // Track previous call selection to avoid unnecessary tab switches
   const prevSelectedCallIdRef = useRef<string | undefined>(undefined);
 
+  // Reset to activity tab if check-ins tab is active but call filter is cleared
+  useEffect(() => {
+    if (!isCallFilterActive && activeTab === 'checkins') {
+      setActiveTab('activity');
+    }
+  }, [isCallFilterActive, activeTab]);
+
   // Switch to actions tab when a call is selected (for quick note/close actions)
   useEffect(() => {
     const prevId = prevSelectedCallIdRef.current;
@@ -374,6 +388,52 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   // Active transmissions count
   const activeTransmissions = radioLog.filter((entry) => entry.isActive).length;
 
+  // Check-in timers — fetch timer statuses across all active calls
+  const calls = useCallsStore((s) => s.calls);
+  const { timerStatuses: allTimerStatuses, fetchTimerStatusesForCalls, startPollingForCalls: startCheckInPolling, stopPolling: stopCheckInPolling, isLoadingStatuses: isCheckInsLoading } = useCheckInStore();
+
+  const [isCheckInSheetOpen, setIsCheckInSheetOpen] = useState(false);
+  const [checkInSheetCallId, setCheckInSheetCallId] = useState<number>(0);
+  const [checkInSheetTimer, setCheckInSheetTimer] = useState<(typeof allTimerStatuses)[0] | null>(null);
+
+  // Get all active call IDs to fetch timer statuses for
+  const activeCallIds = useMemo(() => calls.map((c) => parseInt(c.CallId)).filter((id) => !isNaN(id) && id > 0), [calls]);
+
+  // Fetch check-in timer statuses and restart polling whenever the calls list updates.
+  // Using the `calls` reference as a dependency ensures re-fetch after navigation back
+  // (when calls are refetched on focus) even if the call IDs themselves haven't changed.
+  useEffect(() => {
+    if (activeCallIds.length > 0) {
+      fetchTimerStatusesForCalls(activeCallIds);
+      startCheckInPolling(activeCallIds);
+    }
+    return () => {
+      stopCheckInPolling();
+    };
+  }, [calls, activeCallIds, fetchTimerStatusesForCalls, startCheckInPolling, stopCheckInPolling]);
+
+  // When call filter is active, show only timers for the selected call
+  const filteredTimerStatuses = useMemo(() => {
+    if (!isCallFilterActive || !selectedCallId) return allTimerStatuses;
+    const callIdNum = parseInt(selectedCallId);
+    if (isNaN(callIdNum)) return allTimerStatuses;
+    return allTimerStatuses.filter((s) => s.CallId === callIdNum);
+  }, [allTimerStatuses, isCallFilterActive, selectedCallId]);
+
+  const criticalCheckInCount = filteredTimerStatuses.filter((s) => s.Status === 'Critical').length;
+  const overdueCheckInCount = filteredTimerStatuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Red').length;
+  const urgentCheckInCount = criticalCheckInCount + overdueCheckInCount;
+
+  // Weather alerts
+  const { alerts: weatherAlerts, settings: weatherSettings } = useWeatherAlertsStore();
+  const weatherAlertCount = weatherAlerts.length;
+
+  const handleCheckInFromDashboard = useCallback((timer: (typeof allTimerStatuses)[0]) => {
+    setCheckInSheetCallId(timer.CallId);
+    setCheckInSheetTimer(timer);
+    setIsCheckInSheetOpen(true);
+  }, []);
+
   // Determine what actions are available based on selection context
   const hasSelectedCall = isCallFilterActive && selectedCallId;
   const hasSelectedUnit = !!selectedUnitId;
@@ -385,6 +445,10 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
         return t('dispatch.radio_log');
       case 'actions':
         return t('dispatch.actions');
+      case 'checkins':
+        return t('dispatch.check_ins');
+      case 'weather':
+        return t('weatherAlerts.title');
       default:
         return isCallFilterActive ? t('dispatch.call_activity') : t('dispatch.activity_log');
     }
@@ -395,11 +459,15 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
       case 'radio':
         return radioLog.length;
       case 'actions':
-        return undefined;
+        return urgentCheckInCount > 0 ? urgentCheckInCount : undefined;
+      case 'checkins':
+        return filteredTimerStatuses.length;
+      case 'weather':
+        return weatherAlertCount > 0 ? weatherAlertCount : undefined;
       default:
         return activityCount;
     }
-  }, [activeTab, radioLog.length, activityCount]);
+  }, [activeTab, radioLog.length, activityCount, filteredTimerStatuses.length, urgentCheckInCount, weatherAlertCount]);
 
   const renderActivityContent = () => {
     if (useCallActivity) {
@@ -486,12 +554,104 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
     );
   };
 
+  const renderCheckInsContent = () => {
+    if (isCheckInsLoading && filteredTimerStatuses.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Text className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</Text>
+        </View>
+      );
+    }
+
+    if (filteredTimerStatuses.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Icon as={ShieldCheck} size="lg" className="text-gray-300 dark:text-gray-600" />
+          <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{t('check_in.no_timers')}</Text>
+        </View>
+      );
+    }
+
+    return (
+      <>
+        {/* Summary badges */}
+        {urgentCheckInCount > 0 && (
+          <HStack className="mb-2 gap-2">
+            {criticalCheckInCount > 0 && (
+              <Box className="rounded-full bg-red-200 px-2 py-0.5">
+                <Text className="text-xs font-bold text-red-700">
+                  {criticalCheckInCount} {t('check_in.status_critical')}
+                </Text>
+              </Box>
+            )}
+            {overdueCheckInCount > 0 && (
+              <Box className="rounded-full bg-red-100 px-2 py-0.5">
+                <Text className="text-xs font-medium text-red-600">{t('check_in.overdue_count', { count: overdueCheckInCount })}</Text>
+              </Box>
+            )}
+          </HStack>
+        )}
+
+        {filteredTimerStatuses.map((timer) => (
+          <CheckInTimerCard key={`${timer.TargetType}-${timer.TargetEntityId}`} timer={timer} onCheckIn={handleCheckInFromDashboard} />
+        ))}
+      </>
+    );
+  };
+
+  const renderWeatherContent = () => {
+    if (weatherAlerts.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Icon as={CloudLightning} size="lg" className="text-gray-300 dark:text-gray-600" />
+          <Text className="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">{t('weatherAlerts.noActiveAlerts')}</Text>
+        </View>
+      );
+    }
+
+    return weatherAlerts.map((alert) => {
+      const severityColor = SEVERITY_COLORS[alert.Severity] ?? SEVERITY_COLORS[WeatherAlertSeverity.Unknown];
+      const itemStyle = StyleSheet.flatten([styles.weatherAlertItem, { borderLeftColor: severityColor }]);
+      return (
+        <Pressable key={alert.WeatherAlertId} style={itemStyle} onPress={() => router.push(`/(app)/weather-alerts/${alert.WeatherAlertId}` as Href)}>
+          <HStack className="items-center justify-between">
+            <Text style={{ color: severityColor, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+              {alert.Severity === 0
+                ? t('weatherAlerts.severity.extreme')
+                : alert.Severity === 1
+                  ? t('weatherAlerts.severity.severe')
+                  : alert.Severity === 2
+                    ? t('weatherAlerts.severity.moderate')
+                    : t('weatherAlerts.severity.minor')}
+            </Text>
+            <Icon as={ChevronRight} size="xs" className="text-gray-400 dark:text-gray-500" />
+          </HStack>
+          <Text className="text-sm font-semibold text-gray-900 dark:text-gray-100" numberOfLines={1}>
+            {alert.Event}
+          </Text>
+          <Text className="text-xs text-gray-500 dark:text-gray-400" numberOfLines={1}>
+            {alert.AreaDescription}
+          </Text>
+          {alert.ExpiresUtc ? (
+            <Text className="text-xs text-gray-400 dark:text-gray-500">
+              {t('weatherAlerts.detail.expires')}: {alert.ExpiresUtc}
+            </Text>
+          ) : null}
+        </Pressable>
+      );
+    });
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'radio':
         return renderRadioContent();
       case 'actions':
         return renderActionsContent();
+      case 'checkins':
+        return renderCheckInsContent();
+      case 'weather':
+        return renderWeatherContent();
       default:
         return renderActivityContent();
     }
@@ -501,8 +661,8 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
     <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
       <PanelHeader
         title={getHeaderTitle()}
-        icon={activeTab === 'radio' ? Radio : activeTab === 'actions' ? Settings : ArrowRight}
-        iconColor={activeTab === 'radio' ? '#22c55e' : activeTab === 'actions' ? '#f59e0b' : '#6b7280'}
+        icon={activeTab === 'radio' ? Radio : activeTab === 'actions' ? Settings : activeTab === 'checkins' ? ShieldCheck : activeTab === 'weather' ? CloudLightning : ArrowRight}
+        iconColor={activeTab === 'radio' ? '#22c55e' : activeTab === 'actions' ? '#f59e0b' : activeTab === 'checkins' ? '#ef4444' : activeTab === 'weather' ? '#F57C00' : '#6b7280'}
         count={getHeaderCount()}
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
@@ -542,7 +702,13 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
           <HStack className="border-b border-gray-200 px-2 dark:border-gray-700" space="xs">
             <TabButton label={t('dispatch.activity')} icon={ArrowRight} isActive={activeTab === 'activity'} count={activityCount} onPress={() => setActiveTab('activity')} />
             <TabButton label={t('dispatch.radio')} icon={Radio} isActive={activeTab === 'radio'} count={activeTransmissions > 0 ? activeTransmissions : undefined} onPress={() => setActiveTab('radio')} />
-            <TabButton label={t('dispatch.actions')} icon={Settings} isActive={activeTab === 'actions'} onPress={() => setActiveTab('actions')} />
+            {isCallFilterActive && (
+              <TabButton label={t('dispatch.check_ins')} icon={ShieldCheck} isActive={activeTab === 'checkins'} count={urgentCheckInCount > 0 ? urgentCheckInCount : undefined} onPress={() => setActiveTab('checkins')} />
+            )}
+            <TabButton label={t('dispatch.actions')} icon={Settings} isActive={activeTab === 'actions'} count={urgentCheckInCount > 0 ? urgentCheckInCount : undefined} onPress={() => setActiveTab('actions')} />
+            {weatherSettings?.WeatherAlertsEnabled !== false && (
+              <TabButton label={t('weatherAlerts.title')} icon={CloudLightning} isActive={activeTab === 'weather'} count={weatherAlertCount > 0 ? weatherAlertCount : undefined} onPress={() => setActiveTab('weather')} />
+            )}
           </HStack>
 
           {/* Tab Content */}
@@ -551,6 +717,18 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
           </ScrollView>
         </VStack>
       ) : null}
+
+      {/* Check-in bottom sheet for performing check-ins from the dashboard */}
+      <CheckInBottomSheet
+        isOpen={isCheckInSheetOpen}
+        onClose={() => {
+          setIsCheckInSheetOpen(false);
+          setCheckInSheetTimer(null);
+        }}
+        callId={checkInSheetCallId}
+        selectedTimer={checkInSheetTimer}
+        timers={allTimerStatuses}
+      />
     </Box>
   );
 };
@@ -621,5 +799,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  weatherAlertItem: {
+    borderLeftWidth: 3,
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 6,
+    backgroundColor: 'rgba(0,0,0,0.02)',
   },
 });

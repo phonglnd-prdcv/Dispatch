@@ -9,6 +9,7 @@ import { logger } from '@/lib/logging';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';
 import { useLocationStore } from '@/stores/app/location-store';
+import { useSignalRStore } from '@/stores/signalr/signalr-store';
 
 import MapPins from './map-pins';
 
@@ -53,6 +54,9 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   const cameraRef = useRef<Mapbox.Camera>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [internalPins, setInternalPins] = useState<MapMakerInfoData[]>([]);
+  const lastUpdateTimestamp = useSignalRStore((state) => state.lastUpdateTimestamp);
+  const signalRDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const signalRAbortController = useRef<AbortController | null>(null);
 
   const location = useLocationStore((state) => ({
     latitude: state.latitude,
@@ -147,6 +151,55 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
       abortController.abort();
     };
   }, [autoFetchPins]);
+
+  // Refresh pins when SignalR updates come in (only when autoFetchPins is enabled)
+  useEffect(() => {
+    if (!autoFetchPins || lastUpdateTimestamp <= 0) return;
+
+    // Clear any existing debounce timer
+    if (signalRDebounceTimer.current) {
+      clearTimeout(signalRDebounceTimer.current);
+    }
+
+    // Debounce to prevent rapid consecutive API calls from multiple SignalR events
+    signalRDebounceTimer.current = setTimeout(async () => {
+      // Abort any in-flight SignalR-triggered fetch
+      if (signalRAbortController.current) {
+        signalRAbortController.current.abort();
+      }
+      const controller = new AbortController();
+      signalRAbortController.current = controller;
+
+      try {
+        logger.debug({
+          message: 'Refreshing map pins from SignalR update',
+          context: { timestamp: lastUpdateTimestamp },
+        });
+
+        const mapDataAndMarkers = await getMapDataAndMarkers(controller.signal);
+        if (!controller.signal.aborted && mapDataAndMarkers?.Data) {
+          setInternalPins(mapDataAndMarkers.Data.MapMakerInfos);
+        }
+      } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || error.message === 'canceled')) {
+          return;
+        }
+        logger.error({
+          message: 'Failed to refresh map pins from SignalR update',
+          context: { error },
+        });
+      }
+    }, 1500);
+
+    return () => {
+      if (signalRDebounceTimer.current) {
+        clearTimeout(signalRDebounceTimer.current);
+      }
+      if (signalRAbortController.current) {
+        signalRAbortController.current.abort();
+      }
+    };
+  }, [autoFetchPins, lastUpdateTimestamp]);
 
   // Helper function to get layer style based on type
   const getLayerStyle = (layer: GetMapLayersData): FillLayerStyle | LineLayerStyle | CircleLayerStyle => {

@@ -2,7 +2,7 @@ import { type Href, router } from 'expo-router';
 import { AlertTriangle, Clock, ExternalLink, MapPin, Plus, Radio, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
 
 import { getCallExtraData } from '@/api/calls/calls';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPrio
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { useCallsStore } from '@/stores/calls/store';
+import { useCheckInStore } from '@/stores/checkIn/store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
 import { useSecurityStore } from '@/stores/security/store';
 
@@ -32,16 +33,35 @@ const getDispatchTypeStyle = (type: string): { bg: string; fg: string; label: st
   return { bg: '#6b7280', fg: '#ffffff', label: '•' };
 };
 
-const DispatchBadge: React.FC<{ dispatch: DispatchedEventResultData }> = React.memo(({ dispatch }) => {
+const DispatchBadge: React.FC<{ dispatch: DispatchedEventResultData; isOverdue?: boolean }> = React.memo(({ dispatch, isOverdue }) => {
   const ts = getDispatchTypeStyle(dispatch.Type);
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isOverdue) {
+      const blink = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opacity, { toValue: 0.3, duration: 500, easing: Easing.linear, useNativeDriver: Platform.OS !== 'web' }),
+          Animated.timing(opacity, { toValue: 1, duration: 500, easing: Easing.linear, useNativeDriver: Platform.OS !== 'web' }),
+        ])
+      );
+      blink.start();
+      return () => blink.stop();
+    } else {
+      opacity.setValue(1);
+    }
+  }, [isOverdue, opacity]);
+
+  const bgColor = isOverdue ? '#dc2626' : ts.bg;
+
   return (
-    <View style={StyleSheet.flatten([styles.dispatchBadge, { backgroundColor: ts.bg }])}>
+    <Animated.View style={StyleSheet.flatten([styles.dispatchBadge, { backgroundColor: bgColor, opacity }])}>
       <RNText style={StyleSheet.flatten([styles.dispatchBadgeLabel, { color: ts.fg }])}>{ts.label}</RNText>
       <View style={styles.dispatchBadgeDivider} />
       <RNText style={StyleSheet.flatten([styles.dispatchBadgeName, { color: ts.fg }])} numberOfLines={1}>
         {dispatch.Name}
       </RNText>
-    </View>
+    </Animated.View>
   );
 });
 
@@ -52,7 +72,19 @@ const DispatchTicker: React.FC<{
   dispatches: DispatchedEventResultData[];
   isLoading?: boolean;
   textColor?: string;
-}> = React.memo(({ dispatches, isLoading, textColor = '#ffffff' }) => {
+  overdueEntityIds?: Set<string>;
+}> = React.memo(({ dispatches, isLoading, textColor = '#ffffff', overdueEntityIds }) => {
+  // Deduplicate dispatches by Id (or Type+Name as fallback key)
+  const uniqueDispatches = useMemo(() => {
+    const seen = new Set<string>();
+    return dispatches.filter((d) => {
+      const key = d.Id || `${d.Type}:${d.Name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [dispatches]);
+
   const translateX = useRef(new Animated.Value(0)).current;
   const containerWidthRef = useRef(0);
   const contentWidthRef = useRef(0);
@@ -72,6 +104,7 @@ const DispatchTicker: React.FC<{
       Animated.timing(translateX, {
         toValue: -contentWidthRef.current,
         duration: (totalDistance / 60) * 1000,
+        easing: Easing.linear,
         useNativeDriver: Platform.OS !== 'web',
       })
     );
@@ -79,7 +112,7 @@ const DispatchTicker: React.FC<{
   }, [translateX]);
 
   useEffect(() => {
-    if (isLoading || dispatches.length === 0) {
+    if (isLoading || uniqueDispatches.length === 0) {
       if (animRef.current) {
         animRef.current.stop();
         animRef.current = null;
@@ -91,7 +124,7 @@ const DispatchTicker: React.FC<{
         animRef.current = null;
       }
     };
-  }, [isLoading, dispatches.length]);
+  }, [isLoading, uniqueDispatches.length]);
 
   return (
     <View
@@ -103,7 +136,7 @@ const DispatchTicker: React.FC<{
     >
       {isLoading ? (
         <RNText style={StyleSheet.flatten([styles.tickerPlaceholder, { color: `${textColor}80` }])}>…</RNText>
-      ) : dispatches.length === 0 ? (
+      ) : uniqueDispatches.length === 0 ? (
         <RNText style={StyleSheet.flatten([styles.tickerPlaceholder, { color: `${textColor}80` }])}>—</RNText>
       ) : (
         <Animated.View style={StyleSheet.flatten([styles.tickerScrollTrack, { transform: [{ translateX }] }])}>
@@ -114,10 +147,10 @@ const DispatchTicker: React.FC<{
               startAnim();
             }}
           >
-            {dispatches.map((d, i) => (
-              <React.Fragment key={d.Id || `${d.Name}-${i}`}>
+            {uniqueDispatches.map((d, i) => (
+              <React.Fragment key={d.Id || `${d.Type}:${d.Name}`}>
                 {i > 0 ? <View style={styles.tickerBadgeGap} /> : null}
-                <DispatchBadge dispatch={d} />
+                <DispatchBadge dispatch={d} isOverdue={overdueEntityIds?.has(d.Id)} />
               </React.Fragment>
             ))}
           </View>
@@ -135,7 +168,8 @@ const DashboardCallCard: React.FC<{
   priority?: CallPriorityResultData;
   dispatches?: DispatchedEventResultData[];
   isLoadingDispatches?: boolean;
-}> = React.memo(({ call, priority, dispatches, isLoadingDispatches }) => {
+  overdueEntityIds?: Set<string>;
+}> = React.memo(({ call, priority, dispatches, isLoadingDispatches, overdueEntityIds }) => {
   const bgColor = priority?.Color || '#6b7280';
   const textColor = invertColor(bgColor, true);
 
@@ -188,7 +222,7 @@ const DashboardCallCard: React.FC<{
         <View style={styles.tickerIconWrapper}>
           <Radio size={9} color={textColor} />
         </View>
-        <DispatchTicker dispatches={dispatches ?? []} isLoading={isLoadingDispatches} textColor={textColor} />
+        <DispatchTicker dispatches={dispatches ?? []} isLoading={isLoadingDispatches} textColor={textColor} overdueEntityIds={overdueEntityIds} />
       </View>
     </View>
   );
@@ -210,9 +244,10 @@ const CallItemWrapper: React.FC<{
   isFilterActive: boolean;
   dispatches?: DispatchedEventResultData[];
   isLoadingDispatches?: boolean;
+  overdueEntityIds?: Set<string>;
   onPress: () => void;
   onOpenDetails: () => void;
-}> = ({ call, priority, isSelected, isFilterActive, dispatches, isLoadingDispatches, onPress, onOpenDetails }) => {
+}> = ({ call, priority, isSelected, isFilterActive, dispatches, isLoadingDispatches, overdueEntityIds, onPress, onOpenDetails }) => {
   void isFilterActive; // kept in props for selection badge only
   const { t } = useTranslation();
   const bgColor = priority?.Color || '#6b7280';
@@ -235,7 +270,7 @@ const CallItemWrapper: React.FC<{
 
         {/* Dashboard Card with action button overlay */}
         <View style={styles.cardContainer}>
-          <DashboardCallCard call={call} priority={priority} dispatches={dispatches} isLoadingDispatches={isLoadingDispatches} />
+          <DashboardCallCard call={call} priority={priority} dispatches={dispatches} isLoadingDispatches={isLoadingDispatches} overdueEntityIds={overdueEntityIds} />
           <Pressable
             onPress={(e) => {
               e.stopPropagation();
@@ -255,6 +290,18 @@ const CallItemWrapper: React.FC<{
 export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCallId, onSelectCall, isFilterActive = false }) => {
   const { t } = useTranslation();
   const { canUserCreateCalls } = useSecurityStore();
+
+  // Check-in timer statuses for overdue detection
+  const allTimerStatuses = useCheckInStore((s) => s.timerStatuses);
+  const overdueEntityIds = useMemo(() => {
+    const ids = new Set<string>();
+    allTimerStatuses.forEach((timer) => {
+      if (timer.Status === 'Overdue' || timer.Status === 'Red' || timer.Status === 'Critical') {
+        ids.add(timer.TargetEntityId);
+      }
+    });
+    return ids;
+  }, [allTimerStatuses]);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -467,6 +514,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
                   isFilterActive={isFilterActive}
                   dispatches={callDispatchesMap[call.CallId]}
                   isLoadingDispatches={loadingCallIds.has(call.CallId)}
+                  overdueEntityIds={overdueEntityIds}
                   onPress={() => {
                     onSelectCall?.(call.CallId);
                   }}

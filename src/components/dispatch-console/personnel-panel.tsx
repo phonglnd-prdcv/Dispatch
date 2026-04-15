@@ -1,4 +1,5 @@
-import { Building2, Circle, Filter, Phone, Plus, Search, User, Users, X } from 'lucide-react-native';
+import { type Href, router } from 'expo-router';
+import { Building2, Circle, ExternalLink, Filter, Phone, Plus, Search, User, Users, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +81,16 @@ const PersonnelItem: React.FC<{
           </HStack>
           <VStack className="items-end" space="xs">
             <HStack className="items-center" space="xs">
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  router.push(`/personnel/${person.UserId}` as Href);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.detailsButton}
+              >
+                <ExternalLink size={12} color="#6b7280" />
+              </Pressable>
               <Circle size={8} fill={statusColor} color={statusColor} />
               <Text style={{ color: statusColor }} className="text-xs font-medium">
                 {person.Status || t('dispatch.unknown')}
@@ -138,14 +149,38 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
     let filtered = personnel;
 
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
-      // Get personnel names from dispatches (dispatches contain personnel info by name)
-      const dispatchedPersonnelNames = callDispatches.filter((d) => d.Type === 'Personnel' || d.Type === 'p').map((d) => d.Name.toLowerCase());
+      // Log dispatch types for debugging
+      if (__DEV__) {
+        console.log(
+          '[PersonnelPanel] callDispatches types:',
+          callDispatches.map((d) => ({ Type: d.Type, Name: d.Name }))
+        );
+      }
 
-      // Also check personnel whose StatusDestinationId matches the call
+      // Match personnel to dispatches — prefer stable ID matching, fall back to name
+      const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
+      const personnelDispatches = callDispatches.filter((d) => personnelTypes.has(d.Type));
+      const dispatchedIds = new Set(personnelDispatches.map((d) => d.Id).filter(Boolean));
+      const dispatchedNames = new Set(personnelDispatches.map((d) => d.Name.toLowerCase()));
+
       filtered = personnel.filter((p) => {
+        if (dispatchedIds.size > 0 && dispatchedIds.has(p.UserId)) return true;
+        if (selectedCallId && p.StatusDestinationId === selectedCallId) return true;
         const fullName = `${p.FirstName} ${p.LastName}`.toLowerCase();
-        return dispatchedPersonnelNames.includes(fullName) || (selectedCallId && p.StatusDestinationId === selectedCallId);
+        return dispatchedNames.has(fullName);
       });
+
+      // If strict type matching found nothing, try matching ALL dispatch names/IDs as fallback
+      if (filtered.length === 0) {
+        const allDispatchIds = new Set(callDispatches.map((d) => d.Id).filter(Boolean));
+        const allDispatchNames = new Set(callDispatches.map((d) => d.Name.toLowerCase()));
+        filtered = personnel.filter((p) => {
+          if (allDispatchIds.has(p.UserId)) return true;
+          if (selectedCallId && p.StatusDestinationId === selectedCallId) return true;
+          const fullName = `${p.FirstName} ${p.LastName}`.toLowerCase();
+          return allDispatchNames.has(fullName);
+        });
+      }
     }
 
     // Apply search filter
@@ -164,10 +199,26 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
     return filtered;
   }, [personnel, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
 
-  // Get list of personnel names that are dispatched to the call
+  // Get dispatched personnel IDs and names for highlight matching
+  const dispatchedPersonnelIds = useMemo(() => {
+    if (!callDispatches) return new Set<string>();
+    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
+    const byType = callDispatches.filter((d) => personnelTypes.has(d.Type));
+    const ids = new Set(byType.map((d) => d.Id).filter(Boolean));
+    if (ids.size === 0) {
+      return new Set(callDispatches.map((d) => d.Id).filter(Boolean));
+    }
+    return ids;
+  }, [callDispatches]);
+
   const dispatchedPersonnelNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    return new Set(callDispatches.filter((d) => d.Type === 'Personnel' || d.Type === 'p').map((d) => d.Name.toLowerCase()));
+    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
+    const byType = new Set(callDispatches.filter((d) => personnelTypes.has(d.Type)).map((d) => d.Name.toLowerCase()));
+    if (byType.size === 0) {
+      return new Set(callDispatches.map((d) => d.Name.toLowerCase()));
+    }
+    return byType;
   }, [callDispatches]);
 
   // Count on-duty personnel
@@ -242,7 +293,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
                     key={person.UserId}
                     person={person}
                     isSelected={selectedPersonnelId === person.UserId}
-                    isOnCall={dispatchedPersonnelNames.has(fullName) || Boolean(selectedCallId && person.StatusDestinationId === selectedCallId)}
+                    isOnCall={dispatchedPersonnelIds.has(person.UserId) || dispatchedPersonnelNames.has(fullName) || Boolean(selectedCallId && person.StatusDestinationId === selectedCallId)}
                     onPress={() => handleSelectPersonnel(person.UserId)}
                     onSetStatus={isCallFilterActive && onSetPersonnelStatusForCall ? () => onSetPersonnelStatusForCall(person.UserId, `${person.FirstName} ${person.LastName}`) : undefined}
                   />
@@ -283,6 +334,11 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 4,
+  },
+  detailsButton: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
   },
   statusButton: {
     padding: 4,

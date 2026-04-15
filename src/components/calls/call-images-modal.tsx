@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
@@ -396,7 +396,6 @@ const CallImagesModal: React.FC<CallImagesModalProps> = ({ isOpen, onClose, call
               itemVisiblePercentThreshold: 50,
               minimumViewTime: 100,
             }}
-            estimatedItemSize={width}
             className="w-full"
             contentContainerStyle={{ paddingHorizontal: 0 }}
             initialScrollIndex={0}

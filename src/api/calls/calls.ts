@@ -9,7 +9,7 @@ const callsApi = createApiEndpoint('/Calls/GetActiveCalls');
 const getCallApi = createApiEndpoint('/Calls/GetCall');
 const getCallExtraDataApi = createApiEndpoint('/Calls/GetCallExtraData');
 const createCallApi = createApiEndpoint('/Calls/SaveCall');
-const updateCallApi = createApiEndpoint('/Calls/UpdateCall');
+const updateCallApi = createApiEndpoint('/Calls/EditCall');
 const closeCallApi = createApiEndpoint('/Calls/CloseCall');
 
 export const getCalls = async () => {
@@ -97,20 +97,16 @@ export const createCall = async (callData: CreateCallRequest) => {
     const dispatchEntries: string[] = [];
 
     if (callData.dispatchUsers) {
-      //dispatchEntries.push(...callData.dispatchUsers.map((user) => `U:${user}`));
-      dispatchEntries.push(...callData.dispatchUsers);
+      dispatchEntries.push(...callData.dispatchUsers.map((user) => `P:${user}`));
     }
     if (callData.dispatchGroups) {
-      //dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
-      dispatchEntries.push(...callData.dispatchGroups);
+      dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
     }
     if (callData.dispatchRoles) {
-      //dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
-      dispatchEntries.push(...callData.dispatchRoles);
+      dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
     }
     if (callData.dispatchUnits) {
-      //dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
-      dispatchEntries.push(...callData.dispatchUnits);
+      dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
     }
 
     dispatchList = dispatchEntries.join('|');
@@ -149,27 +145,23 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     const dispatchEntries: string[] = [];
 
     if (callData.dispatchUsers) {
-      //dispatchEntries.push(...callData.dispatchUsers.map((user) => `U:${user}`));
-      dispatchEntries.push(...callData.dispatchUsers);
+      dispatchEntries.push(...callData.dispatchUsers.map((user) => `P:${user}`));
     }
     if (callData.dispatchGroups) {
-      //dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
-      dispatchEntries.push(...callData.dispatchGroups);
+      dispatchEntries.push(...callData.dispatchGroups.map((group) => `G:${group}`));
     }
     if (callData.dispatchRoles) {
-      //dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
-      dispatchEntries.push(...callData.dispatchRoles);
+      dispatchEntries.push(...callData.dispatchRoles.map((role) => `R:${role}`));
     }
     if (callData.dispatchUnits) {
-      //dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
-      dispatchEntries.push(...callData.dispatchUnits);
+      dispatchEntries.push(...callData.dispatchUnits.map((unit) => `U:${unit}`));
     }
 
     dispatchList = dispatchEntries.join('|');
   }
 
   const data = {
-    CallId: callData.callId,
+    Id: callData.callId,
     Name: callData.name,
     Nature: callData.nature,
     Note: callData.note || '',
@@ -188,7 +180,7 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     ReferenceId: callData.referenceId || '',
   };
 
-  const response = await updateCallApi.post<SaveCallResult>(data);
+  const response = await updateCallApi.put<SaveCallResult>(data);
   return response.data;
 };
 

@@ -411,7 +411,7 @@ export default function NewCallWeb() {
           name: data.name,
           nature: data.nature,
           priority: priority.Id,
-          type: type.Id,
+          type: type.Name,
           note: data.note,
           address: data.address,
           latitude: data.latitude,
@@ -437,7 +437,7 @@ export default function NewCallWeb() {
         }
 
         toast.success(t('calls.create_success'));
-        router.push('/calls' as Href);
+        router.push('/(app)/home' as Href);
       } catch (err) {
         console.error('Error creating call:', err);
         toast.error(t('calls.create_error'));

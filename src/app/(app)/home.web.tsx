@@ -9,6 +9,7 @@ import { getCallNotes, saveCallNote } from '@/api/calls/callNotes';
 import { getCallExtraData } from '@/api/calls/calls';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { AudioStreamBottomSheet } from '@/components/audio-stream/audio-stream-bottom-sheet';
+import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
 import { ActiveCallFilterBanner, ActiveCallsPanel, ActivityLogPanel, AddNoteBottomSheet, MapWidget, NotesPanel, PersonnelPanel, PTTInterface, StatsHeader, UnitsPanel } from '@/components/dispatch-console';
 import { Box } from '@/components/ui/box';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
@@ -81,6 +82,7 @@ export default function DispatchConsoleWeb() {
   const [isAddNoteSheetOpen, setIsAddNoteSheetOpen] = useState(false);
   const [selectedPersonnelData, setSelectedPersonnelData] = useState<PersonnelInfoResultData | null>(null);
   const [selectedUnitData, setSelectedUnitData] = useState<UnitInfoResultData | null>(null);
+  const [isCloseCallSheetOpen, setIsCloseCallSheetOpen] = useState(false);
 
   // Track previous timestamps to detect changes
   const prevPersonnelTimestamp = useRef(0);
@@ -454,6 +456,29 @@ export default function DispatchConsoleWeb() {
     });
   };
 
+  // Call action handlers for the actions panel
+  const handleCreateCall = useCallback(() => {
+    router.push('/call/new' as Href);
+  }, []);
+
+  const handleViewCallDetails = useCallback(() => {
+    if (selectedCallId) {
+      router.push(`/call/${selectedCallId}` as Href);
+    }
+  }, [selectedCallId]);
+
+  const handleCloseCallAction = useCallback(() => {
+    if (selectedCallId) {
+      setIsCloseCallSheetOpen(true);
+    }
+  }, [selectedCallId]);
+
+  const handleAddCallNoteAction = useCallback(() => {
+    if (selectedCallId) {
+      setIsAddNoteSheetOpen(true);
+    }
+  }, [selectedCallId]);
+
   // Handle setting unit status for call
   const handleSetUnitStatusForCall = (unitId: string) => {
     const unit = units.find((u) => u.UnitId === unitId);
@@ -522,6 +547,10 @@ export default function DispatchConsoleWeb() {
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
               onUnitStatusUpdated={handleUnitStatusUpdated}
+              onCreateCall={handleCreateCall}
+              onViewCallDetails={handleViewCallDetails}
+              onCloseCall={handleCloseCallAction}
+              onAddCallNote={handleAddCallNoteAction}
             />
           </VStack>
 
@@ -614,6 +643,10 @@ export default function DispatchConsoleWeb() {
               onStatusUpdated={handleStatusUpdated}
               onStaffingUpdated={handleStaffingUpdated}
               onUnitStatusUpdated={handleUnitStatusUpdated}
+              onCreateCall={handleCreateCall}
+              onViewCallDetails={handleViewCallDetails}
+              onCloseCall={handleCloseCallAction}
+              onAddCallNote={handleAddCallNoteAction}
             />
           </VStack>
         </HStack>
@@ -685,6 +718,10 @@ export default function DispatchConsoleWeb() {
             onStatusUpdated={handleStatusUpdated}
             onStaffingUpdated={handleStaffingUpdated}
             onUnitStatusUpdated={handleUnitStatusUpdated}
+            onCreateCall={handleCreateCall}
+            onViewCallDetails={handleViewCallDetails}
+            onCloseCall={handleCloseCallAction}
+            onAddCallNote={handleAddCallNoteAction}
           />
         </VStack>
       </ScrollView>
@@ -721,6 +758,9 @@ export default function DispatchConsoleWeb() {
 
       {/* Add Note Bottom Sheet */}
       <AddNoteBottomSheet isOpen={isAddNoteSheetOpen} onClose={() => setIsAddNoteSheetOpen(false)} onNoteAdded={handleNoteAdded} />
+
+      {/* Close Call Bottom Sheet */}
+      {selectedCallId && <CloseCallBottomSheet key={selectedCallId} isOpen={isCloseCallSheetOpen} onClose={() => setIsCloseCallSheetOpen(false)} callId={selectedCallId} />}
     </View>
   );
 }
