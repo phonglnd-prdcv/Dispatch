@@ -1,4 +1,5 @@
-import { Building2, Circle, Filter, Phone, Plus, Search, User, Users, X } from 'lucide-react-native';
+import { type Href, router } from 'expo-router';
+import { Building2, Circle, ExternalLink, Filter, Phone, Plus, Search, User, Users, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +81,16 @@ const PersonnelItem: React.FC<{
           </HStack>
           <VStack className="items-end" space="xs">
             <HStack className="items-center" space="xs">
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  router.push(`/personnel/${person.UserId}` as Href);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.detailsButton}
+              >
+                <ExternalLink size={12} color="#6b7280" />
+              </Pressable>
               <Circle size={8} fill={statusColor} color={statusColor} />
               <Text style={{ color: statusColor }} className="text-xs font-medium">
                 {person.Status || t('dispatch.unknown')}
@@ -306,6 +317,11 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 4,
+  },
+  detailsButton: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
   },
   statusButton: {
     padding: 4,

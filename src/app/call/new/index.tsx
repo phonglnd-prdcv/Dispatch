@@ -250,7 +250,7 @@ export default function NewCall() {
         name: data.name,
         nature: data.nature,
         priority: priority.Id,
-        type: type.Id,
+        type: type.Name,
         note: data.note,
         address: data.address,
         latitude: data.latitude,

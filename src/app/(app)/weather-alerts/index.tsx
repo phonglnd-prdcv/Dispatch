@@ -3,10 +3,18 @@ import { type Href, router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text as RNText,
+  View,
+} from 'react-native';
 
 import { WeatherAlertCard } from '@/components/weatherAlerts/weather-alert-card';
-import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
@@ -35,7 +43,6 @@ export default function WeatherAlertsListScreen() {
   const filteredAlerts = useMemo(() => {
     let filtered = [...alerts];
 
-    // Apply severity filter
     switch (filter) {
       case 'extreme':
         filtered = filtered.filter((a) => a.Severity === WeatherAlertSeverity.Extreme);
@@ -51,7 +58,6 @@ export default function WeatherAlertsListScreen() {
         break;
     }
 
-    // Apply sort
     switch (sort) {
       case 'severity':
         filtered.sort((a, b) => a.Severity - b.Severity || new Date(b.EffectiveUtc).getTime() - new Date(a.EffectiveUtc).getTime());
@@ -72,7 +78,7 @@ export default function WeatherAlertsListScreen() {
   }, [alerts, filter, sort]);
 
   const handleAlertPress = (alertId: string) => {
-    router.push(`/(app)/weather-alerts/${alertId}` as Href);
+    router.push(`/weather-alerts/${alertId}` as Href);
   };
 
   const renderFilterButton = (key: FilterType, label: string) => {
@@ -81,13 +87,28 @@ export default function WeatherAlertsListScreen() {
       <Pressable
         key={key}
         onPress={() => setFilter(key)}
-        style={[styles.filterButton, isActive && styles.filterButtonActive]}
+        style={[
+          styles.filterPill,
+          isActive
+            ? styles.filterPillActive
+            : isDark
+              ? styles.filterPillDark
+              : styles.filterPillLight,
+        ]}
       >
-        <Text
-          className={`text-xs font-medium ${isActive ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}
+        <RNText
+          style={[
+            styles.filterPillText,
+            isActive
+              ? styles.filterPillTextActive
+              : isDark
+                ? styles.filterPillTextDark
+                : styles.filterPillTextLight,
+          ]}
+          numberOfLines={1}
         >
           {label}
-        </Text>
+        </RNText>
       </Pressable>
     );
   };
@@ -98,13 +119,22 @@ export default function WeatherAlertsListScreen() {
       <Pressable
         key={key}
         onPress={() => setSort(key)}
-        style={[styles.sortButton, isActive && styles.sortButtonActive]}
+        style={[styles.sortPill, isActive && styles.sortPillActive]}
       >
-        <Text
-          className={`text-xs ${isActive ? 'text-primary-600 dark:text-primary-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}`}
+        <RNText
+          style={[
+            styles.sortPillText,
+            isActive
+              ? isDark
+                ? styles.sortPillTextActiveDark
+                : styles.sortPillTextActive
+              : isDark
+                ? styles.sortPillTextDark
+                : styles.sortPillTextLight,
+          ]}
         >
           {label}
-        </Text>
+        </RNText>
       </Pressable>
     );
   };
@@ -129,44 +159,47 @@ export default function WeatherAlertsListScreen() {
 
   return (
     <View style={[styles.container, isDark ? styles.containerDark : styles.containerLight]}>
-      <VStack space="sm" style={styles.inner}>
-        {/* Header */}
-        <Text className="text-lg font-bold text-gray-900 dark:text-gray-100 px-4 pt-4">
-          {t('weatherAlerts.title')}
-        </Text>
+      {/* Header */}
+      <RNText style={[styles.title, isDark ? styles.titleDark : styles.titleLight]}>
+        {t('weatherAlerts.title')}
+      </RNText>
 
-        {/* Filters */}
-        <HStack className="px-4" space="xs">
-          {renderFilterButton('all', t('weatherAlerts.filter.all'))}
-          {renderFilterButton('extreme', t('weatherAlerts.severity.extreme'))}
-          {renderFilterButton('severe', t('weatherAlerts.severity.severe'))}
-          {renderFilterButton('moderate', t('weatherAlerts.severity.moderate'))}
-          {renderFilterButton('minor', t('weatherAlerts.severity.minor'))}
-        </HStack>
+      {/* Filter pills */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterRow}
+      >
+        {renderFilterButton('all', t('weatherAlerts.filter.all'))}
+        {renderFilterButton('extreme', t('weatherAlerts.severity.extreme'))}
+        {renderFilterButton('severe', t('weatherAlerts.severity.severe'))}
+        {renderFilterButton('moderate', t('weatherAlerts.severity.moderate'))}
+        {renderFilterButton('minor', t('weatherAlerts.severity.minor'))}
+      </ScrollView>
 
-        {/* Sort */}
-        <HStack className="px-4" space="sm">
-          {renderSortButton('severity', t('weatherAlerts.sort.severity'))}
-          {renderSortButton('expires', t('weatherAlerts.sort.expires'))}
-          {renderSortButton('newest', t('weatherAlerts.sort.newest'))}
-        </HStack>
+      {/* Sort row */}
+      <View style={styles.sortRow}>
+        {renderSortButton('severity', t('weatherAlerts.sort.severity'))}
+        {renderSortButton('expires', t('weatherAlerts.sort.expires'))}
+        {renderSortButton('newest', t('weatherAlerts.sort.newest'))}
+      </View>
 
-        {/* List */}
-        {isLoading && alerts.length === 0 ? (
-          <ActivityIndicator style={styles.loader} />
-        ) : (
-          <FlatList
-            data={filteredAlerts}
-            keyExtractor={(item) => item.WeatherAlertId}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={renderEmpty}
-            refreshControl={
-              <RefreshControl refreshing={isLoading} onRefresh={fetchActiveAlerts} />
-            }
-          />
-        )}
-      </VStack>
+      {/* List */}
+      {isLoading && alerts.length === 0 ? (
+        <ActivityIndicator style={styles.loader} />
+      ) : (
+        <FlatList
+          data={filteredAlerts}
+          keyExtractor={(item) => item.WeatherAlertId}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmpty}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={fetchActiveAlerts} />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -175,24 +208,91 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   containerLight: { backgroundColor: '#f3f4f6' },
   containerDark: { backgroundColor: '#030712' },
-  inner: { flex: 1 },
-  filterButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  titleLight: { color: '#111827' },
+  titleDark: { color: '#f3f4f6' },
+
+  filterScroll: {
+    flexGrow: 0,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    gap: 8,
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  filterPillLight: {
     backgroundColor: '#e5e7eb',
   },
-  filterButtonActive: {
+  filterPillDark: {
+    backgroundColor: '#374151',
+  },
+  filterPillActive: {
     backgroundColor: '#2563eb',
   },
-  sortButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  filterPillText: {
+    fontSize: 13,
+    fontWeight: '500',
+    lineHeight: 16,
   },
-  sortButtonActive: {
+  filterPillTextActive: {
+    color: '#ffffff',
+  },
+  filterPillTextLight: {
+    color: '#4b5563',
+  },
+  filterPillTextDark: {
+    color: '#9ca3af',
+  },
+
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 4,
+    gap: 12,
+  },
+  sortPill: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  sortPillActive: {
     borderBottomWidth: 2,
     borderBottomColor: '#2563eb',
   },
+  sortPillText: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  sortPillTextActive: {
+    color: '#2563eb',
+    fontWeight: '600',
+  },
+  sortPillTextActiveDark: {
+    color: '#60a5fa',
+    fontWeight: '600',
+  },
+  sortPillTextLight: {
+    color: '#6b7280',
+  },
+  sortPillTextDark: {
+    color: '#9ca3af',
+  },
+
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 24,

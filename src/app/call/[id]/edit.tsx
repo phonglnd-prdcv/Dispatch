@@ -81,7 +81,7 @@ export default function EditCall() {
   const { id } = useLocalSearchParams();
   const callId = Array.isArray(id) ? id[0] : id;
   const { callPriorities, callTypes, isLoading: callDataLoading, error: callDataError, fetchCallPriorities, fetchCallTypes } = useCallsStore();
-  const { call, isLoading: callDetailLoading, error: callDetailError, fetchCallDetail } = useCallDetailStore();
+  const { call, callExtraData, isLoading: callDetailLoading, error: callDetailError, fetchCallDetail } = useCallDetailStore();
   const { config } = useCoreStore();
   const toast = useToast();
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -153,6 +153,32 @@ export default function EditCall() {
       const priority = callPriorities.find((p) => p.Id === call.Priority);
       const type = callTypes.find((t) => t.Id === call.Type);
 
+      // Build dispatch selection from existing dispatches
+      const initialDispatch: DispatchSelection = {
+        everyone: false,
+        users: [],
+        groups: [],
+        roles: [],
+        units: [],
+      };
+
+      if (callExtraData?.Dispatches) {
+        callExtraData.Dispatches.forEach((dispatch) => {
+          const dispatchType = (dispatch.Type || '').toLowerCase();
+          if (dispatchType === 'personnel' || dispatchType === 'p' || dispatchType === 'user') {
+            initialDispatch.users.push(dispatch.Id);
+          } else if (dispatchType === 'group' || dispatchType === 'groups' || dispatchType === 'g') {
+            initialDispatch.groups.push(dispatch.Id);
+          } else if (dispatchType === 'role' || dispatchType === 'roles' || dispatchType === 'r') {
+            initialDispatch.roles.push(dispatch.Id);
+          } else if (dispatchType === 'unit' || dispatchType === 'units' || dispatchType === 'u') {
+            initialDispatch.units.push(dispatch.Id);
+          }
+        });
+      }
+
+      setDispatchSelection(initialDispatch);
+
       reset({
         name: call.Name || '',
         nature: call.Nature || '',
@@ -167,13 +193,7 @@ export default function EditCall() {
         type: type?.Name || '',
         contactName: call.ContactName || '',
         contactInfo: call.ContactInfo || '',
-        dispatchSelection: {
-          everyone: false,
-          users: [],
-          groups: [],
-          roles: [],
-          units: [],
-        },
+        dispatchSelection: initialDispatch,
       });
 
       // Set selected location if coordinates exist
@@ -185,7 +205,7 @@ export default function EditCall() {
         });
       }
     }
-  }, [call, callPriorities, callTypes, reset]);
+  }, [call, callExtraData, callPriorities, callTypes, reset]);
 
   // Track when edit call view is rendered
   useEffect(() => {
@@ -220,7 +240,7 @@ export default function EditCall() {
         name: data.name,
         nature: data.nature,
         priority: priority?.Id || 0,
-        type: type?.Id || '',
+        type: type?.Name || '',
         note: data.note,
         address: data.address,
         latitude: data.latitude,

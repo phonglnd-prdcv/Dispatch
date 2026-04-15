@@ -2,14 +2,13 @@ import { CheckIcon, SearchIcon, UsersIcon, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { ScrollView, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { Loading } from '@/components/common/loading';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { HStack } from '@/components/ui/hstack';
-import { Input, InputField } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type DispatchSelection, useDispatchStore } from '@/stores/dispatch/store';
@@ -80,10 +79,21 @@ export const DispatchSelectionModal: React.FC<DispatchSelectionModalProps> = ({ 
 
       {/* Search */}
       <Box className="p-4">
-        <Input>
-          <SearchIcon size={20} className="ml-3 mr-2 text-neutral-500" />
-          <InputField placeholder={t('common.search')} value={searchQuery} onChangeText={setSearchQuery} className="flex-1" />
-        </Input>
+        <HStack className={`items-center rounded border px-3 ${colorScheme === 'dark' ? 'border-neutral-700 bg-neutral-900' : 'border-neutral-300 bg-white'}`}>
+          <SearchIcon size={20} color={colorScheme === 'dark' ? '#a3a3a3' : '#737373'} />
+          <TextInput
+            placeholder={t('common.search')}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{
+              flex: 1,
+              height: 40,
+              marginLeft: 8,
+              color: colorScheme === 'dark' ? '#ffffff' : '#000000',
+            }}
+            placeholderTextColor={colorScheme === 'dark' ? '#737373' : '#a3a3a3'}
+          />
+        </HStack>
       </Box>
 
       {/* Content */}

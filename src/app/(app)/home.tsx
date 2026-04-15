@@ -45,7 +45,7 @@ export default function DispatchConsole() {
   const { units, isLoading: unitsLoading, fetchUnits } = useUnitsStore();
   const { personnel, isLoading: personnelLoading, fetchPersonnel } = usePersonnelStore();
   const { notes, isLoading: notesLoading, fetchNotes } = useNotesStore();
-  const { lastUpdateTimestamp } = useSignalRStore();
+  const { lastUpdateTimestamp, lastPersonnelUpdateTimestamp, lastUnitsUpdateTimestamp, lastCallsUpdateTimestamp, lastEventType } = useSignalRStore();
   const { userId } = useAuthStore();
 
   // Weather alerts
@@ -139,20 +139,41 @@ export default function DispatchConsole() {
     }, [trackEvent, isLandscape, isTablet])
   );
 
-  // Listen for SignalR updates and refresh data
+  // Listen for SignalR personnel updates
   useEffect(() => {
-    if (lastUpdateTimestamp > 0) {
-      // Add activity log entry for update
+    if (lastPersonnelUpdateTimestamp > 0) {
+      fetchPersonnel();
       addActivityLogEntry({
         type: 'system',
         action: t('dispatch.system_update'),
         description: t('dispatch.data_refreshed'),
       });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastPersonnelUpdateTimestamp]);
 
-      // Refresh data
-      fetchCalls();
+  // Listen for SignalR unit updates
+  useEffect(() => {
+    if (lastUnitsUpdateTimestamp > 0) {
       fetchUnits();
-      fetchPersonnel();
+      addActivityLogEntry({
+        type: 'system',
+        action: t('dispatch.system_update'),
+        description: t('dispatch.data_refreshed'),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastUnitsUpdateTimestamp]);
+
+  // Listen for SignalR call updates
+  useEffect(() => {
+    if (lastCallsUpdateTimestamp > 0) {
+      fetchCalls();
+      addActivityLogEntry({
+        type: 'system',
+        action: t('dispatch.system_update'),
+        description: t('dispatch.data_refreshed'),
+      });
 
       // Refresh call data if filter is active
       if (isCallFilterActive && selectedCallId) {
@@ -160,7 +181,7 @@ export default function DispatchConsole() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastUpdateTimestamp]);
+  }, [lastCallsUpdateTimestamp]);
 
   // Fetch call extra data and notes when a call is selected for filtering
   useEffect(() => {

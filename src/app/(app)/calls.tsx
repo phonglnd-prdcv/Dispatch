@@ -74,7 +74,6 @@ export default function Calls() {
         renderItem={({ item }: { item: CallResultData }) => (
           <Pressable onPress={() => router.push(`/call/${item.CallId}` as Href)}>
             <CallCard call={item} priority={useCallsStore.getState().callPriorities.find((p: { Id: number }) => p.Id === item.Priority)} />
-            <CallCard call={item} priority={useCallsStore.getState().callPriorities.find((p: { Id: number }) => p.Id === item.Priority)} />
           </Pressable>
         )}
         keyExtractor={(item: CallResultData) => item.CallId}
