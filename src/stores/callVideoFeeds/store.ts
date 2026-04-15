@@ -74,14 +74,19 @@ export const useCallVideoFeedsStore = create<CallVideoFeedsState>((set, get) => 
 
   removeFeed: async (feedId: string, callId: string) => {
     // Optimistic removal
-    set({ feeds: get().feeds.filter((f) => f.CallVideoFeedId !== feedId) });
+    set({ feeds: get().feeds.filter((f) => f.CallVideoFeedId !== feedId), error: null });
     try {
       await deleteCallVideoFeed(feedId);
       return true;
     } catch (error) {
       logger.error({ message: 'Failed to delete video feed', context: { error, feedId } });
+      set({ error: error instanceof Error ? error.message : 'Failed to delete video feed' });
       // Re-sync from server instead of reverting a potentially stale snapshot
-      await get().fetchFeeds(callId).catch(() => {});
+      try {
+        await get().fetchFeeds(callId);
+      } catch {
+        // fetchFeeds handles its own error state; nothing else to do here
+      }
       return false;
     }
   },

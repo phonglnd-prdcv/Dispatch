@@ -45,7 +45,7 @@ export default function DispatchConsole() {
   const { units, isLoading: unitsLoading, fetchUnits } = useUnitsStore();
   const { personnel, isLoading: personnelLoading, fetchPersonnel } = usePersonnelStore();
   const { notes, isLoading: notesLoading, fetchNotes } = useNotesStore();
-  const { lastUpdateTimestamp, lastPersonnelUpdateTimestamp, lastUnitsUpdateTimestamp, lastCallsUpdateTimestamp, lastEventType } = useSignalRStore();
+  const { lastPersonnelUpdateTimestamp, lastUnitsUpdateTimestamp, lastCallsUpdateTimestamp, lastEventType } = useSignalRStore();
   const { userId } = useAuthStore();
 
   // Weather alerts

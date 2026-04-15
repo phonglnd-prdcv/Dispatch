@@ -169,7 +169,7 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
 
   fetchTimerStatusesForCalls: async (callIds: number[]) => {
     if (callIds.length === 0) {
-      set({ timerStatuses: [], isLoadingStatuses: false });
+      set({ timerStatuses: [], resolvedTimers: [], isLoadingStatuses: false, statusError: null });
       return;
     }
     set({ isLoadingStatuses: true, statusError: null });
@@ -181,7 +181,7 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
       const allResolved = resolvedResults.flatMap((r) => r.Data || []);
       const enriched = enrichTimerNames(statusResult.Data || [], allResolved);
       const sorted = enriched.sort(sortByStatusSeverity);
-      set({ timerStatuses: sorted, isLoadingStatuses: false });
+      set({ timerStatuses: sorted, resolvedTimers: allResolved, isLoadingStatuses: false });
     } catch (error) {
       set({
         statusError: error instanceof Error ? error.message : 'Failed to fetch timer statuses',
@@ -258,8 +258,11 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
     if (existing) {
       clearInterval(existing);
     }
+    if (callIds.length === 0) {
+      set({ _pollingInterval: null, _pollingCallIds: [] });
+      return;
+    }
     set({ _pollingCallIds: callIds });
-    if (callIds.length === 0) return;
     const interval = setInterval(() => {
       get().fetchTimerStatusesForCalls(callIds);
     }, intervalMs);
