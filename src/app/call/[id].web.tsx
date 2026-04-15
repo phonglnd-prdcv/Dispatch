@@ -169,28 +169,25 @@ export default function CallDetailWeb() {
   const overdueCount = checkInStatuses.filter((s) => s.Status === 'Overdue').length;
   const warningCount = checkInStatuses.filter((s) => s.Status === 'Warning').length;
 
-  const tabs = useMemo(
-    () => {
-      const baseTabs: { key: TabKey; title: string; icon: typeof InfoIcon; badge?: number }[] = [
-        { key: 'info', title: t('call_detail.tabs.info'), icon: InfoIcon },
-        { key: 'contact', title: t('call_detail.tabs.contact'), icon: UserIcon },
-        { key: 'protocols', title: t('call_detail.tabs.protocols'), icon: FileTextIcon },
-        { key: 'dispatched', title: t('call_detail.tabs.dispatched'), icon: UsersIcon },
-        { key: 'timeline', title: t('call_detail.tabs.timeline'), icon: ClockIcon, badge: callExtraData?.Activity?.length || 0 },
-        { key: 'video', title: t('call_detail.tabs.video'), icon: VideoIcon },
-      ];
-      if (call?.CheckInTimersEnabled) {
-        baseTabs.push({
-          key: 'checkin' as const,
-          title: t('check_in.tab_title'),
-          icon: ShieldCheckIcon,
-          badge: overdueCount + warningCount,
-        });
-      }
-      return baseTabs;
-    },
-    [t, callExtraData?.Activity?.length, call?.CheckInTimersEnabled, overdueCount, warningCount]
-  );
+  const tabs = useMemo(() => {
+    const baseTabs: { key: TabKey; title: string; icon: typeof InfoIcon; badge?: number }[] = [
+      { key: 'info', title: t('call_detail.tabs.info'), icon: InfoIcon },
+      { key: 'contact', title: t('call_detail.tabs.contact'), icon: UserIcon },
+      { key: 'protocols', title: t('call_detail.tabs.protocols'), icon: FileTextIcon },
+      { key: 'dispatched', title: t('call_detail.tabs.dispatched'), icon: UsersIcon },
+      { key: 'timeline', title: t('call_detail.tabs.timeline'), icon: ClockIcon, badge: callExtraData?.Activity?.length || 0 },
+      { key: 'video', title: t('call_detail.tabs.video'), icon: VideoIcon },
+    ];
+    if (call?.CheckInTimersEnabled) {
+      baseTabs.push({
+        key: 'checkin' as const,
+        title: t('check_in.tab_title'),
+        icon: ShieldCheckIcon,
+        badge: overdueCount + warningCount,
+      });
+    }
+    return baseTabs;
+  }, [t, callExtraData?.Activity?.length, call?.CheckInTimersEnabled, overdueCount, warningCount]);
 
   if (isLoading) {
     return (

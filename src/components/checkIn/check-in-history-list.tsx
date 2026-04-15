@@ -44,23 +44,17 @@ export const CheckInHistoryList: React.FC<CheckInHistoryListProps> = ({ history,
       {isExpanded && (
         <VStack className="gap-2">
           {history.map((record) => (
-            <Box
-              key={record.CheckInRecordId}
-              className={`rounded-lg p-2 ${colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-gray-50'}`}
-            >
+            <Box key={record.CheckInRecordId} className={`rounded-lg p-2 ${colorScheme === 'dark' ? 'bg-neutral-800' : 'bg-gray-50'}`}>
               <HStack className="items-center justify-between">
                 <VStack className="flex-1">
                   <Text className="text-sm font-medium">{record.CheckInTypeName || String(record.CheckInType)}</Text>
                   <Text className="text-xs text-gray-500">
-                    {record.UserId ? `User: ${record.UserId}` : ''}{record.UnitId ? ` Unit: ${record.UnitId}` : ''}
+                    {record.UserId ? `User: ${record.UserId}` : ''}
+                    {record.UnitId ? ` Unit: ${record.UnitId}` : ''}
                   </Text>
-                  {record.Note ? (
-                    <Text className="text-xs italic text-gray-400">{record.Note}</Text>
-                  ) : null}
+                  {record.Note ? <Text className="text-xs italic text-gray-400">{record.Note}</Text> : null}
                 </VStack>
-                <Text className="text-xs text-gray-400">
-                  {record.Timestamp ? format(new Date(record.Timestamp), 'MMM d, h:mm a') : ''}
-                </Text>
+                <Text className="text-xs text-gray-400">{record.Timestamp ? format(new Date(record.Timestamp), 'MMM d, h:mm a') : ''}</Text>
               </HStack>
             </Box>
           ))}

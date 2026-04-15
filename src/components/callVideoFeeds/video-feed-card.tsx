@@ -1,18 +1,4 @@
-import {
-  CameraIcon,
-  CircleIcon,
-  EllipsisVerticalIcon,
-  EyeIcon,
-  GlobeIcon,
-  MonitorIcon,
-  PencilIcon,
-  PlayIcon,
-  SatelliteIcon,
-  TrafficConeIcon,
-  Trash2Icon,
-  VideoIcon,
-  CloudIcon,
-} from 'lucide-react-native';
+import { CameraIcon, CircleIcon, CloudIcon, EllipsisVerticalIcon, EyeIcon, GlobeIcon, MonitorIcon, PencilIcon, PlayIcon, SatelliteIcon, TrafficConeIcon, Trash2Icon, VideoIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -171,7 +157,14 @@ export const VideoFeedCard: React.FC<VideoFeedCardProps> = ({ feed, onWatch, onE
       {showMenu && canEdit && (
         <HStack className={`mt-2 gap-2 border-t pt-2 ${isDark ? 'border-neutral-700' : 'border-neutral-200'}`}>
           {onEdit && (
-            <Button size="xs" variant="outline" onPress={() => { onEdit(feed); setShowMenu(false); }}>
+            <Button
+              size="xs"
+              variant="outline"
+              onPress={() => {
+                onEdit(feed);
+                setShowMenu(false);
+              }}
+            >
               <ButtonIcon as={PencilIcon} className="mr-1" />
               <ButtonText className="text-xs">{t('common.edit')}</ButtonText>
             </Button>
@@ -181,7 +174,10 @@ export const VideoFeedCard: React.FC<VideoFeedCardProps> = ({ feed, onWatch, onE
               size="xs"
               variant="outline"
               className="border-red-300"
-              onPress={() => { onDelete(feed.CallVideoFeedId); setShowMenu(false); }}
+              onPress={() => {
+                onDelete(feed.CallVideoFeedId);
+                setShowMenu(false);
+              }}
             >
               <ButtonIcon as={Trash2Icon} className="mr-1 text-red-500" />
               <ButtonText className="text-xs text-red-500">{t('common.delete')}</ButtonText>

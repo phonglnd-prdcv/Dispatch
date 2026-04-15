@@ -23,24 +23,13 @@ export const getWeatherAlert = async (alertId: string, signal?: AbortSignal) => 
   return response.data;
 };
 
-export const getAlertsNearLocation = async (
-  lat: number,
-  lng: number,
-  radiusMiles: number = 25,
-  signal?: AbortSignal
-) => {
-  const response = await alertsNearLocationApi.get<ActiveWeatherAlertsResult>(
-    { lat, lng, radiusMiles },
-    signal
-  );
+export const getAlertsNearLocation = async (lat: number, lng: number, radiusMiles: number = 25, signal?: AbortSignal) => {
+  const response = await alertsNearLocationApi.get<ActiveWeatherAlertsResult>({ lat, lng, radiusMiles }, signal);
   return response.data;
 };
 
 export const getAlertHistory = async (startDate: string, endDate: string, signal?: AbortSignal) => {
-  const response = await alertHistoryApi.get<ActiveWeatherAlertsResult>(
-    { startDate, endDate },
-    signal
-  );
+  const response = await alertHistoryApi.get<ActiveWeatherAlertsResult>({ startDate, endDate }, signal);
   return response.data;
 };
 

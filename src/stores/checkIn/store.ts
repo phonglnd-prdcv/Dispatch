@@ -1,14 +1,6 @@
 import { create } from 'zustand';
 
-import {
-  getCheckInHistory,
-  getTimerStatuses,
-  getTimerStatusesForCalls,
-  getTimersForCall,
-  performCheckIn,
-  type PerformCheckInInput,
-  toggleCallTimers,
-} from '@/api/checkIn/checkInTimers';
+import { getCheckInHistory, getTimersForCall, getTimerStatuses, getTimerStatusesForCalls, performCheckIn, type PerformCheckInInput, toggleCallTimers } from '@/api/checkIn/checkInTimers';
 import { type CheckInRecordResultData } from '@/models/v4/checkIn/checkInRecordResultData';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
 import { type ResolvedCheckInTimerResultData } from '@/models/v4/checkIn/resolvedCheckInTimerResultData';

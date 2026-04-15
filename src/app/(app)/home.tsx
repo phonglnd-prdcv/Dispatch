@@ -11,11 +11,11 @@ import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { AudioStreamBottomSheet } from '@/components/audio-stream/audio-stream-bottom-sheet';
 import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
 import { ActiveCallFilterBanner, ActiveCallsPanel, ActivityLogPanel, AddNoteBottomSheet, MapWidget, NotesPanel, PersonnelPanel, PTTInterface, StatsHeader, UnitsPanel } from '@/components/dispatch-console';
-import { WeatherAlertBanner } from '@/components/weatherAlerts/weather-alert-banner';
 import { Box } from '@/components/ui/box';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
 import { VStack } from '@/components/ui/vstack';
+import { WeatherAlertBanner } from '@/components/weatherAlerts/weather-alert-banner';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { isCallActive, isCallPending, isCallScheduled } from '@/lib/utils';
@@ -688,12 +688,7 @@ export default function DispatchConsole() {
       />
 
       {/* Weather Alert Banner */}
-      {weatherSettings?.WeatherAlertsEnabled !== false && weatherAlerts.length > 0 && (
-        <WeatherAlertBanner
-          alerts={weatherAlerts}
-          onPress={() => router.push('/(app)/weather-alerts' as Href)}
-        />
-      )}
+      {weatherSettings?.WeatherAlertsEnabled !== false && weatherAlerts.length > 0 && <WeatherAlertBanner alerts={weatherAlerts} onPress={() => router.push('/(app)/weather-alerts' as Href)} />}
 
       {/* Active Call Filter Banner */}
       {isCallFilterActive && selectedCall && <ActiveCallFilterBanner call={selectedCall} priority={selectedCallPriority} onClearFilter={handleClearCallFilter} />}
@@ -708,13 +703,7 @@ export default function DispatchConsole() {
       <AddNoteBottomSheet isOpen={isAddNoteSheetOpen} onClose={() => setIsAddNoteSheetOpen(false)} onNoteAdded={handleNoteAdded} />
 
       {/* Close Call Bottom Sheet */}
-      {selectedCallId && (
-        <CloseCallBottomSheet
-          isOpen={isCloseCallSheetOpen}
-          onClose={() => setIsCloseCallSheetOpen(false)}
-          callId={selectedCallId}
-        />
-      )}
+      {selectedCallId && <CloseCallBottomSheet isOpen={isCloseCallSheetOpen} onClose={() => setIsCloseCallSheetOpen(false)} callId={selectedCallId} />}
     </View>
   );
 }

@@ -103,15 +103,11 @@ export default function Units() {
       const groupName = (u.GroupName || '').toLowerCase();
       const status = (u.CurrentStatus || '').toLowerCase();
       const note = (u.Note || '').toLowerCase();
-      const roles = (u.Roles || []).map((r) => `${r.RoleName} ${r.Name}`).join(' ').toLowerCase();
-      return (
-        name.includes(query) ||
-        type.includes(query) ||
-        groupName.includes(query) ||
-        status.includes(query) ||
-        note.includes(query) ||
-        roles.includes(query)
-      );
+      const roles = (u.Roles || [])
+        .map((r) => `${r.RoleName} ${r.Name}`)
+        .join(' ')
+        .toLowerCase();
+      return name.includes(query) || type.includes(query) || groupName.includes(query) || status.includes(query) || note.includes(query) || roles.includes(query);
     });
   }, [units, searchQuery]);
 
@@ -123,12 +119,7 @@ export default function Units() {
     [trackEvent]
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: UnitInfoResultData }) => (
-      <UnitCard unit={item} onPress={() => handleUnitPress(item)} />
-    ),
-    [handleUnitPress]
-  );
+  const renderItem = useCallback(({ item }: { item: UnitInfoResultData }) => <UnitCard unit={item} onPress={() => handleUnitPress(item)} />, [handleUnitPress]);
 
   const keyExtractor = useCallback((item: UnitInfoResultData) => item.UnitId, []);
 
@@ -152,9 +143,7 @@ export default function Units() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchUnits} />}
-        ListEmptyComponent={
-          <ZeroState heading={emptyHeading} description={emptyDescription} icon={Truck} />
-        }
+        ListEmptyComponent={<ZeroState heading={emptyHeading} description={emptyDescription} icon={Truck} />}
         contentContainerStyle={styles.listContent}
       />
     );
@@ -169,11 +158,7 @@ export default function Units() {
           <InputSlot className="pl-3">
             <InputIcon as={Search} />
           </InputSlot>
-          <InputField
-            placeholder={t('units.search')}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <InputField placeholder={t('units.search')} value={searchQuery} onChangeText={setSearchQuery} />
           {searchQuery ? (
             <InputSlot className="pr-3" onPress={() => setSearchQuery('')}>
               <InputIcon as={X} />
@@ -184,11 +169,7 @@ export default function Units() {
         {/* Results count */}
         {units.length > 0 && !isLoading ? (
           <HStack className="mb-2 items-center justify-between px-1">
-            <Text className="text-xs text-gray-500 dark:text-gray-400">
-              {searchQuery.trim()
-                ? `${filteredUnits.length} of ${units.length}`
-                : `${units.length} units`}
-            </Text>
+            <Text className="text-xs text-gray-500 dark:text-gray-400">{searchQuery.trim() ? `${filteredUnits.length} of ${units.length}` : `${units.length} units`}</Text>
           </HStack>
         ) : null}
 

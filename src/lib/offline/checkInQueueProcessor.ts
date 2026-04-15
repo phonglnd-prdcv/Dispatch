@@ -87,11 +87,13 @@ export function startQueueListener(): void {
     cleanup = unsubscribe;
 
     // Drain existing backlog if already connected
-    NetInfo.fetch().then((state: { isConnected: boolean }) => {
-      if (state.isConnected) {
-        processCheckInQueue().catch(() => {});
-      }
-    }).catch(() => {});
+    NetInfo.fetch()
+      .then((state: { isConnected: boolean }) => {
+        if (state.isConnected) {
+          processCheckInQueue().catch(() => {});
+        }
+      })
+      .catch(() => {});
   }
 }
 

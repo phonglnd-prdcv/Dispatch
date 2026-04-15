@@ -1,5 +1,5 @@
 import { BaseV4Request } from '../baseV4Request';
-import { CheckInRecordResultData } from './checkInRecordResultData';
+import { type CheckInRecordResultData } from './checkInRecordResultData';
 
 export class CheckInRecordResult extends BaseV4Request {
   public Data: CheckInRecordResultData[] = [];

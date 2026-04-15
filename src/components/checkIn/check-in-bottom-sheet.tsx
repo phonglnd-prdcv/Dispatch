@@ -32,13 +32,7 @@ interface CheckInBottomSheetProps {
   timers: CheckInTimerStatusResultData[];
 }
 
-export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({
-  isOpen,
-  onClose,
-  callId,
-  selectedTimer,
-  timers,
-}) => {
+export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, onClose, callId, selectedTimer, timers }) => {
   const { t } = useTranslation();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -85,8 +79,7 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({
     const effectiveCallId = selected.CallId || callId;
 
     // Resolve UnitId: prefer the explicit field, fall back to parsing TargetEntityId
-    const resolvedUnitId = selected.UnitId
-      || parseInt(selected.TargetEntityId) || 0;
+    const resolvedUnitId = selected.UnitId || parseInt(selected.TargetEntityId) || 0;
 
     console.log('[CheckIn] Performing check-in:', {
       effectiveCallId,
@@ -140,17 +133,9 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({
           <VStack className="gap-2">
             <Text className="text-sm text-gray-500">{t('check_in.select_target')}</Text>
             {timers.map((timer) => (
-              <Button
-                key={`${timer.TargetType}-${timer.TargetEntityId}`}
-                variant="outline"
-                onPress={() => handleSelectTarget(timer)}
-                className="w-full justify-start"
-                size={isLandscape ? 'md' : 'sm'}
-              >
+              <Button key={`${timer.TargetType}-${timer.TargetEntityId}`} variant="outline" onPress={() => handleSelectTarget(timer)} className="w-full justify-start" size={isLandscape ? 'md' : 'sm'}>
                 <VStack className="items-start">
-                  <ButtonText className={`font-bold ${isLandscape ? '' : 'text-xs'}`}>
-                    {timer.TargetName || timer.TargetEntityId || typeLabel(timer)}
-                  </ButtonText>
+                  <ButtonText className={`font-bold ${isLandscape ? '' : 'text-xs'}`}>{timer.TargetName || timer.TargetEntityId || typeLabel(timer)}</ButtonText>
                   <Text className="text-xs text-gray-500">{typeLabel(timer)}</Text>
                 </VStack>
               </Button>
@@ -170,31 +155,15 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({
                 <FormControlLabelText>{t('check_in.add_note')}</FormControlLabelText>
               </FormControlLabel>
               <Textarea>
-                <TextareaInput
-                  placeholder={t('check_in.add_note')}
-                  value={note}
-                  onChangeText={setNote}
-                  numberOfLines={3}
-                />
+                <TextareaInput placeholder={t('check_in.add_note')} value={note} onChangeText={setNote} numberOfLines={3} />
               </Textarea>
             </FormControl>
 
             <HStack className="gap-3 pt-4">
-              <Button
-                variant="outline"
-                className="mr-4 flex-1"
-                onPress={handleClose}
-                disabled={isCheckingIn}
-                size={isLandscape ? 'md' : 'sm'}
-              >
+              <Button variant="outline" className="mr-4 flex-1" onPress={handleClose} disabled={isCheckingIn} size={isLandscape ? 'md' : 'sm'}>
                 <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.cancel')}</ButtonText>
               </Button>
-              <Button
-                className="ml-4 flex-1"
-                onPress={handleConfirm}
-                disabled={isCheckingIn}
-                size={isLandscape ? 'md' : 'sm'}
-              >
+              <Button className="ml-4 flex-1" onPress={handleConfirm} disabled={isCheckingIn} size={isLandscape ? 'md' : 'sm'}>
                 <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('check_in.confirm')}</ButtonText>
               </Button>
             </HStack>

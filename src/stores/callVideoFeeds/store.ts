@@ -1,13 +1,6 @@
 import { create } from 'zustand';
 
-import {
-  deleteCallVideoFeed,
-  editCallVideoFeed,
-  getCallVideoFeeds,
-  saveCallVideoFeed,
-  type EditCallVideoFeedInput,
-  type SaveCallVideoFeedInput,
-} from '@/api/callVideoFeeds/callVideoFeeds';
+import { deleteCallVideoFeed, editCallVideoFeed, type EditCallVideoFeedInput, getCallVideoFeeds, saveCallVideoFeed, type SaveCallVideoFeedInput } from '@/api/callVideoFeeds/callVideoFeeds';
 import { logger } from '@/lib/logging';
 import { type CallVideoFeedResultData } from '@/models/v4/callVideoFeeds/callVideoFeedResultData';
 

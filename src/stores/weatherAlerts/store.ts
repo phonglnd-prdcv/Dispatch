@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 
-import {
-  getActiveAlerts,
-  getAlertsNearLocation,
-  getWeatherAlert,
-  getWeatherAlertSettings,
-} from '@/api/weatherAlerts/weatherAlerts';
+import { getActiveAlerts, getAlertsNearLocation, getWeatherAlert, getWeatherAlertSettings } from '@/api/weatherAlerts/weatherAlerts';
 import { logger } from '@/lib/logging';
 import { WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { type WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAlertResultData';

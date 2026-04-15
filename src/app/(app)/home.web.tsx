@@ -760,14 +760,7 @@ export default function DispatchConsoleWeb() {
       <AddNoteBottomSheet isOpen={isAddNoteSheetOpen} onClose={() => setIsAddNoteSheetOpen(false)} onNoteAdded={handleNoteAdded} />
 
       {/* Close Call Bottom Sheet */}
-      {selectedCallId && (
-        <CloseCallBottomSheet
-          key={selectedCallId}
-          isOpen={isCloseCallSheetOpen}
-          onClose={() => setIsCloseCallSheetOpen(false)}
-          callId={selectedCallId}
-        />
-      )}
+      {selectedCallId && <CloseCallBottomSheet key={selectedCallId} isOpen={isCloseCallSheetOpen} onClose={() => setIsCloseCallSheetOpen(false)} callId={selectedCallId} />}
     </View>
   );
 }

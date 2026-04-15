@@ -8,13 +8,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import {
-  SEVERITY_COLORS,
-  WeatherAlertCategory,
-  WeatherAlertCertainty,
-  WeatherAlertSeverity,
-  WeatherAlertUrgency,
-} from '@/models/v4/weatherAlerts/weatherAlertEnums';
+import { SEVERITY_COLORS, WeatherAlertCategory, WeatherAlertCertainty, WeatherAlertSeverity, WeatherAlertUrgency } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { type WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAlertResultData';
 
 const getCategoryIcon = (category: number) => {
@@ -89,11 +83,7 @@ export const WeatherAlertCard: React.FC<WeatherAlertCardProps> = ({ alert, onPre
   const severityColor = SEVERITY_COLORS[alert.Severity] ?? SEVERITY_COLORS[WeatherAlertSeverity.Unknown];
   const CategoryIcon = getCategoryIcon(alert.AlertCategory);
 
-  const cardStyle = StyleSheet.flatten([
-    styles.card,
-    { borderLeftColor: severityColor },
-    isDark ? styles.cardDark : styles.cardLight,
-  ]);
+  const cardStyle = StyleSheet.flatten([styles.card, { borderLeftColor: severityColor }, isDark ? styles.cardDark : styles.cardLight]);
 
   return (
     <Pressable onPress={() => onPress(alert.WeatherAlertId)} style={cardStyle}>
@@ -101,9 +91,7 @@ export const WeatherAlertCard: React.FC<WeatherAlertCardProps> = ({ alert, onPre
         <HStack className="items-center justify-between">
           <HStack className="items-center" space="xs">
             <View style={StyleSheet.flatten([styles.severityDot, { backgroundColor: severityColor }])} />
-            <Text style={{ color: severityColor, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-              {getSeverityLabel(alert.Severity, t)}
-            </Text>
+            <Text style={{ color: severityColor, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>{getSeverityLabel(alert.Severity, t)}</Text>
           </HStack>
           <Icon as={CategoryIcon} size="sm" color={isDark ? '#9ca3af' : '#6b7280'} />
         </HStack>

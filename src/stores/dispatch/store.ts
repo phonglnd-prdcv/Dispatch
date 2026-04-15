@@ -65,11 +65,7 @@ export const useDispatchStore = create<DispatchState>((set, get) => ({
   fetchDispatchData: async () => {
     set({ isLoading: true, error: null });
     try {
-      const [personnelResult, groupsResult, unitsResult] = await Promise.all([
-        getAllPersonnelInfos(''),
-        getAllGroups(),
-        getUnits(),
-      ]);
+      const [personnelResult, groupsResult, unitsResult] = await Promise.all([getAllPersonnelInfos(''), getAllGroups(), getUnits()]);
 
       const users: DispatchItem[] = (personnelResult?.Data ?? []).map((p) => ({
         Id: p.UserId,

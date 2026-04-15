@@ -27,20 +27,8 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [selectedTimer, setSelectedTimer] = useState<CheckInTimerStatusResultData | null>(null);
 
-  const {
-    timerStatuses,
-    checkInHistory,
-    isLoadingStatuses,
-    isLoadingHistory,
-    statusError,
-    fetchTimerStatuses,
-    fetchCheckInHistory,
-    fetchResolvedTimers,
-    toggleTimers,
-    startPolling,
-    stopPolling,
-    reset,
-  } = useCheckInStore();
+  const { timerStatuses, checkInHistory, isLoadingStatuses, isLoadingHistory, statusError, fetchTimerStatuses, fetchCheckInHistory, fetchResolvedTimers, toggleTimers, startPolling, stopPolling, reset } =
+    useCheckInStore();
 
   const lastCheckInUpdateTimestamp = useSignalRStore((s) => s.lastCheckInUpdateTimestamp);
 
@@ -81,9 +69,7 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
   const warningCount = timerStatuses.filter((s) => s.Status === 'Warning' || s.Status === 'Yellow').length;
   const okCount = timerStatuses.filter((s) => s.Status === 'Ok' || s.Status === 'Green').length;
 
-  const renderTimer = ({ item }: { item: CheckInTimerStatusResultData }) => (
-    <CheckInTimerCard timer={item} onCheckIn={handleCheckIn} />
-  );
+  const renderTimer = ({ item }: { item: CheckInTimerStatusResultData }) => <CheckInTimerCard timer={item} onCheckIn={handleCheckIn} />;
 
   return (
     <VStack className="flex-1 p-4">
@@ -111,16 +97,12 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
           )}
           {overdueCount > 0 && (
             <Box className="rounded-full bg-red-100 px-2 py-0.5">
-              <Text className="text-xs font-medium text-red-600">
-                {t('check_in.overdue_count', { count: overdueCount })}
-              </Text>
+              <Text className="text-xs font-medium text-red-600">{t('check_in.overdue_count', { count: overdueCount })}</Text>
             </Box>
           )}
           {warningCount > 0 && (
             <Box className="ml-1 rounded-full bg-amber-100 px-2 py-0.5">
-              <Text className="text-xs font-medium text-amber-600">
-                {t('check_in.warning_count', { count: warningCount })}
-              </Text>
+              <Text className="text-xs font-medium text-amber-600">{t('check_in.warning_count', { count: warningCount })}</Text>
             </Box>
           )}
           {okCount > 0 && (
@@ -140,25 +122,12 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
       )}
 
       {/* Timer list */}
-      {checkInTimersEnabled && timerStatuses.length > 0 && (
-        <FlatList
-          data={timerStatuses}
-          renderItem={renderTimer}
-          keyExtractor={(item) => `${item.TargetType}-${item.TargetEntityId}`}
-          scrollEnabled={false}
-        />
-      )}
+      {checkInTimersEnabled && timerStatuses.length > 0 && <FlatList data={timerStatuses} renderItem={renderTimer} keyExtractor={(item) => `${item.TargetType}-${item.TargetEntityId}`} scrollEnabled={false} />}
 
       {/* Toggle timers button */}
       <Box className="mt-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onPress={() => toggleTimers(callId, !checkInTimersEnabled)}
-        >
-          <ButtonText className="text-xs">
-            {checkInTimersEnabled ? t('check_in.disable_timers') : t('check_in.enable_timers')}
-          </ButtonText>
+        <Button variant="outline" size="sm" onPress={() => toggleTimers(callId, !checkInTimersEnabled)}>
+          <ButtonText className="text-xs">{checkInTimersEnabled ? t('check_in.disable_timers') : t('check_in.enable_timers')}</ButtonText>
         </Button>
       </Box>
 
@@ -166,13 +135,7 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
       <CheckInHistoryList history={checkInHistory} isLoading={isLoadingHistory} />
 
       {/* Check-in bottom sheet */}
-      <CheckInBottomSheet
-        isOpen={isBottomSheetOpen}
-        onClose={handleCloseBottomSheet}
-        callId={callId}
-        selectedTimer={selectedTimer}
-        timers={timerStatuses}
-      />
+      <CheckInBottomSheet isOpen={isBottomSheetOpen} onClose={handleCloseBottomSheet} callId={callId} selectedTimer={selectedTimer} timers={timerStatuses} />
     </VStack>
   );
 };

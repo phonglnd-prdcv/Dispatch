@@ -9,13 +9,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
-import {
-  SEVERITY_COLORS,
-  WeatherAlertCategory,
-  WeatherAlertCertainty,
-  WeatherAlertSeverity,
-  WeatherAlertUrgency,
-} from '@/models/v4/weatherAlerts/weatherAlertEnums';
+import { SEVERITY_COLORS, WeatherAlertCategory, WeatherAlertCertainty, WeatherAlertSeverity, WeatherAlertUrgency } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
 
 const getCategoryIcon = (category: number) => {
@@ -110,7 +104,9 @@ export default function WeatherAlertDetailScreen() {
         <View style={StyleSheet.flatten([styles.container, isDark ? styles.containerDark : styles.containerLight, styles.centered])}>
           <Text style={{ color: isDark ? '#fff' : '#000', marginBottom: 16 }}>{t('common.no_results_found')}</Text>
           <Pressable
-            onPress={() => { if (id) fetchAlertDetail(id); }}
+            onPress={() => {
+              if (id) fetchAlertDetail(id);
+            }}
             style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#3b82f6', borderRadius: 8 }}
           >
             <Text style={{ color: '#fff' }}>{t('common.retry')}</Text>
@@ -141,9 +137,7 @@ export default function WeatherAlertDetailScreen() {
               <Icon as={CategoryIcon} size="md" color="#FFFFFF" />
               <VStack>
                 <Text className="text-lg font-bold text-white">{alert.Event}</Text>
-                <Text className="text-xs font-semibold uppercase tracking-wider text-white/85">
-                  {getSeverityLabel(alert.Severity, t)}
-                </Text>
+                <Text className="text-xs font-semibold uppercase tracking-wider text-white/85">{getSeverityLabel(alert.Severity, t)}</Text>
               </VStack>
             </HStack>
           </View>
@@ -151,12 +145,8 @@ export default function WeatherAlertDetailScreen() {
           {/* Headline */}
           {alert.Headline ? (
             <View style={StyleSheet.flatten([styles.section, isDark ? styles.sectionDark : styles.sectionLight])}>
-              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
-                {t('weatherAlerts.detail.headline')}
-              </Text>
-              <Text className="text-sm text-gray-700 dark:text-gray-300">
-                {alert.Headline}
-              </Text>
+              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">{t('weatherAlerts.detail.headline')}</Text>
+              <Text className="text-sm text-gray-700 dark:text-gray-300">{alert.Headline}</Text>
             </View>
           ) : null}
 
@@ -173,36 +163,24 @@ export default function WeatherAlertDetailScreen() {
           {/* Area */}
           {alert.AreaDescription ? (
             <View style={StyleSheet.flatten([styles.section, isDark ? styles.sectionDark : styles.sectionLight])}>
-              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
-                {t('weatherAlerts.detail.area')}
-              </Text>
-              <Text className="text-sm text-gray-700 dark:text-gray-300">
-                {alert.AreaDescription}
-              </Text>
+              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">{t('weatherAlerts.detail.area')}</Text>
+              <Text className="text-sm text-gray-700 dark:text-gray-300">{alert.AreaDescription}</Text>
             </View>
           ) : null}
 
           {/* Description */}
           {alert.Description ? (
             <View style={StyleSheet.flatten([styles.section, isDark ? styles.sectionDark : styles.sectionLight])}>
-              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
-                {t('weatherAlerts.detail.description')}
-              </Text>
-              <Text className="text-sm text-gray-700 dark:text-gray-300">
-                {alert.Description}
-              </Text>
+              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">{t('weatherAlerts.detail.description')}</Text>
+              <Text className="text-sm text-gray-700 dark:text-gray-300">{alert.Description}</Text>
             </View>
           ) : null}
 
           {/* Instructions */}
           {alert.Instruction ? (
             <View style={StyleSheet.flatten([styles.instructionSection, isDark ? styles.instructionDark : styles.instructionLight])}>
-              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
-                {t('weatherAlerts.detail.instruction')}
-              </Text>
-              <Text className="text-sm text-gray-700 dark:text-gray-300">
-                {alert.Instruction}
-              </Text>
+              <Text className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">{t('weatherAlerts.detail.instruction')}</Text>
+              <Text className="text-sm text-gray-700 dark:text-gray-300">{alert.Instruction}</Text>
             </View>
           ) : null}
 

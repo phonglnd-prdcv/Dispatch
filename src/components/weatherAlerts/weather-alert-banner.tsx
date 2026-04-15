@@ -6,11 +6,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import {
-  SEVERITY_COLORS,
-  WeatherAlertCategory,
-  WeatherAlertSeverity,
-} from '@/models/v4/weatherAlerts/weatherAlertEnums';
+import { SEVERITY_COLORS, WeatherAlertCategory, WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { type WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAlertResultData';
 
 const getCategoryIcon = (category: number) => {
@@ -56,11 +52,7 @@ export const WeatherAlertBanner: React.FC<WeatherAlertBannerProps> = ({ alerts, 
             <Text className="text-sm font-bold text-white" numberOfLines={1}>
               {topAlert.Event}
             </Text>
-            {remaining > 0 && (
-              <Text className="text-xs font-semibold text-white/85">
-                {t('weatherAlerts.moreAlerts', { count: remaining })}
-              </Text>
-            )}
+            {remaining > 0 && <Text className="text-xs font-semibold text-white/85">{t('weatherAlerts.moreAlerts', { count: remaining })}</Text>}
           </HStack>
           <Text className="mt-0.5 text-xs text-white/90" numberOfLines={1}>
             {topAlert.AreaDescription}

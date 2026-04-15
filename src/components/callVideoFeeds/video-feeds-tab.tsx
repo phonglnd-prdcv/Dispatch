@@ -79,15 +79,7 @@ export const VideoFeedsTab: React.FC<VideoFeedsTabProps> = ({ callId, canEdit })
   }, []);
 
   const renderFeed = useCallback(
-    ({ item }: { item: CallVideoFeedResultData }) => (
-      <VideoFeedCard
-        feed={item}
-        onWatch={handleWatch}
-        onEdit={canEdit ? handleEdit : undefined}
-        onDelete={canEdit ? handleDelete : undefined}
-        canEdit={canEdit}
-      />
-    ),
+    ({ item }: { item: CallVideoFeedResultData }) => <VideoFeedCard feed={item} onWatch={handleWatch} onEdit={canEdit ? handleEdit : undefined} onDelete={canEdit ? handleDelete : undefined} canEdit={canEdit} />,
     [canEdit, handleWatch, handleEdit, handleDelete]
   );
 
@@ -121,12 +113,7 @@ export const VideoFeedsTab: React.FC<VideoFeedsTabProps> = ({ callId, canEdit })
         </Box>
       ) : (
         <>
-          <FlatList
-            data={feeds}
-            renderItem={renderFeed}
-            keyExtractor={(item) => item.CallVideoFeedId}
-            scrollEnabled={false}
-          />
+          <FlatList data={feeds} renderItem={renderFeed} keyExtractor={(item) => item.CallVideoFeedId} scrollEnabled={false} />
           {canEdit && (
             <Button onPress={handleAddNew} variant="outline" className="mt-2">
               <ButtonIcon as={PlusIcon} className="mr-1" />

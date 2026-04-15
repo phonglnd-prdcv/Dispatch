@@ -1,16 +1,6 @@
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  Building2,
-  Circle,
-  Clock,
-  Mail,
-  MapPin,
-  Phone,
-  Shield,
-  User,
-  Users,
-} from 'lucide-react-native';
+import { Building2, Circle, Clock, Mail, MapPin, Phone, Shield, User, Users } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -91,9 +81,7 @@ export default function PersonnelDetail() {
     }
   };
 
-  const screenTitle = person
-    ? `${person.FirstName} ${person.LastName}`
-    : t('personnel.details');
+  const screenTitle = person ? `${person.FirstName} ${person.LastName}` : t('personnel.details');
 
   if (isLoading) {
     return (
@@ -183,9 +171,7 @@ export default function PersonnelDetail() {
               {person.GroupName ? (
                 <HStack className="mt-1 items-center" space="xs">
                   <Icon as={Users} size="xs" className="text-gray-400" />
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {person.GroupName}
-                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">{person.GroupName}</Text>
                 </HStack>
               ) : null}
               {person.IdentificationNumber ? (
@@ -219,14 +205,8 @@ export default function PersonnelDetail() {
 
               {/* Status row */}
               <HStack className="items-center justify-between border-b border-gray-100 py-3 dark:border-gray-700">
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('personnel.status')}
-                </Text>
-                <HStack
-                  className="items-center rounded-full px-3 py-1"
-                  space="sm"
-                  style={{ backgroundColor: `${statusColor}18` }}
-                >
+                <Text className="text-sm text-gray-500 dark:text-gray-400">{t('personnel.status')}</Text>
+                <HStack className="items-center rounded-full px-3 py-1" space="sm" style={{ backgroundColor: `${statusColor}18` }}>
                   <Circle size={10} fill={statusColor} color={statusColor} />
                   <Text style={{ color: statusColor }} className="text-sm font-semibold">
                     {person.Status || t('personnel.unknown_status')}
@@ -236,14 +216,8 @@ export default function PersonnelDetail() {
 
               {/* Staffing row */}
               <HStack className="items-center justify-between border-b border-gray-100 py-3 dark:border-gray-700">
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('personnel.staffing')}
-                </Text>
-                <HStack
-                  className="items-center rounded-full px-3 py-1"
-                  space="sm"
-                  style={{ backgroundColor: `${staffingColor}18` }}
-                >
+                <Text className="text-sm text-gray-500 dark:text-gray-400">{t('personnel.staffing')}</Text>
+                <HStack className="items-center rounded-full px-3 py-1" space="sm" style={{ backgroundColor: `${staffingColor}18` }}>
                   <Circle size={10} fill={staffingColor} color={staffingColor} />
                   <Text style={{ color: staffingColor }} className="text-sm font-semibold">
                     {person.Staffing || t('personnel.unknown_status')}
@@ -254,18 +228,10 @@ export default function PersonnelDetail() {
               {/* Responding to */}
               {person.StatusDestinationName ? (
                 <HStack className="items-center justify-between border-b border-gray-100 py-3 dark:border-gray-700">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('personnel.responding_to')}
-                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">{t('personnel.responding_to')}</Text>
                   <HStack className="items-center" space="xs">
-                    <Icon
-                      as={person.StatusDestinationId?.startsWith('call-') ? MapPin : Building2}
-                      size="xs"
-                      className="text-amber-500"
-                    />
-                    <Text className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                      {person.StatusDestinationName}
-                    </Text>
+                    <Icon as={person.StatusDestinationId?.startsWith('call-') ? MapPin : Building2} size="xs" className="text-amber-500" />
+                    <Text className="text-sm font-medium text-amber-600 dark:text-amber-400">{person.StatusDestinationName}</Text>
                   </HStack>
                 </HStack>
               ) : null}
@@ -273,14 +239,10 @@ export default function PersonnelDetail() {
               {/* Status timestamp */}
               {person.StatusTimestamp ? (
                 <HStack className="items-center justify-between border-b border-gray-100 py-3 dark:border-gray-700">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('personnel.status_updated')}
-                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">{t('personnel.status_updated')}</Text>
                   <HStack className="items-center" space="xs">
                     <Icon as={Clock} size="xs" className="text-gray-400" />
-                    <Text className="text-sm text-gray-600 dark:text-gray-300">
-                      {formatTimestamp(person.StatusTimestamp)}
-                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-300">{formatTimestamp(person.StatusTimestamp)}</Text>
                   </HStack>
                 </HStack>
               ) : null}
@@ -288,14 +250,10 @@ export default function PersonnelDetail() {
               {/* Staffing timestamp */}
               {person.StaffingTimestamp ? (
                 <HStack className="items-center justify-between py-3">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('personnel.staffing_updated')}
-                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">{t('personnel.staffing_updated')}</Text>
                   <HStack className="items-center" space="xs">
                     <Icon as={Clock} size="xs" className="text-gray-400" />
-                    <Text className="text-sm text-gray-600 dark:text-gray-300">
-                      {formatTimestamp(person.StaffingTimestamp)}
-                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-300">{formatTimestamp(person.StaffingTimestamp)}</Text>
                   </HStack>
                 </HStack>
               ) : null}
@@ -309,15 +267,10 @@ export default function PersonnelDetail() {
                 </Heading>
                 <HStack className="flex-wrap" space="sm">
                   {person.Roles.map((role) => (
-                    <Box
-                      key={role}
-                      className="mb-2 rounded-full bg-indigo-50 px-3 py-1 dark:bg-indigo-900/30"
-                    >
+                    <Box key={role} className="mb-2 rounded-full bg-indigo-50 px-3 py-1 dark:bg-indigo-900/30">
                       <HStack className="items-center" space="xs">
                         <Icon as={Shield} size="xs" className="text-indigo-500" />
-                        <Text className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                          {role}
-                        </Text>
+                        <Text className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{role}</Text>
                       </HStack>
                     </Box>
                   ))}
@@ -335,15 +288,11 @@ export default function PersonnelDetail() {
                 <HStack className="items-center justify-between border-b border-gray-100 py-2 dark:border-gray-700">
                   <HStack className="items-center" space="sm">
                     <Icon as={Mail} size="sm" className="text-gray-400" />
-                    <Text className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('personnel.email')}
-                    </Text>
+                    <Text className="text-sm text-gray-500 dark:text-gray-400">{t('personnel.email')}</Text>
                   </HStack>
                   {person.EmailAddress ? (
                     <Pressable onPress={handleEmail}>
-                      <Text className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                        {person.EmailAddress}
-                      </Text>
+                      <Text className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{person.EmailAddress}</Text>
                     </Pressable>
                   ) : (
                     <Text className="text-sm text-gray-400">{t('personnel.no_email')}</Text>
@@ -353,15 +302,11 @@ export default function PersonnelDetail() {
                 <HStack className="items-center justify-between py-2">
                   <HStack className="items-center" space="sm">
                     <Icon as={Phone} size="sm" className="text-gray-400" />
-                    <Text className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('personnel.phone')}
-                    </Text>
+                    <Text className="text-sm text-gray-500 dark:text-gray-400">{t('personnel.phone')}</Text>
                   </HStack>
                   {person.MobilePhone ? (
                     <Pressable onPress={handleCall}>
-                      <Text className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                        {person.MobilePhone}
-                      </Text>
+                      <Text className="text-sm font-medium text-indigo-600 dark:text-indigo-400">{person.MobilePhone}</Text>
                     </Pressable>
                   ) : (
                     <Text className="text-sm text-gray-400">{t('personnel.no_phone')}</Text>
@@ -378,16 +323,9 @@ export default function PersonnelDetail() {
                 </Heading>
                 <VStack space="sm">
                   {person.UdfValues.map((udf, index) => (
-                    <HStack
-                      key={`${udf.UdfFieldValueId}-${index}`}
-                      className={`items-center justify-between py-2 ${index < person.UdfValues.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
-                    >
-                      <Text className="text-sm text-gray-500 dark:text-gray-400">
-                        {udf.UdfFieldId}
-                      </Text>
-                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {udf.Value || '—'}
-                      </Text>
+                    <HStack key={`${udf.UdfFieldValueId}-${index}`} className={`items-center justify-between py-2 ${index < person.UdfValues.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}>
+                      <Text className="text-sm text-gray-500 dark:text-gray-400">{udf.UdfFieldId}</Text>
+                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{udf.Value || '—'}</Text>
                     </HStack>
                   ))}
                 </VStack>

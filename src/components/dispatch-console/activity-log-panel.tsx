@@ -17,10 +17,10 @@ import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { SEVERITY_COLORS, WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { useCallsStore } from '@/stores/calls/store';
 import { useCheckInStore } from '@/stores/checkIn/store';
-import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
 import { type RadioLogEntry } from '@/stores/dispatch/dispatch-console-store';
 import { usePersonnelActionsStore } from '@/stores/dispatch/personnel-actions-store';
 import { useUnitActionsStore } from '@/stores/dispatch/unit-actions-store';
+import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
 
 import { CheckInBottomSheet } from '../checkIn/check-in-bottom-sheet';
 import { CheckInTimerCard } from '../checkIn/check-in-timer-card';
@@ -383,17 +383,11 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
 
   // Check-in timers — fetch timer statuses across all active calls
   const calls = useCallsStore((s) => s.calls);
-  const {
-    timerStatuses: allTimerStatuses,
-    fetchTimerStatusesForCalls,
-    startPollingForCalls: startCheckInPolling,
-    stopPolling: stopCheckInPolling,
-    isLoadingStatuses: isCheckInsLoading,
-  } = useCheckInStore();
+  const { timerStatuses: allTimerStatuses, fetchTimerStatusesForCalls, startPollingForCalls: startCheckInPolling, stopPolling: stopCheckInPolling, isLoadingStatuses: isCheckInsLoading } = useCheckInStore();
 
   const [isCheckInSheetOpen, setIsCheckInSheetOpen] = useState(false);
   const [checkInSheetCallId, setCheckInSheetCallId] = useState<number>(0);
-  const [checkInSheetTimer, setCheckInSheetTimer] = useState<typeof allTimerStatuses[0] | null>(null);
+  const [checkInSheetTimer, setCheckInSheetTimer] = useState<(typeof allTimerStatuses)[0] | null>(null);
 
   // Get all active call IDs to fetch timer statuses for
   const activeCallIds = calls.map((c) => parseInt(c.CallId)).filter((id) => !isNaN(id) && id > 0);
@@ -416,7 +410,7 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   const { alerts: weatherAlerts, settings: weatherSettings } = useWeatherAlertsStore();
   const weatherAlertCount = weatherAlerts.length;
 
-  const handleCheckInFromDashboard = useCallback((timer: typeof allTimerStatuses[0]) => {
+  const handleCheckInFromDashboard = useCallback((timer: (typeof allTimerStatuses)[0]) => {
     setCheckInSheetCallId(timer.CallId);
     setCheckInSheetTimer(timer);
     setIsCheckInSheetOpen(true);
@@ -567,7 +561,9 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
           <HStack className="mb-2 gap-2">
             {criticalCheckInCount > 0 && (
               <Box className="rounded-full bg-red-200 px-2 py-0.5">
-                <Text className="text-xs font-bold text-red-700">{criticalCheckInCount} {t('check_in.status_critical')}</Text>
+                <Text className="text-xs font-bold text-red-700">
+                  {criticalCheckInCount} {t('check_in.status_critical')}
+                </Text>
               </Box>
             )}
             {overdueCheckInCount > 0 && (
@@ -579,11 +575,7 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
         )}
 
         {allTimerStatuses.map((timer) => (
-          <CheckInTimerCard
-            key={`${timer.TargetType}-${timer.TargetEntityId}`}
-            timer={timer}
-            onCheckIn={handleCheckInFromDashboard}
-          />
+          <CheckInTimerCard key={`${timer.TargetType}-${timer.TargetEntityId}`} timer={timer} onCheckIn={handleCheckInFromDashboard} />
         ))}
       </>
     );
@@ -603,14 +595,16 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
       const severityColor = SEVERITY_COLORS[alert.Severity] ?? SEVERITY_COLORS[WeatherAlertSeverity.Unknown];
       const itemStyle = StyleSheet.flatten([styles.weatherAlertItem, { borderLeftColor: severityColor }]);
       return (
-        <Pressable
-          key={alert.WeatherAlertId}
-          style={itemStyle}
-          onPress={() => router.push(`/(app)/weather-alerts/${alert.WeatherAlertId}` as Href)}
-        >
+        <Pressable key={alert.WeatherAlertId} style={itemStyle} onPress={() => router.push(`/(app)/weather-alerts/${alert.WeatherAlertId}` as Href)}>
           <HStack className="items-center justify-between">
             <Text style={{ color: severityColor, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
-              {alert.Severity === 0 ? t('weatherAlerts.severity.extreme') : alert.Severity === 1 ? t('weatherAlerts.severity.severe') : alert.Severity === 2 ? t('weatherAlerts.severity.moderate') : t('weatherAlerts.severity.minor')}
+              {alert.Severity === 0
+                ? t('weatherAlerts.severity.extreme')
+                : alert.Severity === 1
+                  ? t('weatherAlerts.severity.severe')
+                  : alert.Severity === 2
+                    ? t('weatherAlerts.severity.moderate')
+                    : t('weatherAlerts.severity.minor')}
             </Text>
             <Icon as={ChevronRight} size="xs" className="text-gray-400 dark:text-gray-500" />
           </HStack>
@@ -707,7 +701,10 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
       {/* Check-in bottom sheet for performing check-ins from the dashboard */}
       <CheckInBottomSheet
         isOpen={isCheckInSheetOpen}
-        onClose={() => { setIsCheckInSheetOpen(false); setCheckInSheetTimer(null); }}
+        onClose={() => {
+          setIsCheckInSheetOpen(false);
+          setCheckInSheetTimer(null);
+        }}
         callId={checkInSheetCallId}
         selectedTimer={checkInSheetTimer}
         timers={allTimerStatuses}

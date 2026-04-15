@@ -1,14 +1,6 @@
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  Building2,
-  Circle,
-  Clock,
-  MapPin,
-  Shield,
-  Truck,
-  User,
-} from 'lucide-react-native';
+import { Building2, Circle, Clock, MapPin, Shield, Truck, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -169,17 +161,11 @@ export default function UnitDetail() {
               <Heading size="lg" className="mt-3 text-gray-900 dark:text-gray-50">
                 {unit.Name}
               </Heading>
-              {unit.Type ? (
-                <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {unit.Type}
-                </Text>
-              ) : null}
+              {unit.Type ? <Text className="mt-1 text-sm text-gray-500 dark:text-gray-400">{unit.Type}</Text> : null}
               {unit.GroupName ? (
                 <HStack className="mt-1 items-center" space="xs">
                   <Icon as={Building2} size="xs" className="text-gray-400" />
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {unit.GroupName}
-                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">{unit.GroupName}</Text>
                 </HStack>
               ) : null}
             </Box>
@@ -192,14 +178,8 @@ export default function UnitDetail() {
 
               {/* Status row */}
               <HStack className="items-center justify-between border-b border-gray-100 py-3 dark:border-gray-700">
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('units.status')}
-                </Text>
-                <HStack
-                  className="items-center rounded-full px-3 py-1"
-                  space="sm"
-                  style={{ backgroundColor: `${statusColor}18` }}
-                >
+                <Text className="text-sm text-gray-500 dark:text-gray-400">{t('units.status')}</Text>
+                <HStack className="items-center rounded-full px-3 py-1" space="sm" style={{ backgroundColor: `${statusColor}18` }}>
                   <Circle size={10} fill={statusColor} color={statusColor} />
                   <Text style={{ color: statusColor }} className="text-sm font-semibold">
                     {unit.CurrentStatus || t('units.unknown_status')}
@@ -209,15 +189,11 @@ export default function UnitDetail() {
 
               {/* Destination */}
               <HStack className="items-center justify-between border-b border-gray-100 py-3 dark:border-gray-700">
-                <Text className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('units.destination')}
-                </Text>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">{t('units.destination')}</Text>
                 {unit.CurrentDestinationName ? (
                   <HStack className="items-center" space="xs">
                     <Icon as={MapPin} size="xs" className="text-amber-500" />
-                    <Text className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                      {unit.CurrentDestinationName}
-                    </Text>
+                    <Text className="text-sm font-medium text-amber-600 dark:text-amber-400">{unit.CurrentDestinationName}</Text>
                   </HStack>
                 ) : (
                   <Text className="text-sm text-gray-400">{t('units.no_destination')}</Text>
@@ -227,14 +203,10 @@ export default function UnitDetail() {
               {/* Status timestamp */}
               {unit.CurrentStatusTimestampUtc ? (
                 <HStack className="items-center justify-between border-b border-gray-100 py-3 dark:border-gray-700">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('units.status_updated')}
-                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">{t('units.status_updated')}</Text>
                   <HStack className="items-center" space="xs">
                     <Icon as={Clock} size="xs" className="text-gray-400" />
-                    <Text className="text-sm text-gray-600 dark:text-gray-300">
-                      {formatTimestamp(unit.CurrentStatusTimestampUtc)}
-                    </Text>
+                    <Text className="text-sm text-gray-600 dark:text-gray-300">{formatTimestamp(unit.CurrentStatusTimestampUtc)}</Text>
                   </HStack>
                 </HStack>
               ) : null}
@@ -242,9 +214,7 @@ export default function UnitDetail() {
               {/* GPS */}
               {unit.Latitude && unit.Longitude ? (
                 <HStack className="items-center justify-between py-3">
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">
-                    GPS
-                  </Text>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400">GPS</Text>
                   <HStack className="items-center" space="xs">
                     <Icon as={MapPin} size="xs" className="text-gray-400" />
                     <Text className="text-sm text-gray-600 dark:text-gray-300">
@@ -263,22 +233,15 @@ export default function UnitDetail() {
                 </Heading>
                 <VStack space="sm">
                   {unit.Roles.map((role) => (
-                    <HStack
-                      key={role.RoleId || role.RoleName}
-                      className="items-center justify-between border-b border-gray-100 py-2 last:border-b-0 dark:border-gray-700"
-                    >
+                    <HStack key={role.RoleId || role.RoleName} className="items-center justify-between border-b border-gray-100 py-2 last:border-b-0 dark:border-gray-700">
                       <HStack className="items-center" space="sm">
                         <Icon as={Shield} size="xs" className="text-indigo-500" />
-                        <Text className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                          {role.RoleName}
-                        </Text>
+                        <Text className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{role.RoleName}</Text>
                       </HStack>
                       {role.Name ? (
                         <HStack className="items-center" space="xs">
                           <Icon as={User} size="xs" className="text-gray-400" />
-                          <Text className="text-sm text-gray-600 dark:text-gray-300">
-                            {role.Name}
-                          </Text>
+                          <Text className="text-sm text-gray-600 dark:text-gray-300">{role.Name}</Text>
                         </HStack>
                       ) : (
                         <Text className="text-sm text-gray-400">Unassigned</Text>
@@ -290,7 +253,7 @@ export default function UnitDetail() {
             ) : null}
 
             {/* Vehicle Information */}
-            {(unit.Vin || unit.PlateNumber || unit.FourWheelDrive || unit.SpecialPermit) ? (
+            {unit.Vin || unit.PlateNumber || unit.FourWheelDrive || unit.SpecialPermit ? (
               <Box className="mx-4 mt-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
                 <Heading size="sm" className="mb-3 text-gray-900 dark:text-gray-50">
                   {t('units.vehicle_info')}
@@ -298,39 +261,23 @@ export default function UnitDetail() {
                 <VStack space="sm">
                   {unit.Vin ? (
                     <HStack className="items-center justify-between border-b border-gray-100 py-2 dark:border-gray-700">
-                      <Text className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('units.vin')}
-                      </Text>
-                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {unit.Vin}
-                      </Text>
+                      <Text className="text-sm text-gray-500 dark:text-gray-400">{t('units.vin')}</Text>
+                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{unit.Vin}</Text>
                     </HStack>
                   ) : null}
                   {unit.PlateNumber ? (
                     <HStack className="items-center justify-between border-b border-gray-100 py-2 dark:border-gray-700">
-                      <Text className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('units.plate_number')}
-                      </Text>
-                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {unit.PlateNumber}
-                      </Text>
+                      <Text className="text-sm text-gray-500 dark:text-gray-400">{t('units.plate_number')}</Text>
+                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{unit.PlateNumber}</Text>
                     </HStack>
                   ) : null}
                   <HStack className="items-center justify-between border-b border-gray-100 py-2 dark:border-gray-700">
-                    <Text className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('units.four_wheel_drive')}
-                    </Text>
-                    <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      {unit.FourWheelDrive ? t('units.yes') : t('units.no')}
-                    </Text>
+                    <Text className="text-sm text-gray-500 dark:text-gray-400">{t('units.four_wheel_drive')}</Text>
+                    <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{unit.FourWheelDrive ? t('units.yes') : t('units.no')}</Text>
                   </HStack>
                   <HStack className="items-center justify-between py-2">
-                    <Text className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('units.special_permit')}
-                    </Text>
-                    <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                      {unit.SpecialPermit ? t('units.yes') : t('units.no')}
-                    </Text>
+                    <Text className="text-sm text-gray-500 dark:text-gray-400">{t('units.special_permit')}</Text>
+                    <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{unit.SpecialPermit ? t('units.yes') : t('units.no')}</Text>
                   </HStack>
                 </VStack>
               </Box>
@@ -344,16 +291,9 @@ export default function UnitDetail() {
                 </Heading>
                 <VStack space="sm">
                   {unit.UdfValues.map((udf, index) => (
-                    <HStack
-                      key={`${udf.UdfFieldValueId}-${index}`}
-                      className={`items-center justify-between py-2 ${index < unit.UdfValues.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
-                    >
-                      <Text className="text-sm text-gray-500 dark:text-gray-400">
-                        {udf.UdfFieldId}
-                      </Text>
-                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {udf.Value || '—'}
-                      </Text>
+                    <HStack key={`${udf.UdfFieldValueId}-${index}`} className={`items-center justify-between py-2 ${index < unit.UdfValues.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}>
+                      <Text className="text-sm text-gray-500 dark:text-gray-400">{udf.UdfFieldId}</Text>
+                      <Text className="text-sm font-medium text-gray-700 dark:text-gray-200">{udf.Value || '—'}</Text>
                     </HStack>
                   ))}
                 </VStack>
@@ -366,9 +306,7 @@ export default function UnitDetail() {
                 <Heading size="sm" className="mb-3 text-gray-900 dark:text-gray-50">
                   Note
                 </Heading>
-                <Text className="text-sm text-gray-700 dark:text-gray-200">
-                  {unit.Note}
-                </Text>
+                <Text className="text-sm text-gray-700 dark:text-gray-200">{unit.Note}</Text>
               </Box>
             ) : null}
 

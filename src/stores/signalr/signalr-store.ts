@@ -8,7 +8,18 @@ import { signalRService } from '@/services/signalr.service';
 import { useCoreStore } from '../app/core-store';
 import { securityStore, useSecurityStore } from '../security/store';
 
-export type SignalREventType = 'personnelStatusUpdated' | 'personnelStaffingUpdated' | 'unitStatusUpdated' | 'callsUpdated' | 'callAdded' | 'callClosed' | 'checkInUpdated' | 'weatherAlertReceived' | 'weatherAlertUpdated' | 'weatherAlertExpired' | null;
+export type SignalREventType =
+  | 'personnelStatusUpdated'
+  | 'personnelStaffingUpdated'
+  | 'unitStatusUpdated'
+  | 'callsUpdated'
+  | 'callAdded'
+  | 'callClosed'
+  | 'checkInUpdated'
+  | 'weatherAlertReceived'
+  | 'weatherAlertUpdated'
+  | 'weatherAlertExpired'
+  | null;
 
 interface SignalRState {
   isUpdateHubConnected: boolean;
@@ -70,7 +81,19 @@ let updateHubHandlers: EventHandlers = {
  * Helper function to unregister all update hub event handlers
  */
 function unregisterUpdateHubHandlers(): void {
-  const events: (keyof EventHandlers)[] = ['personnelStatusUpdated', 'personnelStaffingUpdated', 'unitStatusUpdated', 'callsUpdated', 'callAdded', 'callClosed', 'checkInUpdated', 'weatherAlertReceived', 'weatherAlertUpdated', 'weatherAlertExpired', 'onConnected'];
+  const events: (keyof EventHandlers)[] = [
+    'personnelStatusUpdated',
+    'personnelStaffingUpdated',
+    'unitStatusUpdated',
+    'callsUpdated',
+    'callAdded',
+    'callClosed',
+    'checkInUpdated',
+    'weatherAlertReceived',
+    'weatherAlertUpdated',
+    'weatherAlertExpired',
+    'onConnected',
+  ];
 
   events.forEach((event) => {
     const handler = updateHubHandlers[event];
@@ -178,7 +201,19 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
         name: Env.CHANNEL_HUB_NAME,
         eventingUrl: eventingUrl,
         hubName: Env.CHANNEL_HUB_NAME,
-        methods: ['personnelStatusUpdated', 'personnelStaffingUpdated', 'unitStatusUpdated', 'callsUpdated', 'callAdded', 'callClosed', 'checkInUpdated', 'weatherAlertReceived', 'weatherAlertUpdated', 'weatherAlertExpired', 'onConnected'],
+        methods: [
+          'personnelStatusUpdated',
+          'personnelStaffingUpdated',
+          'unitStatusUpdated',
+          'callsUpdated',
+          'callAdded',
+          'callClosed',
+          'checkInUpdated',
+          'weatherAlertReceived',
+          'weatherAlertUpdated',
+          'weatherAlertExpired',
+          'onConnected',
+        ],
       });
 
       await signalRService.invoke(Env.CHANNEL_HUB_NAME, 'connect', parseInt(securityStore.getState().rights?.DepartmentId ?? '0'));

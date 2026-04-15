@@ -48,9 +48,7 @@ export const CallCard: React.FC<CallCardProps> = React.memo(({ call, priority })
           </Text>
         </HStack>
         <HStack style={styles.timeGroup}>
-          {call.CheckInTimersEnabled && (
-            <ShieldCheck size={12} color={textColor} style={styles.clockIcon} />
-          )}
+          {call.CheckInTimersEnabled && <ShieldCheck size={12} color={textColor} style={styles.clockIcon} />}
           <Clock size={10} color={textColor} style={styles.clockIcon} />
           <Text style={[styles.timeText, { color: textColor }]}>{getTimeAgoUtc(call.LoggedOnUtc)}</Text>
         </HStack>

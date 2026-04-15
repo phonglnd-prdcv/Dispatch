@@ -95,13 +95,7 @@ export default function Personnel() {
       const status = (p.Status || '').toLowerCase();
       const staffing = (p.Staffing || '').toLowerCase();
       const roles = (p.Roles || []).join(' ').toLowerCase();
-      return (
-        fullName.includes(query) ||
-        group.includes(query) ||
-        status.includes(query) ||
-        staffing.includes(query) ||
-        roles.includes(query)
-      );
+      return fullName.includes(query) || group.includes(query) || status.includes(query) || staffing.includes(query) || roles.includes(query);
     });
   }, [personnel, searchQuery]);
 
@@ -113,12 +107,7 @@ export default function Personnel() {
     [trackEvent]
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: PersonnelInfoResultData }) => (
-      <PersonnelCard person={item} onPress={() => handlePersonPress(item)} />
-    ),
-    [handlePersonPress]
-  );
+  const renderItem = useCallback(({ item }: { item: PersonnelInfoResultData }) => <PersonnelCard person={item} onPress={() => handlePersonPress(item)} />, [handlePersonPress]);
 
   const keyExtractor = useCallback((item: PersonnelInfoResultData) => item.UserId, []);
 
@@ -142,9 +131,7 @@ export default function Personnel() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchPersonnel} />}
-        ListEmptyComponent={
-          <ZeroState heading={emptyHeading} description={emptyDescription} icon={Users} />
-        }
+        ListEmptyComponent={<ZeroState heading={emptyHeading} description={emptyDescription} icon={Users} />}
         contentContainerStyle={styles.listContent}
       />
     );
@@ -159,11 +146,7 @@ export default function Personnel() {
           <InputSlot className="pl-3">
             <InputIcon as={Search} />
           </InputSlot>
-          <InputField
-            placeholder={t('personnel.search')}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <InputField placeholder={t('personnel.search')} value={searchQuery} onChangeText={setSearchQuery} />
           {searchQuery ? (
             <InputSlot className="pr-3" onPress={() => setSearchQuery('')}>
               <InputIcon as={X} />
@@ -174,11 +157,7 @@ export default function Personnel() {
         {/* Results count */}
         {personnel.length > 0 && !isLoading ? (
           <HStack className="mb-2 items-center justify-between px-1">
-            <Text className="text-xs text-gray-500 dark:text-gray-400">
-              {searchQuery.trim()
-                ? `${filteredPersonnel.length} of ${personnel.length}`
-                : `${personnel.length} personnel`}
-            </Text>
+            <Text className="text-xs text-gray-500 dark:text-gray-400">{searchQuery.trim() ? `${filteredPersonnel.length} of ${personnel.length}` : `${personnel.length} personnel`}</Text>
           </HStack>
         ) : null}
 

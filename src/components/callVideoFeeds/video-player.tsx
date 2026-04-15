@@ -17,12 +17,7 @@ interface VideoPlayerProps {
 }
 
 function extractYouTubeId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
-    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/,
-    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-  ];
+  const patterns = [/(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/, /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/, /(?:youtube\.com\/live\/)([a-zA-Z0-9_-]{11})/, /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/];
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) return match[1];
@@ -167,14 +162,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ feed, visible, onClose
                   <ActivityIndicator size="large" />
                 </View>
               )}
-              <WebView
-                source={{ html: playerHtml }}
-                style={styles.webview}
-                allowsInlineMediaPlayback={true}
-                mediaPlaybackRequiresUserAction={false}
-                javaScriptEnabled={true}
-                onLoadEnd={() => setIsLoading(false)}
-              />
+              <WebView source={{ html: playerHtml }} style={styles.webview} allowsInlineMediaPlayback={true} mediaPlaybackRequiresUserAction={false} javaScriptEnabled={true} onLoadEnd={() => setIsLoading(false)} />
             </>
           ) : (
             <Box className="flex-1 items-center justify-center p-8">

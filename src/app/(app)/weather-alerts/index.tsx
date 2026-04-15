@@ -3,20 +3,11 @@ import { type Href, router } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text as RNText,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text as RNText, View } from 'react-native';
 
-import { WeatherAlertCard } from '@/components/weatherAlerts/weather-alert-card';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { WeatherAlertCard } from '@/components/weatherAlerts/weather-alert-card';
 import { WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { type WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAlertResultData';
 import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
@@ -84,29 +75,8 @@ export default function WeatherAlertsListScreen() {
   const renderFilterButton = (key: FilterType, label: string) => {
     const isActive = filter === key;
     return (
-      <Pressable
-        key={key}
-        onPress={() => setFilter(key)}
-        style={[
-          styles.filterPill,
-          isActive
-            ? styles.filterPillActive
-            : isDark
-              ? styles.filterPillDark
-              : styles.filterPillLight,
-        ]}
-      >
-        <RNText
-          style={[
-            styles.filterPillText,
-            isActive
-              ? styles.filterPillTextActive
-              : isDark
-                ? styles.filterPillTextDark
-                : styles.filterPillTextLight,
-          ]}
-          numberOfLines={1}
-        >
+      <Pressable key={key} onPress={() => setFilter(key)} style={[styles.filterPill, isActive ? styles.filterPillActive : isDark ? styles.filterPillDark : styles.filterPillLight]}>
+        <RNText style={[styles.filterPillText, isActive ? styles.filterPillTextActive : isDark ? styles.filterPillTextDark : styles.filterPillTextLight]} numberOfLines={1}>
           {label}
         </RNText>
       </Pressable>
@@ -116,25 +86,8 @@ export default function WeatherAlertsListScreen() {
   const renderSortButton = (key: SortType, label: string) => {
     const isActive = sort === key;
     return (
-      <Pressable
-        key={key}
-        onPress={() => setSort(key)}
-        style={[styles.sortPill, isActive && styles.sortPillActive]}
-      >
-        <RNText
-          style={[
-            styles.sortPillText,
-            isActive
-              ? isDark
-                ? styles.sortPillTextActiveDark
-                : styles.sortPillTextActive
-              : isDark
-                ? styles.sortPillTextDark
-                : styles.sortPillTextLight,
-          ]}
-        >
-          {label}
-        </RNText>
+      <Pressable key={key} onPress={() => setSort(key)} style={[styles.sortPill, isActive && styles.sortPillActive]}>
+        <RNText style={[styles.sortPillText, isActive ? (isDark ? styles.sortPillTextActiveDark : styles.sortPillTextActive) : isDark ? styles.sortPillTextDark : styles.sortPillTextLight]}>{label}</RNText>
       </Pressable>
     );
   };
@@ -143,34 +96,20 @@ export default function WeatherAlertsListScreen() {
     if (isLoading) return null;
     return (
       <VStack className="flex-1 items-center justify-center py-12" space="sm">
-        <Text className="text-base text-gray-500 dark:text-gray-400">
-          {t('weatherAlerts.noActiveAlerts')}
-        </Text>
+        <Text className="text-base text-gray-500 dark:text-gray-400">{t('weatherAlerts.noActiveAlerts')}</Text>
       </VStack>
     );
   };
 
-  const renderItem = useCallback(
-    ({ item }: { item: WeatherAlertResultData }) => (
-      <WeatherAlertCard alert={item} onPress={handleAlertPress} />
-    ),
-    []
-  );
+  const renderItem = useCallback(({ item }: { item: WeatherAlertResultData }) => <WeatherAlertCard alert={item} onPress={handleAlertPress} />, []);
 
   return (
     <View style={[styles.container, isDark ? styles.containerDark : styles.containerLight]}>
       {/* Header */}
-      <RNText style={[styles.title, isDark ? styles.titleDark : styles.titleLight]}>
-        {t('weatherAlerts.title')}
-      </RNText>
+      <RNText style={[styles.title, isDark ? styles.titleDark : styles.titleLight]}>{t('weatherAlerts.title')}</RNText>
 
       {/* Filter pills */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScroll}
-        contentContainerStyle={styles.filterRow}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
         {renderFilterButton('all', t('weatherAlerts.filter.all'))}
         {renderFilterButton('extreme', t('weatherAlerts.severity.extreme'))}
         {renderFilterButton('severe', t('weatherAlerts.severity.severe'))}
@@ -195,9 +134,7 @@ export default function WeatherAlertsListScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmpty}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={fetchActiveAlerts} />
-          }
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchActiveAlerts} />}
         />
       )}
     </View>

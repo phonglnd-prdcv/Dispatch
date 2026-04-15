@@ -151,7 +151,10 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
       // Log dispatch types for debugging
       if (__DEV__) {
-        console.log('[PersonnelPanel] callDispatches types:', callDispatches.map((d) => ({ Type: d.Type, Name: d.Name })));
+        console.log(
+          '[PersonnelPanel] callDispatches types:',
+          callDispatches.map((d) => ({ Type: d.Type, Name: d.Name }))
+        );
       }
 
       // Match personnel to dispatches — prefer stable ID matching, fall back to name
