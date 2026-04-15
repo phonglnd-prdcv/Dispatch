@@ -3,7 +3,7 @@ import { AlertTriangle, Cloud, Flame, Heart, Leaf } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
@@ -80,7 +80,7 @@ export default function WeatherAlertDetailScreen() {
     }
   }, [id, fetchAlertDetail]);
 
-  if (isLoadingDetail || !selectedAlert) {
+  if (isLoadingDetail) {
     return (
       <>
         <Stack.Screen
@@ -92,6 +92,29 @@ export default function WeatherAlertDetailScreen() {
         />
         <View style={StyleSheet.flatten([styles.container, isDark ? styles.containerDark : styles.containerLight, styles.centered])}>
           <ActivityIndicator size="large" />
+        </View>
+      </>
+    );
+  }
+
+  if (!selectedAlert) {
+    return (
+      <>
+        <Stack.Screen
+          options={{
+            title: t('weatherAlerts.title'),
+            headerShown: true,
+            headerBackTitle: '',
+          }}
+        />
+        <View style={StyleSheet.flatten([styles.container, isDark ? styles.containerDark : styles.containerLight, styles.centered])}>
+          <Text style={{ color: isDark ? '#fff' : '#000', marginBottom: 16 }}>{t('common.no_results_found')}</Text>
+          <Pressable
+            onPress={() => { if (id) fetchAlertDetail(id); }}
+            style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#3b82f6', borderRadius: 8 }}
+          >
+            <Text style={{ color: '#fff' }}>{t('common.retry')}</Text>
+          </Pressable>
         </View>
       </>
     );

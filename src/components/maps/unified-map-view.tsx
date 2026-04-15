@@ -56,6 +56,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
   const [internalPins, setInternalPins] = useState<MapMakerInfoData[]>([]);
   const lastUpdateTimestamp = useSignalRStore((state) => state.lastUpdateTimestamp);
   const signalRDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const signalRAbortController = useRef<AbortController | null>(null);
 
   const location = useLocationStore((state) => ({
     latitude: state.latitude,
@@ -162,14 +163,21 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
 
     // Debounce to prevent rapid consecutive API calls from multiple SignalR events
     signalRDebounceTimer.current = setTimeout(async () => {
+      // Abort any in-flight SignalR-triggered fetch
+      if (signalRAbortController.current) {
+        signalRAbortController.current.abort();
+      }
+      const controller = new AbortController();
+      signalRAbortController.current = controller;
+
       try {
         logger.debug({
           message: 'Refreshing map pins from SignalR update',
           context: { timestamp: lastUpdateTimestamp },
         });
 
-        const mapDataAndMarkers = await getMapDataAndMarkers();
-        if (mapDataAndMarkers?.Data) {
+        const mapDataAndMarkers = await getMapDataAndMarkers(controller.signal);
+        if (!controller.signal.aborted && mapDataAndMarkers?.Data) {
           setInternalPins(mapDataAndMarkers.Data.MapMakerInfos);
         }
       } catch (error) {
@@ -186,6 +194,9 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
     return () => {
       if (signalRDebounceTimer.current) {
         clearTimeout(signalRDebounceTimer.current);
+      }
+      if (signalRAbortController.current) {
+        signalRAbortController.current.abort();
       }
     };
   }, [autoFetchPins, lastUpdateTimestamp]);

@@ -81,59 +81,57 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
   const warningCount = timerStatuses.filter((s) => s.Status === 'Warning' || s.Status === 'Yellow').length;
   const okCount = timerStatuses.filter((s) => s.Status === 'Ok' || s.Status === 'Green').length;
 
-  if (!checkInTimersEnabled) {
-    return (
-      <Box className="p-4">
-        <Text className="text-center text-gray-500">{t('check_in.timers_disabled')}</Text>
-      </Box>
-    );
-  }
-
-  if (!isLoadingStatuses && timerStatuses.length === 0 && !statusError) {
-    return (
-      <Box className="p-4">
-        <Text className="text-center text-gray-500">{t('check_in.no_timers')}</Text>
-      </Box>
-    );
-  }
-
   const renderTimer = ({ item }: { item: CheckInTimerStatusResultData }) => (
     <CheckInTimerCard timer={item} onCheckIn={handleCheckIn} />
   );
 
   return (
     <VStack className="flex-1 p-4">
+      {!checkInTimersEnabled && (
+        <Box className="mb-3 p-4">
+          <Text className="text-center text-gray-500">{t('check_in.timers_disabled')}</Text>
+        </Box>
+      )}
+
+      {checkInTimersEnabled && !isLoadingStatuses && timerStatuses.length === 0 && !statusError && (
+        <Box className="mb-3 p-4">
+          <Text className="text-center text-gray-500">{t('check_in.no_timers')}</Text>
+        </Box>
+      )}
+
       {/* Summary header */}
-      <HStack className="mb-3 items-center gap-2">
-        {criticalCount > 0 && (
-          <Box className="rounded-full bg-red-200 px-2 py-0.5">
-            <Text className="text-xs font-bold text-red-700">
-              {criticalCount} {t('check_in.status_critical')}
-            </Text>
-          </Box>
-        )}
-        {overdueCount > 0 && (
-          <Box className="rounded-full bg-red-100 px-2 py-0.5">
-            <Text className="text-xs font-medium text-red-600">
-              {t('check_in.overdue_count', { count: overdueCount })}
-            </Text>
-          </Box>
-        )}
-        {warningCount > 0 && (
-          <Box className="ml-1 rounded-full bg-amber-100 px-2 py-0.5">
-            <Text className="text-xs font-medium text-amber-600">
-              {t('check_in.warning_count', { count: warningCount })}
-            </Text>
-          </Box>
-        )}
-        {okCount > 0 && (
-          <Box className="ml-1 rounded-full bg-green-100 px-2 py-0.5">
-            <Text className="text-xs font-medium text-green-600">
-              {okCount} {t('check_in.status_ok')}
-            </Text>
-          </Box>
-        )}
-      </HStack>
+      {checkInTimersEnabled && timerStatuses.length > 0 && (
+        <HStack className="mb-3 items-center gap-2">
+          {criticalCount > 0 && (
+            <Box className="rounded-full bg-red-200 px-2 py-0.5">
+              <Text className="text-xs font-bold text-red-700">
+                {criticalCount} {t('check_in.status_critical')}
+              </Text>
+            </Box>
+          )}
+          {overdueCount > 0 && (
+            <Box className="rounded-full bg-red-100 px-2 py-0.5">
+              <Text className="text-xs font-medium text-red-600">
+                {t('check_in.overdue_count', { count: overdueCount })}
+              </Text>
+            </Box>
+          )}
+          {warningCount > 0 && (
+            <Box className="ml-1 rounded-full bg-amber-100 px-2 py-0.5">
+              <Text className="text-xs font-medium text-amber-600">
+                {t('check_in.warning_count', { count: warningCount })}
+              </Text>
+            </Box>
+          )}
+          {okCount > 0 && (
+            <Box className="ml-1 rounded-full bg-green-100 px-2 py-0.5">
+              <Text className="text-xs font-medium text-green-600">
+                {okCount} {t('check_in.status_ok')}
+              </Text>
+            </Box>
+          )}
+        </HStack>
+      )}
 
       {statusError && (
         <Box className="mb-2 rounded-lg bg-red-50 p-2">
@@ -142,12 +140,14 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
       )}
 
       {/* Timer list */}
-      <FlatList
-        data={timerStatuses}
-        renderItem={renderTimer}
-        keyExtractor={(item) => `${item.TargetType}-${item.TargetEntityId}`}
-        scrollEnabled={false}
-      />
+      {checkInTimersEnabled && timerStatuses.length > 0 && (
+        <FlatList
+          data={timerStatuses}
+          renderItem={renderTimer}
+          keyExtractor={(item) => `${item.TargetType}-${item.TargetEntityId}`}
+          scrollEnabled={false}
+        />
+      )}
 
       {/* Toggle timers button */}
       <Box className="mt-3">

@@ -58,6 +58,7 @@ export default function CallDetail() {
   const { canUserCreateCalls } = useSecurityStore();
   const { activeCall, activeStatuses, activeUnit } = useCoreStore();
   const { setIsOpen: setStatusBottomSheetOpen, setSelectedCall } = useStatusBottomSheetStore();
+  const timerStatuses = useCheckInStore((state) => state.timerStatuses);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -481,9 +482,8 @@ export default function CallDetail() {
     });
 
     if (call?.CheckInTimersEnabled) {
-      const checkInStatuses = useCheckInStore.getState().timerStatuses;
-      const overdueCount = checkInStatuses.filter((s) => s.Status === 'Overdue').length;
-      const warningCount = checkInStatuses.filter((s) => s.Status === 'Warning').length;
+      const overdueCount = timerStatuses.filter((s) => s.Status === 'Overdue').length;
+      const warningCount = timerStatuses.filter((s) => s.Status === 'Warning').length;
       const badgeCount = overdueCount + warningCount;
 
       tabs.push({

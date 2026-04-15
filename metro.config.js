@@ -3,9 +3,6 @@
 const _ = require('lodash');
 const path = require('path');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
-const { default: exclusionList } = require('metro-config/private/defaults/exclusionList');
-//const { getDefaultConfig } = require('expo/metro-config');
-//const path = require('path');
 const { withNativeWind } = require('nativewind/metro');
 
 const config = getSentryExpoConfig(__dirname, {
@@ -14,9 +11,11 @@ const config = getSentryExpoConfig(__dirname, {
 
 // Exclude electron directory from Metro bundler for Android/iOS
 // Electron files use Node.js APIs that don't exist in React Native
-config.resolver.blockList = exclusionList([
-  /electron\/.*/,
-]);
+const existingBlockList = config.resolver.blockList;
+const extraBlocked = [/electron\/.*/];
+config.resolver.blockList = existingBlockList
+  ? [...(Array.isArray(existingBlockList) ? existingBlockList : [existingBlockList]), ...extraBlocked]
+  : extraBlocked;
 
 // 1. Watch all files within the monorepo
 // 2. Let Metro know where to resolve packages and in what order

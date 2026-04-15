@@ -24,10 +24,10 @@ export function enqueueCheckIn(input: PerformCheckInInput): void {
   storage.set(QUEUE_KEY, JSON.stringify(queue));
 }
 
-export function dequeueCheckIn(index: number): void {
+export function dequeueCheckIn(queuedAt: number): void {
   const queue = getQueuedCheckIns();
-  queue.splice(index, 1);
-  storage.set(QUEUE_KEY, JSON.stringify(queue));
+  const filtered = queue.filter((item) => item.queuedAt !== queuedAt);
+  storage.set(QUEUE_KEY, JSON.stringify(filtered));
 }
 
 export function clearCheckInQueue(): void {

@@ -19,8 +19,9 @@ async function isConnected(): Promise<boolean> {
     try {
       const state = await NetInfo.fetch();
       return !!state.isConnected;
-    } catch {
-      return true;
+    } catch (error) {
+      logger.error({ message: 'NetInfo.fetch() failed, assuming offline', context: { error } });
+      return false;
     }
   }
   return true;
@@ -37,15 +38,15 @@ export async function processCheckInQueue(): Promise<number> {
 
   try {
     const queue = getQueuedCheckIns();
-    for (let i = 0; i < queue.length; i++) {
+    for (const item of queue) {
       try {
-        await performCheckIn(queue[i].input);
-        dequeueCheckIn(i - processed);
+        await performCheckIn(item.input);
+        dequeueCheckIn(item.queuedAt);
         processed++;
       } catch (error) {
         logger.error({
           message: 'Failed to process queued check-in',
-          context: { error, input: queue[i].input },
+          context: { error, input: item.input },
         });
         break;
       }
@@ -71,6 +72,11 @@ export function startQueueListener(): void {
     };
     window.addEventListener('online', handler);
     cleanup = () => window.removeEventListener('online', handler);
+
+    // Drain existing backlog if already online
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      processCheckInQueue().catch(() => {});
+    }
   } else if (NetInfo) {
     // Native: use NetInfo listener
     const unsubscribe = NetInfo.addEventListener((state: { isConnected: boolean }) => {
@@ -79,6 +85,13 @@ export function startQueueListener(): void {
       }
     });
     cleanup = unsubscribe;
+
+    // Drain existing backlog if already connected
+    NetInfo.fetch().then((state: { isConnected: boolean }) => {
+      if (state.isConnected) {
+        processCheckInQueue().catch(() => {});
+      }
+    }).catch(() => {});
   }
 }
 

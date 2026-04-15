@@ -30,6 +30,18 @@ function extractYouTubeId(url: string): string | null {
   return null;
 }
 
+function sanitizeUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+    return parsed.href;
+  } catch {
+    return null;
+  }
+}
+
 function getPlayerHtml(feed: CallVideoFeedResultData, isDark: boolean): string | null {
   const bgColor = isDark ? '#171717' : '#ffffff';
   const textColor = isDark ? '#d1d5db' : '#374151';
@@ -73,28 +85,34 @@ function getPlayerHtml(feed: CallVideoFeedResultData, isDark: boolean): string |
       `;
     }
 
-    case CallVideoFeedFormat.MJPEG:
+    case CallVideoFeedFormat.MJPEG: {
+      const mjpegUrl = sanitizeUrl(feed.Url);
+      if (!mjpegUrl) return null;
       return `
         <!DOCTYPE html>
         <html><head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>body{margin:0;padding:0;background:${bgColor};display:flex;align-items:center;justify-content:center;height:100vh}img{width:100%;max-height:100vh;object-fit:contain}</style>
         </head><body>
-          <img src="${feed.Url}" alt="MJPEG Stream" />
+          <img src="${mjpegUrl}" alt="MJPEG Stream" />
         </body></html>
       `;
+    }
 
     case CallVideoFeedFormat.Embed:
-    case CallVideoFeedFormat.Other:
+    case CallVideoFeedFormat.Other: {
+      const embedUrl = sanitizeUrl(feed.Url);
+      if (!embedUrl) return null;
       return `
         <!DOCTYPE html>
         <html><head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>body{margin:0;padding:0;background:${bgColor}}iframe{width:100%;height:100vh;border:none}</style>
         </head><body>
-          <iframe src="${feed.Url}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+          <iframe src="${embedUrl}" sandbox="allow-scripts allow-same-origin" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         </body></html>
       `;
+    }
 
     default:
       return null;

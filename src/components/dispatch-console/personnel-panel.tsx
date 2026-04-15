@@ -154,24 +154,28 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
         console.log('[PersonnelPanel] callDispatches types:', callDispatches.map((d) => ({ Type: d.Type, Name: d.Name })));
       }
 
-      // Get personnel names from dispatches — match common type values for personnel
+      // Match personnel to dispatches — prefer stable ID matching, fall back to name
       const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
-      const dispatchedPersonnelNames = callDispatches
-        .filter((d) => personnelTypes.has(d.Type))
-        .map((d) => d.Name.toLowerCase());
+      const personnelDispatches = callDispatches.filter((d) => personnelTypes.has(d.Type));
+      const dispatchedIds = new Set(personnelDispatches.map((d) => d.Id).filter(Boolean));
+      const dispatchedNames = new Set(personnelDispatches.map((d) => d.Name.toLowerCase()));
 
-      // Also check personnel whose StatusDestinationId matches the call
       filtered = personnel.filter((p) => {
+        if (dispatchedIds.size > 0 && dispatchedIds.has(p.UserId)) return true;
+        if (selectedCallId && p.StatusDestinationId === selectedCallId) return true;
         const fullName = `${p.FirstName} ${p.LastName}`.toLowerCase();
-        return dispatchedPersonnelNames.includes(fullName) || (selectedCallId && p.StatusDestinationId === selectedCallId);
+        return dispatchedNames.has(fullName);
       });
 
-      // If strict type matching found nothing, try matching ALL dispatch names against personnel as fallback
+      // If strict type matching found nothing, try matching ALL dispatch names/IDs as fallback
       if (filtered.length === 0) {
-        const allDispatchNames = callDispatches.map((d) => d.Name.toLowerCase());
+        const allDispatchIds = new Set(callDispatches.map((d) => d.Id).filter(Boolean));
+        const allDispatchNames = new Set(callDispatches.map((d) => d.Name.toLowerCase()));
         filtered = personnel.filter((p) => {
+          if (allDispatchIds.has(p.UserId)) return true;
+          if (selectedCallId && p.StatusDestinationId === selectedCallId) return true;
           const fullName = `${p.FirstName} ${p.LastName}`.toLowerCase();
-          return allDispatchNames.includes(fullName) || (selectedCallId && p.StatusDestinationId === selectedCallId);
+          return allDispatchNames.has(fullName);
         });
       }
     }
@@ -192,12 +196,22 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
     return filtered;
   }, [personnel, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
 
-  // Get list of personnel names that are dispatched to the call
+  // Get dispatched personnel IDs and names for highlight matching
+  const dispatchedPersonnelIds = useMemo(() => {
+    if (!callDispatches) return new Set<string>();
+    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
+    const byType = callDispatches.filter((d) => personnelTypes.has(d.Type));
+    const ids = new Set(byType.map((d) => d.Id).filter(Boolean));
+    if (ids.size === 0) {
+      return new Set(callDispatches.map((d) => d.Id).filter(Boolean));
+    }
+    return ids;
+  }, [callDispatches]);
+
   const dispatchedPersonnelNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
     const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
     const byType = new Set(callDispatches.filter((d) => personnelTypes.has(d.Type)).map((d) => d.Name.toLowerCase()));
-    // If no type matches, include all dispatch names as fallback
     if (byType.size === 0) {
       return new Set(callDispatches.map((d) => d.Name.toLowerCase()));
     }
@@ -276,7 +290,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
                     key={person.UserId}
                     person={person}
                     isSelected={selectedPersonnelId === person.UserId}
-                    isOnCall={dispatchedPersonnelNames.has(fullName) || Boolean(selectedCallId && person.StatusDestinationId === selectedCallId)}
+                    isOnCall={dispatchedPersonnelIds.has(person.UserId) || dispatchedPersonnelNames.has(fullName) || Boolean(selectedCallId && person.StatusDestinationId === selectedCallId)}
                     onPress={() => handleSelectPersonnel(person.UserId)}
                     onSetStatus={isCallFilterActive && onSetPersonnelStatusForCall ? () => onSetPersonnelStatusForCall(person.UserId, `${person.FirstName} ${person.LastName}`) : undefined}
                   />

@@ -40,7 +40,12 @@ export default function UnitDetail() {
 
   useEffect(() => {
     const fetchDetail = async () => {
-      if (!unitId) return;
+      if (!unitId) {
+        setIsLoading(false);
+        setError('Missing unit id');
+        setUnit(null);
+        return;
+      }
       try {
         setIsLoading(true);
         setError(null);

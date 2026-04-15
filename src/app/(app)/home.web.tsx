@@ -762,6 +762,7 @@ export default function DispatchConsoleWeb() {
       {/* Close Call Bottom Sheet */}
       {selectedCallId && (
         <CloseCallBottomSheet
+          key={selectedCallId}
           isOpen={isCloseCallSheetOpen}
           onClose={() => setIsCloseCallSheetOpen(false)}
           callId={selectedCallId}
