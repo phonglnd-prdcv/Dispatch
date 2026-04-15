@@ -11,6 +11,16 @@ import { useLocationStore } from '@/stores/app/location-store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
 
+// Mock @legendapp/motion before importing CallDetail
+jest.mock('@legendapp/motion', () => ({
+  Motion: {
+    View: jest.fn().mockImplementation(({ children }) => children),
+    Text: jest.fn().mockImplementation(({ children }) => children),
+  },
+  AnimatePresence: jest.fn().mockImplementation(({ children }) => children),
+  createMotionAnimatedComponent: jest.fn((Component) => Component),
+}));
+
 import CallDetail from '../../../app/call/[id]';
 
 

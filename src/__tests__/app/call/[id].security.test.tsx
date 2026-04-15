@@ -5,13 +5,26 @@ import React from 'react';
 jest.mock('react-native', () => ({
   Platform: {
     OS: 'ios',
+    select: (obj: any) => obj.ios ?? obj.default,
+  },
+  PixelRatio: {
+    getFontScale: () => 1,
+    get: () => 2,
+    roundToNearestPixel: (size: number) => size,
+  },
+  Dimensions: {
+    get: () => ({ width: 375, height: 812, scale: 2, fontScale: 1 }),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
   },
   ScrollView: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   StyleSheet: {
     create: (styles: any) => styles,
+    flatten: (styles: any) => styles,
   },
   useWindowDimensions: () => ({ width: 375, height: 812 }),
   View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
 }));
 
 // Mock expo-router
@@ -153,6 +166,7 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('nativewind', () => ({
+  cssInterop: jest.fn((Component: any) => Component),
   useColorScheme: () => ({ colorScheme: 'light' }),
 }));
 
@@ -302,6 +316,36 @@ jest.mock('react-native-svg', () => ({
   Path: ({ ...props }: any) => <div {...props} />,
   G: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   Mixin: {},
+}));
+
+// Mock @legendapp/motion
+jest.mock('@legendapp/motion', () => ({
+  Motion: {
+    View: jest.fn().mockImplementation(({ children }: any) => children),
+    Text: jest.fn().mockImplementation(({ children }: any) => children),
+  },
+  AnimatePresence: jest.fn().mockImplementation(({ children }: any) => children),
+  createMotionAnimatedComponent: jest.fn((Component: any) => Component),
+}));
+
+// Mock bottom-sheet to avoid deep gluestack/actionsheet import chain
+jest.mock('@/components/ui/bottom-sheet', () => ({
+  BottomSheet: ({ children }: any) => <div>{children}</div>,
+  BottomSheetContent: ({ children }: any) => <div>{children}</div>,
+  BottomSheetDragIndicator: () => null,
+  BottomSheetDragIndicatorWrapper: ({ children }: any) => <div>{children}</div>,
+  BottomSheetBackdrop: () => null,
+}));
+
+// Mock video feeds tab to avoid actionsheet import chain
+jest.mock('@/components/callVideoFeeds/video-feeds-tab', () => ({
+  __esModule: true,
+  default: () => <div data-testid="video-feeds-tab">Video Feeds</div>,
+}));
+
+// Mock check-in tab
+jest.mock('@/components/checkIn/check-in-tab', () => ({
+  CheckInTab: () => <div data-testid="check-in-tab">Check In</div>,
 }));
 
 import CallDetail from '../../../app/call/[id]';
