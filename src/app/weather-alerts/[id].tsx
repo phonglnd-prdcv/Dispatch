@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HStack } from '@/components/ui/hstack';
-import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { SEVERITY_COLORS, WeatherAlertCategory, WeatherAlertCertainty, WeatherAlertSeverity, WeatherAlertUrgency } from '@/models/v4/weatherAlerts/weatherAlertEnums';
@@ -134,7 +133,7 @@ export default function WeatherAlertDetailScreen() {
           {/* Header */}
           <View style={StyleSheet.flatten([styles.header, { backgroundColor: severityColor }])}>
             <HStack className="items-center" space="sm">
-              <Icon as={CategoryIcon} size="md" color="#FFFFFF" />
+              <CategoryIcon size={20} color="#FFFFFF" />
               <VStack>
                 <Text className="text-lg font-bold text-white">{alert.Event}</Text>
                 <Text className="text-xs font-semibold uppercase tracking-wider text-white/85">{getSeverityLabel(alert.Severity, t)}</Text>

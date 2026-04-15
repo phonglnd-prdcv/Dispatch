@@ -1,6 +1,6 @@
 import { ShieldCheckIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -10,6 +10,8 @@ import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
+import { usePersonnelStore } from '@/stores/personnel/store';
+import { useUnitsStore } from '@/stores/units/store';
 
 const STATUS_COLORS: Record<string, string> = {
   Ok: '#22C55E',
@@ -39,12 +41,53 @@ interface CheckInTimerCardProps {
 export const CheckInTimerCard: React.FC<CheckInTimerCardProps> = React.memo(({ timer, onCheckIn }) => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
+  const units = useUnitsStore((s) => s.units);
+  const personnel = usePersonnelStore((s) => s.personnel);
 
   const statusColor = STATUS_COLORS[timer.Status] || '#6B7280';
   const progress = timer.DurationMinutes > 0 ? Math.min((timer.ElapsedMinutes / timer.DurationMinutes) * 100, 100) : 0;
 
   // Use TargetTypeName from API, fall back to translation key lookup
   const typeLabel = timer.TargetTypeName || (CHECK_IN_TYPE_KEYS[String(timer.TargetType)] ? t(CHECK_IN_TYPE_KEYS[String(timer.TargetType)]) : String(timer.TargetType));
+
+  // The API's TargetName often contains the check-in TYPE name (e.g. "UnitType")
+  // rather than the actual entity name (e.g. "Engine 1"). Detect this and look up
+  // the real name from the units/personnel stores using TargetEntityId.
+  const isTargetNameActuallyTypeName = !timer.TargetName
+    || timer.TargetName === timer.TargetTypeName
+    || /type$/i.test(timer.TargetName)
+    || Object.keys(CHECK_IN_TYPE_KEYS).some((k) => k.toLowerCase() === timer.TargetName.toLowerCase())
+    || timer.TargetName.toLowerCase() === 'unittype'
+    || timer.TargetName.toLowerCase() === 'personneltype';
+
+  const displayName = useMemo(() => {
+    // If TargetName is a real entity name (not a type label), use it directly
+    if (timer.TargetName && !isTargetNameActuallyTypeName) return timer.TargetName;
+
+    const entityId = timer.TargetEntityId;
+    const unitId = timer.UnitId;
+
+    // Look up from units store by TargetEntityId or UnitId
+    if (units.length > 0) {
+      for (const u of units) {
+        if (entityId && u.UnitId === entityId) return u.Name;
+        if (unitId > 0 && u.UnitId === String(unitId)) return u.Name;
+        if (unitId > 0 && parseInt(u.UnitId, 10) === unitId) return u.Name;
+        if (entityId && !isNaN(parseInt(entityId, 10)) && parseInt(u.UnitId, 10) === parseInt(entityId, 10)) return u.Name;
+      }
+    }
+
+    // Look up from personnel store by TargetEntityId
+    if (personnel.length > 0 && entityId) {
+      for (const p of personnel) {
+        if (p.UserId === entityId || p.IdentificationNumber === entityId) {
+          return `${p.FirstName} ${p.LastName}`.trim();
+        }
+      }
+    }
+
+    return entityId || typeLabel;
+  }, [timer.TargetName, timer.TargetEntityId, timer.UnitId, isTargetNameActuallyTypeName, units, personnel, typeLabel]);
 
   const statusKey = `check_in.status_${timer.Status.toLowerCase()}` as const;
 
@@ -57,15 +100,8 @@ export const CheckInTimerCard: React.FC<CheckInTimerCardProps> = React.memo(({ t
           <HStack className="flex-1 items-center gap-2">
             <ShieldCheckIcon size={16} color={statusColor} />
             <VStack className="ml-2 flex-1">
-              <Text className="text-sm font-bold">{timer.TargetName || timer.TargetEntityId || typeLabel}</Text>
-              {timer.TargetName ? (
-                <Text className="text-xs font-medium text-gray-500">{typeLabel}</Text>
-              ) : (
-                <Text className="text-xs font-medium text-gray-500">
-                  {timer.TargetTypeName || String(timer.TargetType)}
-                  {timer.TargetEntityId ? ` #${timer.TargetEntityId}` : ''}
-                </Text>
-              )}
+              <Text className="text-sm font-bold">{displayName}</Text>
+              <Text className="text-xs font-medium text-gray-500">{typeLabel}</Text>
             </VStack>
           </HStack>
           <Box className="rounded-full px-2 py-0.5" style={{ backgroundColor: statusColor + '20' }}>

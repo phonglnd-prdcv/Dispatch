@@ -9,6 +9,7 @@ interface CallVideoFeedsState {
   isLoading: boolean;
   error: string | null;
   isSaving: boolean;
+  _currentFetchId: number;
 
   fetchFeeds: (callId: string) => Promise<void>;
   addFeed: (input: SaveCallVideoFeedInput) => Promise<string | null>;
@@ -22,14 +23,18 @@ export const useCallVideoFeedsStore = create<CallVideoFeedsState>((set, get) => 
   isLoading: false,
   error: null,
   isSaving: false,
+  _currentFetchId: 0,
 
   fetchFeeds: async (callId: string) => {
-    set({ isLoading: true, error: null });
+    const fetchId = get()._currentFetchId + 1;
+    set({ isLoading: true, error: null, _currentFetchId: fetchId });
     try {
       const result = await getCallVideoFeeds(callId);
+      if (get()._currentFetchId !== fetchId) return; // stale response
       const feeds = (result.Data || []).sort((a, b) => a.SortOrder - b.SortOrder);
       set({ feeds, isLoading: false });
     } catch (error) {
+      if (get()._currentFetchId !== fetchId) return; // stale error
       logger.error({ message: 'Failed to fetch video feeds', context: { error, callId } });
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch video feeds',
@@ -48,7 +53,7 @@ export const useCallVideoFeedsStore = create<CallVideoFeedsState>((set, get) => 
       return result.Id || null;
     } catch (error) {
       logger.error({ message: 'Failed to add video feed', context: { error } });
-      set({ isSaving: false });
+      set({ error: error instanceof Error ? error.message : 'Failed to add video feed', isSaving: false });
       return null;
     }
   },
@@ -62,22 +67,21 @@ export const useCallVideoFeedsStore = create<CallVideoFeedsState>((set, get) => 
       return true;
     } catch (error) {
       logger.error({ message: 'Failed to update video feed', context: { error } });
-      set({ isSaving: false });
+      set({ error: error instanceof Error ? error.message : 'Failed to update video feed', isSaving: false });
       return false;
     }
   },
 
   removeFeed: async (feedId: string, callId: string) => {
     // Optimistic removal
-    const previousFeeds = get().feeds;
-    set({ feeds: previousFeeds.filter((f) => f.CallVideoFeedId !== feedId) });
+    set({ feeds: get().feeds.filter((f) => f.CallVideoFeedId !== feedId) });
     try {
       await deleteCallVideoFeed(feedId);
       return true;
     } catch (error) {
       logger.error({ message: 'Failed to delete video feed', context: { error, feedId } });
-      // Revert on failure
-      set({ feeds: previousFeeds });
+      // Re-sync from server instead of reverting a potentially stale snapshot
+      await get().fetchFeeds(callId).catch(() => {});
       return false;
     }
   },
@@ -88,6 +92,7 @@ export const useCallVideoFeedsStore = create<CallVideoFeedsState>((set, get) => 
       isLoading: false,
       error: null,
       isSaving: false,
+      _currentFetchId: 0,
     });
   },
 }));

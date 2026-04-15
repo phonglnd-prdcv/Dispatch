@@ -69,7 +69,7 @@ export const useWeatherAlertsStore = create<WeatherAlertsState>((set, get) => ({
       set({ selectedAlert: result.Data, isLoadingDetail: false });
     } catch (error) {
       logger.error({ message: 'Failed to fetch weather alert detail', context: { error, alertId } });
-      set({ isLoadingDetail: false });
+      set({ selectedAlert: null, isLoadingDetail: false });
     }
   },
 

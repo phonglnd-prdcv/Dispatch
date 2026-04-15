@@ -4,6 +4,98 @@ import { getCheckInHistory, getTimersForCall, getTimerStatuses, getTimerStatuses
 import { type CheckInRecordResultData } from '@/models/v4/checkIn/checkInRecordResultData';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
 import { type ResolvedCheckInTimerResultData } from '@/models/v4/checkIn/resolvedCheckInTimerResultData';
+import { usePersonnelStore } from '@/stores/personnel/store';
+import { useUnitsStore } from '@/stores/units/store';
+
+/**
+ * Enrich timer statuses with TargetName from:
+ * 1. Resolved timers (same endpoint family)
+ * 2. Units store (by every possible ID match)
+ * 3. Personnel store (by every possible ID match)
+ */
+function enrichTimerNames(
+  statuses: CheckInTimerStatusResultData[],
+  resolved: ResolvedCheckInTimerResultData[]
+): CheckInTimerStatusResultData[] {
+  // Build name lookup from resolved timers
+  const resolvedNameMap = new Map<string, string>();
+  for (const r of resolved) {
+    if (r.TargetName) {
+      if (r.TargetEntityId) resolvedNameMap.set(`${r.TargetType}-${r.TargetEntityId}`, r.TargetName);
+      // Also key by just TargetType for type-level timers
+      if (!resolvedNameMap.has(`type-${r.TargetType}`)) resolvedNameMap.set(`type-${r.TargetType}`, r.TargetName);
+    }
+  }
+
+  // Get units and personnel from their stores for name lookup
+  const units = useUnitsStore.getState().units;
+  const personnel = usePersonnelStore.getState().personnel;
+
+  // Build fast lookup maps for units
+  const unitByIdStr = new Map<string, string>(); // UnitId string → Name
+  const unitByIdNum = new Map<number, string>(); // parsed numeric UnitId → Name
+  for (const u of units) {
+    if (u.Name) {
+      unitByIdStr.set(u.UnitId, u.Name);
+      const num = parseInt(u.UnitId, 10);
+      if (!isNaN(num)) unitByIdNum.set(num, u.Name);
+    }
+  }
+
+  // Build fast lookup maps for personnel
+  const personnelByUserId = new Map<string, string>(); // UserId → full name
+  const personnelByIdNum = new Map<number, string>(); // parsed numeric UserId → full name
+  for (const p of personnel) {
+    const fullName = `${p.FirstName || ''} ${p.LastName || ''}`.trim();
+    if (fullName) {
+      personnelByUserId.set(p.UserId, fullName);
+      if (p.IdentificationNumber) personnelByUserId.set(p.IdentificationNumber, fullName);
+      const num = parseInt(p.UserId, 10);
+      if (!isNaN(num)) personnelByIdNum.set(num, fullName);
+    }
+  }
+
+  return statuses.map((s) => {
+    // Skip if TargetName is a real entity name (not a type label like "UnitType")
+    const nameIsTypeLabel = !s.TargetName
+      || /type$/i.test(s.TargetName)
+      || s.TargetName === s.TargetTypeName;
+    if (s.TargetName && !nameIsTypeLabel) return s;
+
+    let name: string | undefined;
+
+    // 1. Try resolved timers
+    if (s.TargetEntityId) {
+      name = resolvedNameMap.get(`${s.TargetType}-${s.TargetEntityId}`);
+    }
+    if (!name) {
+      name = resolvedNameMap.get(`type-${s.TargetType}`);
+    }
+
+    // 2. Try units store (by TargetEntityId string, UnitId number, and cross-parsed)
+    if (!name && s.TargetEntityId) {
+      name = unitByIdStr.get(s.TargetEntityId);
+    }
+    if (!name && s.UnitId > 0) {
+      name = unitByIdNum.get(s.UnitId) || unitByIdStr.get(String(s.UnitId));
+    }
+    if (!name && s.TargetEntityId) {
+      const parsed = parseInt(s.TargetEntityId, 10);
+      if (!isNaN(parsed)) name = unitByIdNum.get(parsed);
+    }
+
+    // 3. Try personnel store (by TargetEntityId string and cross-parsed)
+    if (!name && s.TargetEntityId) {
+      name = personnelByUserId.get(s.TargetEntityId);
+    }
+    if (!name && s.TargetEntityId) {
+      const parsed = parseInt(s.TargetEntityId, 10);
+      if (!isNaN(parsed)) name = personnelByIdNum.get(parsed);
+    }
+
+    return name ? { ...s, TargetName: name } : s;
+  });
+}
 
 const STATUS_SEVERITY: Record<string, number> = {
   Critical: 0,
@@ -60,9 +152,13 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   fetchTimerStatuses: async (callId: number) => {
     set({ isLoadingStatuses: true, statusError: null });
     try {
-      const result = await getTimerStatuses(callId);
-      const sorted = (result.Data || []).sort(sortByStatusSeverity);
-      set({ timerStatuses: sorted, isLoadingStatuses: false });
+      const [statusResult, resolvedResult] = await Promise.all([
+        getTimerStatuses(callId),
+        getTimersForCall(callId).catch(() => ({ Data: [] as ResolvedCheckInTimerResultData[] })),
+      ]);
+      const enriched = enrichTimerNames(statusResult.Data || [], resolvedResult.Data || []);
+      const sorted = enriched.sort(sortByStatusSeverity);
+      set({ timerStatuses: sorted, resolvedTimers: resolvedResult.Data || [], isLoadingStatuses: false });
     } catch (error) {
       set({
         statusError: error instanceof Error ? error.message : 'Failed to fetch timer statuses',
@@ -78,8 +174,13 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
     }
     set({ isLoadingStatuses: true, statusError: null });
     try {
-      const result = await getTimerStatusesForCalls(callIds);
-      const sorted = (result.Data || []).sort(sortByStatusSeverity);
+      const [statusResult, ...resolvedResults] = await Promise.all([
+        getTimerStatusesForCalls(callIds),
+        ...callIds.map((id) => getTimersForCall(id).catch(() => ({ Data: [] as ResolvedCheckInTimerResultData[] }))),
+      ]);
+      const allResolved = resolvedResults.flatMap((r) => r.Data || []);
+      const enriched = enrichTimerNames(statusResult.Data || [], allResolved);
+      const sorted = enriched.sort(sortByStatusSeverity);
       set({ timerStatuses: sorted, isLoadingStatuses: false });
     } catch (error) {
       set({

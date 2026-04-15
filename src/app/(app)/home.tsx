@@ -128,7 +128,7 @@ export default function DispatchConsole() {
     }
   };
 
-  // Track analytics when view becomes visible
+  // Refresh data and track analytics when view becomes visible
   useFocusEffect(
     useCallback(() => {
       trackEvent('dispatch_console_viewed', {
@@ -136,7 +136,11 @@ export default function DispatchConsole() {
         isLandscape,
         isTablet,
       });
-    }, [trackEvent, isLandscape, isTablet])
+      // Re-fetch core data so downstream panels (including check-in timers) refresh
+      fetchCalls();
+      fetchUnits();
+      fetchPersonnel();
+    }, [trackEvent, isLandscape, isTablet, fetchCalls, fetchUnits, fetchPersonnel])
   );
 
   // Listen for SignalR personnel updates

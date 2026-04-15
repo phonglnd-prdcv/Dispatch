@@ -1,7 +1,7 @@
 import { type Href, router } from 'expo-router';
 import { AlertTriangle, ArrowRight, ChevronRight, Clock, CloudLightning, Filter, Info, Mic, Phone, Plus, Radio, Settings, ShieldCheck, Truck, User, Zap } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -318,6 +318,13 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   // Track previous call selection to avoid unnecessary tab switches
   const prevSelectedCallIdRef = useRef<string | undefined>(undefined);
 
+  // Reset to activity tab if check-ins tab is active but call filter is cleared
+  useEffect(() => {
+    if (!isCallFilterActive && activeTab === 'checkins') {
+      setActiveTab('activity');
+    }
+  }, [isCallFilterActive, activeTab]);
+
   // Switch to actions tab when a call is selected (for quick note/close actions)
   useEffect(() => {
     const prevId = prevSelectedCallIdRef.current;
@@ -390,8 +397,11 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   const [checkInSheetTimer, setCheckInSheetTimer] = useState<(typeof allTimerStatuses)[0] | null>(null);
 
   // Get all active call IDs to fetch timer statuses for
-  const activeCallIds = calls.map((c) => parseInt(c.CallId)).filter((id) => !isNaN(id) && id > 0);
+  const activeCallIds = useMemo(() => calls.map((c) => parseInt(c.CallId)).filter((id) => !isNaN(id) && id > 0), [calls]);
 
+  // Fetch check-in timer statuses and restart polling whenever the calls list updates.
+  // Using the `calls` reference as a dependency ensures re-fetch after navigation back
+  // (when calls are refetched on focus) even if the call IDs themselves haven't changed.
   useEffect(() => {
     if (activeCallIds.length > 0) {
       fetchTimerStatusesForCalls(activeCallIds);
@@ -400,10 +410,18 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
     return () => {
       stopCheckInPolling();
     };
-  }, [activeCallIds.join(','), fetchTimerStatusesForCalls, startCheckInPolling, stopCheckInPolling]);
+  }, [calls, activeCallIds, fetchTimerStatusesForCalls, startCheckInPolling, stopCheckInPolling]);
 
-  const criticalCheckInCount = allTimerStatuses.filter((s) => s.Status === 'Critical').length;
-  const overdueCheckInCount = allTimerStatuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Red').length;
+  // When call filter is active, show only timers for the selected call
+  const filteredTimerStatuses = useMemo(() => {
+    if (!isCallFilterActive || !selectedCallId) return allTimerStatuses;
+    const callIdNum = parseInt(selectedCallId);
+    if (isNaN(callIdNum)) return allTimerStatuses;
+    return allTimerStatuses.filter((s) => s.CallId === callIdNum);
+  }, [allTimerStatuses, isCallFilterActive, selectedCallId]);
+
+  const criticalCheckInCount = filteredTimerStatuses.filter((s) => s.Status === 'Critical').length;
+  const overdueCheckInCount = filteredTimerStatuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Red').length;
   const urgentCheckInCount = criticalCheckInCount + overdueCheckInCount;
 
   // Weather alerts
@@ -443,13 +461,13 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
       case 'actions':
         return urgentCheckInCount > 0 ? urgentCheckInCount : undefined;
       case 'checkins':
-        return allTimerStatuses.length;
+        return filteredTimerStatuses.length;
       case 'weather':
         return weatherAlertCount > 0 ? weatherAlertCount : undefined;
       default:
         return activityCount;
     }
-  }, [activeTab, radioLog.length, activityCount, allTimerStatuses.length, urgentCheckInCount, weatherAlertCount]);
+  }, [activeTab, radioLog.length, activityCount, filteredTimerStatuses.length, urgentCheckInCount, weatherAlertCount]);
 
   const renderActivityContent = () => {
     if (useCallActivity) {
@@ -537,7 +555,7 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
   };
 
   const renderCheckInsContent = () => {
-    if (isCheckInsLoading && allTimerStatuses.length === 0) {
+    if (isCheckInsLoading && filteredTimerStatuses.length === 0) {
       return (
         <View style={styles.emptyState}>
           <Text className="text-sm text-gray-500 dark:text-gray-400">{t('common.loading')}</Text>
@@ -545,7 +563,7 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
       );
     }
 
-    if (allTimerStatuses.length === 0) {
+    if (filteredTimerStatuses.length === 0) {
       return (
         <View style={styles.emptyState}>
           <Icon as={ShieldCheck} size="lg" className="text-gray-300 dark:text-gray-600" />
@@ -574,7 +592,7 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
           </HStack>
         )}
 
-        {allTimerStatuses.map((timer) => (
+        {filteredTimerStatuses.map((timer) => (
           <CheckInTimerCard key={`${timer.TargetType}-${timer.TargetEntityId}`} timer={timer} onCheckIn={handleCheckInFromDashboard} />
         ))}
       </>
@@ -684,7 +702,9 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
           <HStack className="border-b border-gray-200 px-2 dark:border-gray-700" space="xs">
             <TabButton label={t('dispatch.activity')} icon={ArrowRight} isActive={activeTab === 'activity'} count={activityCount} onPress={() => setActiveTab('activity')} />
             <TabButton label={t('dispatch.radio')} icon={Radio} isActive={activeTab === 'radio'} count={activeTransmissions > 0 ? activeTransmissions : undefined} onPress={() => setActiveTab('radio')} />
-            <TabButton label={t('dispatch.check_ins')} icon={ShieldCheck} isActive={activeTab === 'checkins'} count={urgentCheckInCount > 0 ? urgentCheckInCount : undefined} onPress={() => setActiveTab('checkins')} />
+            {isCallFilterActive && (
+              <TabButton label={t('dispatch.check_ins')} icon={ShieldCheck} isActive={activeTab === 'checkins'} count={urgentCheckInCount > 0 ? urgentCheckInCount : undefined} onPress={() => setActiveTab('checkins')} />
+            )}
             <TabButton label={t('dispatch.actions')} icon={Settings} isActive={activeTab === 'actions'} count={urgentCheckInCount > 0 ? urgentCheckInCount : undefined} onPress={() => setActiveTab('actions')} />
             {weatherSettings?.WeatherAlertsEnabled !== false && (
               <TabButton label={t('weatherAlerts.title')} icon={CloudLightning} isActive={activeTab === 'weather'} count={weatherAlertCount > 0 ? weatherAlertCount : undefined} onPress={() => setActiveTab('weather')} />

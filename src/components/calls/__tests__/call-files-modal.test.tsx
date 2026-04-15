@@ -55,8 +55,8 @@ jest.mock('@/hooks/use-analytics', () => ({
   }),
 }));
 
-// Mock expo modules
-jest.mock('expo-file-system', () => ({
+// Mock expo modules — component imports from 'expo-file-system/legacy'
+jest.mock('expo-file-system/legacy', () => ({
   documentDirectory: '/mock/documents/',
   writeAsStringAsync: jest.fn(),
   EncodingType: {
@@ -90,14 +90,13 @@ Object.defineProperty(global, 'FileReader', {
     result: string | ArrayBuffer | null = null;
     readyState = 0;
     onload: ((event: any) => void) | null = null;
+    onerror: ((event: any) => void) | null = null;
 
-    readAsDataURL(blob: Blob) {
-      // Simulate successful file read
-      setTimeout(() => {
-        this.result = 'data:application/pdf;base64,dGVzdCBjb250ZW50'; // base64 for "test content"
-        this.readyState = 2; // DONE
-        if (this.onload) this.onload(new Event('load') as any);
-      }, 0);
+    readAsDataURL(_blob: Blob) {
+      // Fire synchronously — onload is set before readAsDataURL is called
+      this.result = 'data:application/pdf;base64,dGVzdCBjb250ZW50'; // base64 for "test content"
+      this.readyState = 2; // DONE
+      if (this.onload) this.onload(new Event('load') as any);
     }
   }
 });
@@ -492,7 +491,7 @@ describe('CallFilesModal', () => {
 
   describe('File Download', () => {
     const mockGetCallAttachmentFile = require('@/api/calls/callFiles').getCallAttachmentFile;
-    const mockWriteAsStringAsync = require('expo-file-system').writeAsStringAsync;
+    const mockWriteAsStringAsync = require('expo-file-system/legacy').writeAsStringAsync;
     const mockShareAsync = require('expo-sharing').shareAsync;
 
     beforeEach(() => {

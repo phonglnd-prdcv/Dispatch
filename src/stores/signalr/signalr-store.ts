@@ -283,12 +283,30 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
       };
       signalRService.on('checkInUpdated', updateHubHandlers.checkInUpdated);
 
+      // Extract alertId from SignalR weather alert payloads which may be a plain
+      // string, a number, or an object with an alertId / WeatherAlertId field.
+      const extractAlertId = (message: unknown): string | null => {
+        if (typeof message === 'string') return message;
+        if (typeof message === 'number') return String(message);
+        if (message && typeof message === 'object') {
+          const obj = message as Record<string, unknown>;
+          const id = obj.alertId ?? obj.AlertId ?? obj.WeatherAlertId ?? obj.id ?? obj.Id;
+          if (typeof id === 'string') return id;
+          if (typeof id === 'number') return String(id);
+        }
+        return null;
+      };
+
       updateHubHandlers.weatherAlertReceived = (message: unknown) => {
         logger.info({
           message: 'weatherAlertReceived',
           context: { message },
         });
-        const alertId = typeof message === 'string' ? message : String(message);
+        const alertId = extractAlertId(message);
+        if (!alertId) {
+          logger.warn({ message: 'weatherAlertReceived: could not extract alertId', context: { message } });
+          return;
+        }
         // Lazy import to avoid circular dependency
         const { useWeatherAlertsStore } = require('../weatherAlerts/store');
         useWeatherAlertsStore.getState().handleAlertReceived(alertId);
@@ -301,7 +319,11 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'weatherAlertUpdated',
           context: { message },
         });
-        const alertId = typeof message === 'string' ? message : String(message);
+        const alertId = extractAlertId(message);
+        if (!alertId) {
+          logger.warn({ message: 'weatherAlertUpdated: could not extract alertId', context: { message } });
+          return;
+        }
         const { useWeatherAlertsStore } = require('../weatherAlerts/store');
         useWeatherAlertsStore.getState().handleAlertUpdated(alertId);
         set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'weatherAlertUpdated', lastWeatherAlertTimestamp: Date.now() });
@@ -313,7 +335,11 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           message: 'weatherAlertExpired',
           context: { message },
         });
-        const alertId = typeof message === 'string' ? message : String(message);
+        const alertId = extractAlertId(message);
+        if (!alertId) {
+          logger.warn({ message: 'weatherAlertExpired: could not extract alertId', context: { message } });
+          return;
+        }
         const { useWeatherAlertsStore } = require('../weatherAlerts/store');
         useWeatherAlertsStore.getState().handleAlertExpired(alertId);
         set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'weatherAlertExpired', lastWeatherAlertTimestamp: Date.now() });

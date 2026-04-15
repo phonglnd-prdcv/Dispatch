@@ -12,7 +12,41 @@ import { VStack } from '@/components/ui/vstack';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCheckInStore } from '@/stores/checkIn/store';
+import { usePersonnelStore } from '@/stores/personnel/store';
 import { useToastStore } from '@/stores/toast/store';
+import { useUnitsStore } from '@/stores/units/store';
+
+/** Resolve the display name for a check-in timer entity */
+function resolveTimerDisplayName(
+  timer: CheckInTimerStatusResultData,
+  units: { UnitId: string; Name: string }[],
+  personnel: { UserId: string; IdentificationNumber: string; FirstName: string; LastName: string }[],
+  fallback: string
+): string {
+  // TargetName from API is often the type label (e.g. "UnitType"), not the entity name
+  if (timer.TargetName && !/type$/i.test(timer.TargetName) && timer.TargetName !== timer.TargetTypeName) {
+    return timer.TargetName;
+  }
+
+  const entityId = timer.TargetEntityId;
+  const unitId = timer.UnitId;
+
+  for (const u of units) {
+    if (entityId && u.UnitId === entityId) return u.Name;
+    if (unitId > 0 && u.UnitId === String(unitId)) return u.Name;
+    if (unitId > 0 && parseInt(u.UnitId, 10) === unitId) return u.Name;
+  }
+
+  if (entityId) {
+    for (const p of personnel) {
+      if (p.UserId === entityId || p.IdentificationNumber === entityId) {
+        return `${p.FirstName} ${p.LastName}`.trim();
+      }
+    }
+  }
+
+  return entityId || fallback;
+}
 
 const CHECK_IN_TYPE_KEYS: Record<string, string> = {
   Personnel: 'check_in.type_personnel',
@@ -38,6 +72,8 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
   const isLandscape = width > height;
   const showToast = useToastStore((state) => state.showToast);
   const { performCheckIn, isCheckingIn } = useCheckInStore();
+  const units = useUnitsStore((s) => s.units);
+  const personnel = usePersonnelStore((s) => s.personnel);
   const userLocation = useLocationStore((state) => ({
     latitude: state.latitude,
     longitude: state.longitude,
@@ -135,7 +171,7 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
             {timers.map((timer) => (
               <Button key={`${timer.TargetType}-${timer.TargetEntityId}`} variant="outline" onPress={() => handleSelectTarget(timer)} className="w-full justify-start" size={isLandscape ? 'md' : 'sm'}>
                 <VStack className="items-start">
-                  <ButtonText className={`font-bold ${isLandscape ? '' : 'text-xs'}`}>{timer.TargetName || timer.TargetEntityId || typeLabel(timer)}</ButtonText>
+                  <ButtonText className={`font-bold ${isLandscape ? '' : 'text-xs'}`}>{resolveTimerDisplayName(timer, units, personnel, typeLabel(timer))}</ButtonText>
                   <Text className="text-xs text-gray-500">{typeLabel(timer)}</Text>
                 </VStack>
               </Button>
@@ -146,7 +182,7 @@ export const CheckInBottomSheet: React.FC<CheckInBottomSheetProps> = ({ isOpen, 
         {step === 'confirm' && selected && (
           <VStack className="gap-4">
             <VStack>
-              <Text className="text-base font-bold">{selected.TargetName || selected.TargetEntityId || typeLabel(selected)}</Text>
+              <Text className="text-base font-bold">{resolveTimerDisplayName(selected, units, personnel, typeLabel(selected))}</Text>
               <Text className="text-sm text-gray-500">{typeLabel(selected)}</Text>
             </VStack>
 
