@@ -2,7 +2,7 @@ import { Stack, useFocusEffect } from 'expo-router';
 import { type Feature, type FeatureCollection, type GeoJsonProperties, type Geometry } from 'geojson';
 import mapboxgl from 'mapbox-gl';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
@@ -11,10 +11,14 @@ import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { getMapIconWebUrl, MAP_ICONS } from '@/constants/map-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
+import { isPoiMarker } from '@/lib/destination-helpers';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { getMapMarkerColor, getMapPinSummary, hasValidMapCoordinates, resolveMapMarkerIconKey } from '@/lib/map-markers';
+import { createDefaultVisiblePoiLayerIds, filterMapPinsByPoiLayers, getPoiMapLayerId } from '@/lib/poi-map-layers';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';
+import { type PoiLayerData } from '@/models/v4/mapping/poiLayerData';
 import { useLocationStore } from '@/stores/app/location-store';
 
 // Mapbox GL CSS needs to be injected for web
@@ -33,6 +37,8 @@ export default function MapWeb() {
   const sourceIdsRef = useRef<string[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
+  const [poiLayers, setPoiLayers] = useState<PoiLayerData[]>([]);
+  const [visiblePoiLayerIds, setVisiblePoiLayerIds] = useState<Set<string>>(new Set());
   const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
 
   const location = useLocationStore((state) => ({
@@ -42,6 +48,45 @@ export default function MapWeb() {
 
   // Map layers hook
   const { layers, visibleLayers, isLoading: isLayersLoading, fetchLayers, toggleLayer, showAllLayers, hideAllLayers, getVisibleLayerData } = useMapLayers({ initialLayerType: MapLayerType.ALL, autoFetch: true });
+
+  const syncPoiLayers = useCallback((nextPoiLayers: PoiLayerData[]) => {
+    setPoiLayers(nextPoiLayers);
+    setVisiblePoiLayerIds(createDefaultVisiblePoiLayerIds(nextPoiLayers));
+  }, []);
+
+  const togglePoiLayer = useCallback((layerId: string) => {
+    setVisiblePoiLayerIds((currentLayerIds) => {
+      const nextLayerIds = new Set(currentLayerIds);
+
+      if (nextLayerIds.has(layerId)) {
+        nextLayerIds.delete(layerId);
+      } else {
+        nextLayerIds.add(layerId);
+      }
+
+      return nextLayerIds;
+    });
+  }, []);
+
+  const showAllMapLayers = useCallback(() => {
+    showAllLayers();
+    setVisiblePoiLayerIds(createDefaultVisiblePoiLayerIds(poiLayers));
+  }, [poiLayers, showAllLayers]);
+
+  const hideAllMapLayers = useCallback(() => {
+    hideAllLayers();
+    setVisiblePoiLayerIds(new Set());
+  }, [hideAllLayers]);
+
+  const combinedLayers = useMemo(
+    () => [
+      ...layers.map((layer) => ({ Id: layer.Id, Name: layer.Name, Color: layer.Color, kind: 'custom' as const })),
+      ...poiLayers.map((layer) => ({ Id: getPoiMapLayerId(layer.PoiTypeId), Name: layer.Name, Color: layer.Color, kind: 'poi' as const })),
+    ],
+    [layers, poiLayers]
+  );
+
+  const visibleMapPins = useMemo(() => filterMapPinsByPoiLayers(mapPins, visiblePoiLayerIds), [mapPins, visiblePoiLayerIds]);
 
   // Get map style based on current theme
   const getMapStyle = useCallback(() => {
@@ -127,6 +172,7 @@ export default function MapWeb() {
 
         if (mapDataAndMarkers && mapDataAndMarkers.Data) {
           setMapPins(mapDataAndMarkers.Data.MapMakerInfos);
+          syncPoiLayers(mapDataAndMarkers.Data.PoiLayers ?? []);
 
           // Center map on the data center if provided
           if (mapDataAndMarkers.Data.CenterLat && mapDataAndMarkers.Data.CenterLon && map.current) {
@@ -164,7 +210,7 @@ export default function MapWeb() {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [syncPoiLayers]);
 
   // Update markers when mapPins change
   useEffect(() => {
@@ -175,8 +221,8 @@ export default function MapWeb() {
     markersRef.current = [];
 
     // Add new markers
-    mapPins.forEach((pin) => {
-      if (!pin.Latitude || !pin.Longitude) return;
+    visibleMapPins.forEach((pin) => {
+      if (!hasValidMapCoordinates(pin)) return;
 
       // Create custom marker element
       const el = document.createElement('div');
@@ -186,28 +232,44 @@ export default function MapWeb() {
       el.style.alignItems = 'center';
       el.style.cursor = 'pointer';
 
-      // Create marker icon
       const iconContainer = document.createElement('div');
-      iconContainer.style.width = '32px';
-      iconContainer.style.height = '32px';
+      iconContainer.style.display = 'flex';
+      iconContainer.style.alignItems = 'center';
+      iconContainer.style.justifyContent = 'center';
       iconContainer.style.position = 'relative';
 
-      // Get the icon for this pin type
-      const iconKey = (pin.ImagePath?.toLowerCase() || 'call') as MapIconKey;
-      const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
+      if (isPoiMarker(pin.Type)) {
+        iconContainer.style.width = '22px';
+        iconContainer.style.height = '22px';
+        iconContainer.style.borderRadius = '999px';
+        iconContainer.style.backgroundColor = getMapMarkerColor(pin);
+        iconContainer.style.border = '2px solid #ffffff';
+        iconContainer.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.35)';
 
-      const img = document.createElement('img');
-      const imgSrc = getMapIconWebUrl(iconData);
-      img.src = imgSrc;
-      img.style.width = '32px';
-      img.style.height = '32px';
-      img.style.objectFit = 'contain';
-      img.alt = pin.Title;
-      img.onerror = () => {
-        // Fallback to call icon if image fails to load
-        img.src = getMapIconWebUrl(MAP_ICONS['call']);
-      };
-      iconContainer.appendChild(img);
+        const innerDot = document.createElement('div');
+        innerDot.style.width = '8px';
+        innerDot.style.height = '8px';
+        innerDot.style.borderRadius = '999px';
+        innerDot.style.backgroundColor = '#ffffff';
+        iconContainer.appendChild(innerDot);
+      } else {
+        iconContainer.style.width = '32px';
+        iconContainer.style.height = '32px';
+
+        const iconKey = resolveMapMarkerIconKey(pin) as MapIconKey;
+        const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
+        const img = document.createElement('img');
+        const imgSrc = getMapIconWebUrl(iconData);
+        img.src = imgSrc;
+        img.style.width = '32px';
+        img.style.height = '32px';
+        img.style.objectFit = 'contain';
+        img.alt = pin.Title;
+        img.onerror = () => {
+          img.src = getMapIconWebUrl(MAP_ICONS['call']);
+        };
+        iconContainer.appendChild(img);
+      }
 
       el.appendChild(iconContainer);
 
@@ -230,7 +292,7 @@ export default function MapWeb() {
       const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
         `<div style="padding: 8px;">
           <h3 style="margin: 0 0 8px 0; font-weight: 600;">${pin.Title}</h3>
-          ${pin.InfoWindowContent ? `<p style="margin: 0 0 8px 0; font-size: 12px;">${pin.InfoWindowContent}</p>` : ''}
+          ${getMapPinSummary(pin) ? `<p style="margin: 0 0 8px 0; font-size: 12px;">${getMapPinSummary(pin)}</p>` : ''}
           <p style="margin: 0; font-size: 11px; color: #666;">
             ${pin.Latitude.toFixed(6)}, ${pin.Longitude.toFixed(6)}
           </p>
@@ -241,7 +303,7 @@ export default function MapWeb() {
 
       markersRef.current.push(marker);
     });
-  }, [mapPins, isMapReady, colorScheme]);
+  }, [visibleMapPins, isMapReady, colorScheme]);
 
   // Update layers when visibility changes
   useEffect(() => {
@@ -340,15 +402,15 @@ export default function MapWeb() {
 
   // Track when map view is rendered
   useEffect(() => {
-    trackEvent('map_view_rendered', {
+      trackEvent('map_view_rendered', {
       hasMapPins: mapPins.length > 0,
       mapPinsCount: mapPins.length,
       theme: colorScheme || 'light',
       platform: 'web',
-      layersCount: layers.length,
-      visibleLayersCount: visibleLayers.size,
+      layersCount: combinedLayers.length,
+      visibleLayersCount: visibleLayers.size + visiblePoiLayerIds.size,
     });
-  }, [trackEvent, mapPins.length, colorScheme, layers.length, visibleLayers.size]);
+  }, [trackEvent, mapPins.length, colorScheme, combinedLayers.length, visibleLayers.size, visiblePoiLayerIds.size]);
 
   // Render layers panel modal
   const renderLayersPanel = () => {
@@ -366,20 +428,20 @@ export default function MapWeb() {
             </View>
 
             <View style={styles.layersPanelActions}>
-              <TouchableOpacity onPress={showAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+              <TouchableOpacity onPress={showAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
                 <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={hideAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+              <TouchableOpacity onPress={hideAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
                 <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.layersList}>
-              {layers.length === 0 ? (
+              {combinedLayers.length === 0 ? (
                 <Text style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</Text>
               ) : (
-                layers.map((layer) => (
-                  <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => toggleLayer(layer.Id)}>
+                combinedLayers.map((layer) => (
+                  <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}>
                     <View style={styles.layerInfo}>
                       <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
                       <Text style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
@@ -387,10 +449,10 @@ export default function MapWeb() {
                       </Text>
                     </View>
                     <Switch
-                      value={visibleLayers.has(layer.Id)}
-                      onValueChange={() => toggleLayer(layer.Id)}
+                      value={layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)}
+                      onValueChange={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}
                       trackColor={{ false: isDark ? '#4b5563' : '#d1d5db', true: '#3b82f6' }}
-                      thumbColor={visibleLayers.has(layer.Id) ? '#ffffff' : '#f4f3f4'}
+                      thumbColor={(layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)) ? '#ffffff' : '#f4f3f4'}
                     />
                   </Pressable>
                 ))

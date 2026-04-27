@@ -1,13 +1,15 @@
 import { create } from 'zustand';
 
 import { saveUnitStatus } from '@/api/units/unitStatuses';
+import { DestinationEntityType, type DestinationSelectionType } from '@/lib/destination-helpers';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { SaveUnitStatusInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
 
-export type DestinationType = 'none' | 'call' | 'station';
+export type DestinationType = DestinationSelectionType;
 
 interface UnitActionsState {
   // Panel visibility
@@ -21,6 +23,7 @@ interface UnitActionsState {
   statusDestinationType: DestinationType;
   statusSelectedCall: CallResultData | null;
   statusSelectedStation: GroupResultData | null;
+  statusSelectedPoi: PoiResultData | null;
   statusNote: string;
   isSubmittingStatus: boolean;
 
@@ -28,6 +31,7 @@ interface UnitActionsState {
   availableStatuses: StatusesResultData[];
   availableCalls: CallResultData[];
   availableStations: GroupResultData[];
+  availablePois: PoiResultData[];
   isLoadingOptions: boolean;
 
   // Error handling
@@ -42,6 +46,7 @@ interface UnitActionsState {
   setStatusDestinationType: (type: DestinationType) => void;
   setStatusSelectedCall: (call: CallResultData | null) => void;
   setStatusSelectedStation: (station: GroupResultData | null) => void;
+  setStatusSelectedPoi: (poi: PoiResultData | null) => void;
   setStatusNote: (note: string) => void;
   submitStatus: (overrides?: { unit?: UnitInfoResultData; status?: StatusesResultData }) => Promise<boolean>;
   resetStatusForm: () => void;
@@ -50,6 +55,7 @@ interface UnitActionsState {
   setAvailableStatuses: (statuses: StatusesResultData[]) => void;
   setAvailableCalls: (calls: CallResultData[]) => void;
   setAvailableStations: (stations: GroupResultData[]) => void;
+  setAvailablePois: (pois: PoiResultData[]) => void;
   setIsLoadingOptions: (loading: boolean) => void;
 
   // Reset everything
@@ -63,11 +69,13 @@ const initialState = {
   statusDestinationType: 'none' as DestinationType,
   statusSelectedCall: null,
   statusSelectedStation: null,
+  statusSelectedPoi: null,
   statusNote: '',
   isSubmittingStatus: false,
   availableStatuses: [],
   availableCalls: [],
   availableStations: [],
+  availablePois: [],
   isLoadingOptions: false,
   statusError: null,
 };
@@ -84,6 +92,7 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
       statusDestinationType: 'none',
       statusSelectedCall: null,
       statusSelectedStation: null,
+      statusSelectedPoi: null,
       statusNote: '',
       statusError: null,
     });
@@ -105,10 +114,16 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
     if (type === 'none') {
       updates.statusSelectedCall = null;
       updates.statusSelectedStation = null;
+      updates.statusSelectedPoi = null;
     } else if (type === 'call') {
       updates.statusSelectedStation = null;
+      updates.statusSelectedPoi = null;
     } else if (type === 'station') {
       updates.statusSelectedCall = null;
+      updates.statusSelectedPoi = null;
+    } else if (type === 'poi') {
+      updates.statusSelectedCall = null;
+      updates.statusSelectedStation = null;
     }
     set(updates);
   },
@@ -118,6 +133,7 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
       statusSelectedCall: call,
       statusDestinationType: 'call',
       statusSelectedStation: null,
+      statusSelectedPoi: null,
     }),
 
   setStatusSelectedStation: (station) =>
@@ -125,6 +141,15 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
       statusSelectedStation: station,
       statusDestinationType: 'station',
       statusSelectedCall: null,
+      statusSelectedPoi: null,
+    }),
+
+  setStatusSelectedPoi: (poi) =>
+    set({
+      statusSelectedPoi: poi,
+      statusDestinationType: 'poi',
+      statusSelectedCall: null,
+      statusSelectedStation: null,
     }),
 
   setStatusNote: (note) => set({ statusNote: note }),
@@ -133,7 +158,7 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
     const storeState = get();
     const selectedUnit = overrides?.unit ?? storeState.selectedUnit;
     const selectedStatus = overrides?.status ?? storeState.selectedStatus;
-    const { statusDestinationType, statusSelectedCall, statusSelectedStation, statusNote } = storeState;
+    const { statusDestinationType, statusSelectedCall, statusSelectedStation, statusSelectedPoi, statusNote } = storeState;
 
     if (!selectedUnit || !selectedStatus) {
       set({ statusError: 'Please select a status' });
@@ -145,17 +170,24 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
     try {
       const date = new Date();
       let respondingTo = '';
+      let respondingToType: number | null = null;
 
       if (statusDestinationType === 'call' && statusSelectedCall) {
         respondingTo = statusSelectedCall.CallId;
+        respondingToType = DestinationEntityType.Call;
       } else if (statusDestinationType === 'station' && statusSelectedStation) {
         respondingTo = statusSelectedStation.GroupId;
+        respondingToType = DestinationEntityType.Station;
+      } else if (statusDestinationType === 'poi' && statusSelectedPoi) {
+        respondingTo = statusSelectedPoi.PoiId.toString();
+        respondingToType = DestinationEntityType.Poi;
       }
 
       const input = new SaveUnitStatusInput();
       input.Id = selectedUnit.UnitId;
       input.Type = selectedStatus.Id.toString();
       input.RespondingTo = respondingTo;
+      input.RespondingToType = respondingToType;
       input.TimestampUtc = date.toUTCString().replace('UTC', 'GMT');
       input.Timestamp = date.toISOString();
       input.Note = statusNote;
@@ -179,6 +211,7 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
         statusDestinationType: 'none',
         statusSelectedCall: null,
         statusSelectedStation: null,
+        statusSelectedPoi: null,
         statusNote: '',
       });
 
@@ -198,6 +231,7 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
       statusDestinationType: 'none',
       statusSelectedCall: null,
       statusSelectedStation: null,
+      statusSelectedPoi: null,
       statusNote: '',
       statusError: null,
     }),
@@ -206,6 +240,7 @@ export const useUnitActionsStore = create<UnitActionsState>((set, get) => ({
   setAvailableStatuses: (statuses) => set({ availableStatuses: statuses }),
   setAvailableCalls: (calls) => set({ availableCalls: calls }),
   setAvailableStations: (stations) => set({ availableStations: stations }),
+  setAvailablePois: (pois) => set({ availablePois: pois }),
   setIsLoadingOptions: (loading) => set({ isLoadingOptions: loading }),
 
   // Reset everything

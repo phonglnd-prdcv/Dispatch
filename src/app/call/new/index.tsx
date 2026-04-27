@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as z from 'zod';
 
 import { createCall } from '@/api/calls/calls';
+import { getNewCallData } from '@/api/dispatch/dispatch';
 import { getNewCallForm } from '@/api/forms/forms';
 import { saveUdfValues } from '@/api/userDefinedFields/userDefinedFields';
 import { CallFormRenderer } from '@/components/calls/call-form-renderer';
@@ -37,9 +38,11 @@ import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useToast } from '@/hooks/use-toast';
+import { getPoiDestinationOptionLabel } from '@/lib/poi-display';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type ContactResultData } from '@/models/v4/contacts/contactResultData';
 import { type FormResultData } from '@/models/v4/forms/formResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type UdfFieldValueInput } from '@/models/v4/userDefinedFields/udfFieldValueInput';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -50,6 +53,7 @@ const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
   nature: z.string().min(1, { message: 'Nature is required' }),
   note: z.string().optional(),
+  destinationPoiId: z.string().optional(),
   address: z.string().optional(),
   coordinates: z.string().optional(),
   what3words: z.string().optional(),
@@ -72,6 +76,8 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const NO_DESTINATION_VALUE = '__none__';
 
 // Google Maps Geocoding API response types
 interface GeocodingResult {
@@ -130,6 +136,8 @@ export default function NewCall() {
   const [showLinkedCallsModal, setShowLinkedCallsModal] = useState(false);
   const [callFormData, setCallFormData] = useState<string | null>(null);
   const [callForm, setCallForm] = useState<FormResultData | null>(null);
+  const [destinationPois, setDestinationPois] = useState<PoiResultData[]>([]);
+  const [isLoadingDestinationPois, setIsLoadingDestinationPois] = useState(false);
   const [udfValues, setUdfValues] = useState<UdfFieldValueInput[]>([]);
   const [selectedProtocols, setSelectedProtocols] = useState<SelectedProtocol[]>([]);
   const [linkedCall, setLinkedCall] = useState<{ callId: string; number: string; name: string } | null>(null);
@@ -181,6 +189,7 @@ export default function NewCall() {
       name: '',
       nature: '',
       note: '',
+      destinationPoiId: '',
       address: '',
       coordinates: '',
       what3words: '',
@@ -212,6 +221,30 @@ export default function NewCall() {
         if (result?.Data?.Data) setCallForm(result.Data);
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    setIsLoadingDestinationPois(true);
+    getNewCallData()
+      .then((result) => {
+        if (isMounted) {
+          setDestinationPois(result?.Data?.DestinationPois || []);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load destination POIs:', error);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingDestinationPois(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Track when new call view is rendered
@@ -252,6 +285,7 @@ export default function NewCall() {
         priority: priority.Id,
         type: type.Name,
         note: data.note,
+        destinationPoiId: data.destinationPoiId ? Number(data.destinationPoiId) : null,
         address: data.address,
         latitude: data.latitude,
         longitude: data.longitude,
@@ -952,6 +986,35 @@ export default function NewCall() {
                       </Button>
                     )}
                   </Box>
+
+                  <FormControl>
+                    <FormControlLabel>
+                      <FormControlLabelText>{t('calls.destination_poi')}</FormControlLabelText>
+                    </FormControlLabel>
+                    <Controller
+                      control={control}
+                      name="destinationPoiId"
+                      render={({ field: { onChange, value } }) => (
+                        <Select selectedValue={value || NO_DESTINATION_VALUE} onValueChange={(selectedValue) => onChange(selectedValue === NO_DESTINATION_VALUE ? '' : selectedValue)}>
+                          <SelectTrigger>
+                            <SelectInput placeholder={t('calls.select_destination_poi')} className="w-5/6" />
+                            <SelectIcon as={ChevronDownIcon} className="mr-3" />
+                          </SelectTrigger>
+                          <SelectPortal>
+                            <SelectBackdrop />
+                            <SelectContent>
+                              <SelectItem label={t('calls.no_destination')} value={NO_DESTINATION_VALUE} />
+                              {destinationPois.map((poi) => (
+                                <SelectItem key={poi.PoiId} label={getPoiDestinationOptionLabel(poi)} value={poi.PoiId.toString()} />
+                              ))}
+                            </SelectContent>
+                          </SelectPortal>
+                        </Select>
+                      )}
+                    />
+                    {isLoadingDestinationPois ? <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('calls.loading_destination_pois')}</Text> : null}
+                    {!isLoadingDestinationPois && destinationPois.length === 0 ? <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('calls.no_destination_pois_available')}</Text> : null}
+                  </FormControl>
                 </View>
               ) : null}
             </Card>

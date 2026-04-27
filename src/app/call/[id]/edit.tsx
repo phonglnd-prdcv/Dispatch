@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import * as z from 'zod';
 
+import { getNewCallData } from '@/api/dispatch/dispatch';
 import { saveUdfValues } from '@/api/userDefinedFields/userDefinedFields';
 import { DispatchSelectionModal } from '@/components/calls/dispatch-selection-modal';
 import { UdfFieldsRenderer } from '@/components/calls/udf-fields-renderer';
@@ -26,6 +27,8 @@ import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { getPoiDestinationOptionLabel } from '@/lib/poi-display';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type UdfFieldValueInput } from '@/models/v4/userDefinedFields/udfFieldValueInput';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
@@ -37,6 +40,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   nature: z.string().min(1, 'Nature is required'),
   note: z.string().optional(),
+  destinationPoiId: z.string().optional(),
   address: z.string().optional(),
   coordinates: z.string().optional(),
   what3words: z.string().optional(),
@@ -57,6 +61,8 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const NO_DESTINATION_VALUE = '__none__';
 
 interface GeocodingResult {
   place_id: string;
@@ -94,6 +100,8 @@ export default function EditCall() {
   const [isGeocodingCoordinates, setIsGeocodingCoordinates] = useState(false);
   const [isGeocodingWhat3Words, setIsGeocodingWhat3Words] = useState(false);
   const [addressResults, setAddressResults] = useState<GeocodingResult[]>([]);
+  const [destinationPois, setDestinationPois] = useState<PoiResultData[]>([]);
+  const [isLoadingDestinationPois, setIsLoadingDestinationPois] = useState(false);
   const [dispatchSelection, setDispatchSelection] = useState<DispatchSelection>({
     everyone: false,
     users: [],
@@ -119,6 +127,7 @@ export default function EditCall() {
       name: '',
       nature: '',
       note: '',
+      destinationPoiId: '',
       address: '',
       coordinates: '',
       what3words: '',
@@ -146,6 +155,30 @@ export default function EditCall() {
       fetchCallDetail(callId);
     }
   }, [fetchCallPriorities, fetchCallTypes, fetchCallDetail, callId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    setIsLoadingDestinationPois(true);
+    getNewCallData()
+      .then((result) => {
+        if (isMounted) {
+          setDestinationPois(result?.Data?.DestinationPois || []);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load destination POIs:', error);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingDestinationPois(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Pre-populate form when call data is loaded
   useEffect(() => {
@@ -183,6 +216,7 @@ export default function EditCall() {
         name: call.Name || '',
         nature: call.Nature || '',
         note: call.Note || '',
+        destinationPoiId: call.DestinationPoiId ? call.DestinationPoiId.toString() : '',
         address: call.Address || '',
         coordinates: call.Geolocation || '',
         what3words: '',
@@ -242,6 +276,7 @@ export default function EditCall() {
         priority: priority?.Id || 0,
         type: type?.Name || '',
         note: data.note,
+        destinationPoiId: data.destinationPoiId ? Number(data.destinationPoiId) : null,
         address: data.address,
         latitude: data.latitude,
         longitude: data.longitude,
@@ -641,6 +676,35 @@ export default function EditCall() {
                   </Button>
                 )}
               </Box>
+
+              <FormControl>
+                <FormControlLabel>
+                  <FormControlLabelText>{t('calls.destination_poi')}</FormControlLabelText>
+                </FormControlLabel>
+                <Controller
+                  control={control}
+                  name="destinationPoiId"
+                  render={({ field: { onChange, value } }) => (
+                    <Select selectedValue={value || NO_DESTINATION_VALUE} onValueChange={(selectedValue) => onChange(selectedValue === NO_DESTINATION_VALUE ? '' : selectedValue)}>
+                      <SelectTrigger>
+                        <SelectInput placeholder={t('calls.select_destination_poi')} />
+                        <SelectIcon as={ChevronDownIcon} />
+                      </SelectTrigger>
+                      <SelectPortal>
+                        <SelectBackdrop />
+                        <SelectContent>
+                          <SelectItem label={t('calls.no_destination')} value={NO_DESTINATION_VALUE} />
+                          {destinationPois.map((poi) => (
+                            <SelectItem key={poi.PoiId} label={getPoiDestinationOptionLabel(poi)} value={poi.PoiId.toString()} />
+                          ))}
+                        </SelectContent>
+                      </SelectPortal>
+                    </Select>
+                  )}
+                />
+                {isLoadingDestinationPois ? <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('calls.loading_destination_pois')}</Text> : null}
+                {!isLoadingDestinationPois && destinationPois.length === 0 ? <Text className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('calls.no_destination_pois_available')}</Text> : null}
+              </FormControl>
             </Card>
 
             <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>

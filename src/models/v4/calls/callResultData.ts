@@ -5,6 +5,13 @@ export class CallResultData {
   public Nature: string = '';
   public Note: string = '';
   public Address: string = '';
+  public DestinationPoiId: number | null = null;
+  public DestinationName: string = '';
+  public DestinationAddress: string = '';
+  public DestinationTypeName: string = '';
+  public DestinationPoiTypeId: number | null = null;
+  public DestinationLatitude: number | null = null;
+  public DestinationLongitude: number | null = null;
   public Geolocation: string = '';
   public LoggedOn: string = '';
   // State: 0 = Active, 1 = Open, 2 = Pending, 3 = Scheduled, 4 = Closed (can be number or string depending on API version)
@@ -25,7 +32,11 @@ export class CallResultData {
   public LoggedOnUtc: string = '';
   public DispatchedOn: string = '';
   public DispatchedOnUtc: string = '';
+  public ScheduledOn: string = '';
+  public ScheduledOnUtc: string = '';
   public Latitude: string = '';
   public Longitude: string = '';
+  public Protocols: unknown[] = [];
+  public UdfValues: unknown[] = [];
   public CheckInTimersEnabled: boolean = false;
 }

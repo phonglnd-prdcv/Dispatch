@@ -286,6 +286,14 @@ export default function CallDetail() {
                 <Text className="text-sm text-gray-500">{t('call_detail.timestamp')}</Text>
                 <Text className="font-medium">{format(new Date(call.LoggedOn), 'MMM d, h:mm a')}</Text>
               </Box>
+              {(call.ScheduledOn || call.ScheduledOnUtc) ? (
+                <Box className="border-b border-outline-100 pb-2">
+                  <Text className="text-sm text-gray-500">{t('call_detail.scheduled_on')}</Text>
+                  <Text className="font-medium text-amber-600 dark:text-amber-400">
+                    {format(new Date(call.ScheduledOn || call.ScheduledOnUtc), 'MMM d, yyyy h:mm a')}
+                  </Text>
+                </Box>
+              ) : null}
               <Box className="border-b border-outline-100 pb-2">
                 <Text className="text-sm text-gray-500">{t('call_detail.type')}</Text>
                 <Text className="font-medium">{call.Type}</Text>
@@ -294,6 +302,24 @@ export default function CallDetail() {
                 <Text className="text-sm text-gray-500">{t('call_detail.address')}</Text>
                 <Text className="font-medium">{call.Address}</Text>
               </Box>
+              {call.DestinationName ? (
+                <Box className="border-b border-outline-100 pb-2">
+                  <Text className="text-sm text-gray-500">{t('call_detail.destination')}</Text>
+                  <Text className="font-medium">{call.DestinationName}</Text>
+                </Box>
+              ) : null}
+              {call.DestinationTypeName ? (
+                <Box className="border-b border-outline-100 pb-2">
+                  <Text className="text-sm text-gray-500">{t('call_detail.destination_type')}</Text>
+                  <Text className="font-medium">{call.DestinationTypeName}</Text>
+                </Box>
+              ) : null}
+              {call.DestinationAddress ? (
+                <Box className="border-b border-outline-100 pb-2">
+                  <Text className="text-sm text-gray-500">{t('call_detail.destination_address')}</Text>
+                  <Text className="font-medium">{call.DestinationAddress}</Text>
+                </Box>
+              ) : null}
               <Box className="border-b border-outline-100 pb-2">
                 <Text className="text-sm text-gray-500">{t('call_detail.note')}</Text>
                 <Box>

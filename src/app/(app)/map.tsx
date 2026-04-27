@@ -3,7 +3,7 @@ import { Stack, useFocusEffect } from 'expo-router';
 import { type Feature, type FeatureCollection, type GeoJsonProperties, type Geometry } from 'geojson';
 import { LayersIcon, NavigationIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +18,9 @@ import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { filterMapPinsByPoiLayers, createDefaultVisiblePoiLayerIds, getPoiMapLayerId } from '@/lib/poi-map-layers';
 import { onSortOptions } from '@/lib/utils';
+import { type PoiLayerData } from '@/models/v4/mapping/poiLayerData';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -37,6 +39,8 @@ export default function Map() {
   const [isMapReady, setIsMapReady] = useState(false);
   const [hasUserMovedMap, setHasUserMovedMap] = useState(false);
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
+  const [poiLayers, setPoiLayers] = useState<PoiLayerData[]>([]);
+  const [visiblePoiLayerIds, setVisiblePoiLayerIds] = useState<Set<string>>(new Set());
   const [selectedPin, setSelectedPin] = useState<MapMakerInfoData | null>(null);
   const [isPinDetailModalOpen, setIsPinDetailModalOpen] = useState(false);
   const [isLayersPanelOpen, setIsLayersPanelOpen] = useState(false);
@@ -69,6 +73,45 @@ export default function Map() {
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useMapSignalRUpdates(setMapPins);
+
+  const syncPoiLayers = useCallback((nextPoiLayers: PoiLayerData[]) => {
+    setPoiLayers(nextPoiLayers);
+    setVisiblePoiLayerIds(createDefaultVisiblePoiLayerIds(nextPoiLayers));
+  }, []);
+
+  const togglePoiLayer = useCallback((layerId: string) => {
+    setVisiblePoiLayerIds((currentLayerIds) => {
+      const nextLayerIds = new Set(currentLayerIds);
+
+      if (nextLayerIds.has(layerId)) {
+        nextLayerIds.delete(layerId);
+      } else {
+        nextLayerIds.add(layerId);
+      }
+
+      return nextLayerIds;
+    });
+  }, []);
+
+  const showAllMapLayers = useCallback(() => {
+    showAllLayers();
+    setVisiblePoiLayerIds(createDefaultVisiblePoiLayerIds(poiLayers));
+  }, [poiLayers, showAllLayers]);
+
+  const hideAllMapLayers = useCallback(() => {
+    hideAllLayers();
+    setVisiblePoiLayerIds(new Set());
+  }, [hideAllLayers]);
+
+  const combinedLayers = useMemo(
+    () => [
+      ...layers.map((layer) => ({ Id: layer.Id, Name: layer.Name, Color: layer.Color, kind: 'custom' as const })),
+      ...poiLayers.map((layer) => ({ Id: getPoiMapLayerId(layer.PoiTypeId), Name: layer.Name, Color: layer.Color, kind: 'poi' as const })),
+    ],
+    [layers, poiLayers]
+  );
+
+  const visibleMapPins = useMemo(() => filterMapPinsByPoiLayers(mapPins, visiblePoiLayerIds), [mapPins, visiblePoiLayerIds]);
 
   // Update map style when theme changes
   useEffect(() => {
@@ -183,6 +226,7 @@ export default function Map() {
 
         if (mapDataAndMarkers && mapDataAndMarkers.Data) {
           setMapPins(mapDataAndMarkers.Data.MapMakerInfos);
+          syncPoiLayers(mapDataAndMarkers.Data.PoiLayers ?? []);
         }
       } catch (error) {
         // Don't log aborted requests as errors
@@ -206,7 +250,7 @@ export default function Map() {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [syncPoiLayers]);
 
   useEffect(() => {
     Animated.loop(
@@ -227,15 +271,15 @@ export default function Map() {
 
   // Track when map view is rendered
   useEffect(() => {
-    trackEvent('map_view_rendered', {
+      trackEvent('map_view_rendered', {
       hasMapPins: mapPins.length > 0,
       mapPinsCount: mapPins.length,
       isMapLocked: location.isMapLocked,
       theme: colorScheme || 'light',
-      layersCount: layers.length,
-      visibleLayersCount: visibleLayers.size,
+      layersCount: combinedLayers.length,
+      visibleLayersCount: visibleLayers.size + visiblePoiLayerIds.size,
     });
-  }, [trackEvent, mapPins.length, location.isMapLocked, colorScheme, layers.length, visibleLayers.size]);
+  }, [trackEvent, mapPins.length, location.isMapLocked, colorScheme, combinedLayers.length, visibleLayers.size, visiblePoiLayerIds.size]);
 
   const onCameraChanged = (event: any) => {
     // Only register user interaction if map is not locked
@@ -448,35 +492,35 @@ export default function Map() {
             </View>
 
             <View style={styles.layersPanelActions}>
-              <TouchableOpacity onPress={showAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={hideAllLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</Text>
-              </TouchableOpacity>
-            </View>
+               <TouchableOpacity onPress={showAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+                 <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</Text>
+               </TouchableOpacity>
+               <TouchableOpacity onPress={hideAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+                 <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</Text>
+               </TouchableOpacity>
+             </View>
 
-            <ScrollView style={styles.layersList}>
-              {layers.length === 0 ? (
-                <Text style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</Text>
-              ) : (
-                layers.map((layer) => (
-                  <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => toggleLayer(layer.Id)}>
-                    <View style={styles.layerInfo}>
-                      <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
-                      <Text style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
+             <ScrollView style={styles.layersList}>
+               {combinedLayers.length === 0 ? (
+                 <Text style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</Text>
+               ) : (
+                 combinedLayers.map((layer) => (
+                   <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}>
+                     <View style={styles.layerInfo}>
+                       <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
+                       <Text style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
                         {layer.Name}
                       </Text>
-                    </View>
-                    <Switch
-                      value={visibleLayers.has(layer.Id)}
-                      onValueChange={() => toggleLayer(layer.Id)}
-                      trackColor={{ false: isDark ? '#4b5563' : '#d1d5db', true: '#3b82f6' }}
-                      thumbColor={visibleLayers.has(layer.Id) ? '#ffffff' : '#f4f3f4'}
-                    />
-                  </Pressable>
-                ))
-              )}
+                     </View>
+                     <Switch
+                       value={layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)}
+                       onValueChange={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}
+                       trackColor={{ false: isDark ? '#4b5563' : '#d1d5db', true: '#3b82f6' }}
+                       thumbColor={(layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)) ? '#ffffff' : '#f4f3f4'}
+                     />
+                   </Pressable>
+                 ))
+               )}
             </ScrollView>
           </View>
         </View>
@@ -546,7 +590,7 @@ export default function Map() {
               </Animated.View>
             </Mapbox.PointAnnotation>
           ) : null}
-          <MapPins pins={mapPins} onPinPress={handlePinPress} />
+           <MapPins pins={visibleMapPins} onPinPress={handlePinPress} />
         </Mapbox.MapView>
 
         {/* Layers Button */}

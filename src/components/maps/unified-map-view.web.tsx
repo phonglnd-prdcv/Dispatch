@@ -6,8 +6,10 @@ import { StyleSheet, View } from 'react-native';
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { getMapIconWebUrl, MAP_ICONS } from '@/constants/map-icons';
+import { isPoiMarker } from '@/lib/destination-helpers';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { getMapMarkerColor, getMapPinSummary, hasValidMapCoordinates, resolveMapMarkerIconKey } from '@/lib/map-markers';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';
 import { useLocationStore } from '@/stores/app/location-store';
@@ -220,7 +222,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
 
     // Add new markers
     mapPins.forEach((pin) => {
-      if (!pin.Latitude || !pin.Longitude) return;
+      if (!hasValidMapCoordinates(pin)) return;
 
       // Create custom marker element
       const el = document.createElement('div');
@@ -230,27 +232,44 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
       el.style.alignItems = 'center';
       el.style.cursor = 'pointer';
 
-      // Create marker icon
       const iconContainer = document.createElement('div');
-      iconContainer.style.width = '32px';
-      iconContainer.style.height = '32px';
+      iconContainer.style.display = 'flex';
+      iconContainer.style.alignItems = 'center';
+      iconContainer.style.justifyContent = 'center';
       iconContainer.style.position = 'relative';
 
-      const iconKey = (pin.ImagePath?.toLowerCase() || 'call') as MapIconKey;
-      const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
+      if (isPoiMarker(pin.Type)) {
+        iconContainer.style.width = '22px';
+        iconContainer.style.height = '22px';
+        iconContainer.style.borderRadius = '999px';
+        iconContainer.style.backgroundColor = getMapMarkerColor(pin);
+        iconContainer.style.border = '2px solid #ffffff';
+        iconContainer.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.35)';
 
-      const img = document.createElement('img');
-      const imgSrc = getMapIconWebUrl(iconData);
-      img.src = imgSrc;
-      img.style.width = '32px';
-      img.style.height = '32px';
-      img.style.objectFit = 'contain';
-      img.alt = pin.Title;
-      img.onerror = () => {
-        // Fallback to call icon if image fails to load
-        img.src = getMapIconWebUrl(MAP_ICONS['call']);
-      };
-      iconContainer.appendChild(img);
+        const innerDot = document.createElement('div');
+        innerDot.style.width = '8px';
+        innerDot.style.height = '8px';
+        innerDot.style.borderRadius = '999px';
+        innerDot.style.backgroundColor = '#ffffff';
+        iconContainer.appendChild(innerDot);
+      } else {
+        iconContainer.style.width = '32px';
+        iconContainer.style.height = '32px';
+
+        const iconKey = resolveMapMarkerIconKey(pin) as MapIconKey;
+        const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
+        const img = document.createElement('img');
+        const imgSrc = getMapIconWebUrl(iconData);
+        img.src = imgSrc;
+        img.style.width = '32px';
+        img.style.height = '32px';
+        img.style.objectFit = 'contain';
+        img.alt = pin.Title;
+        img.onerror = () => {
+          img.src = getMapIconWebUrl(MAP_ICONS['call']);
+        };
+        iconContainer.appendChild(img);
+      }
 
       el.appendChild(iconContainer);
 
@@ -278,7 +297,7 @@ export const UnifiedMapView: React.FC<UnifiedMapViewProps> = ({
       const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
         `<div style="padding: 8px;">
           <h3 style="margin: 0 0 8px 0; font-weight: 600;">${pin.Title}</h3>
-          ${pin.InfoWindowContent ? `<p style="margin: 0 0 8px 0; font-size: 12px;">${pin.InfoWindowContent}</p>` : ''}
+          ${getMapPinSummary(pin) ? `<p style="margin: 0 0 8px 0; font-size: 12px;">${getMapPinSummary(pin)}</p>` : ''}
           <p style="margin: 0; font-size: 11px; color: #666;">
             ${pin.Latitude.toFixed(6)}, ${pin.Longitude.toFixed(6)}
           </p>

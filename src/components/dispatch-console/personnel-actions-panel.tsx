@@ -1,9 +1,10 @@
-import { Building2, Check, ChevronDown, ChevronRight, ChevronUp, Phone, Send, User, X, Zap } from 'lucide-react-native';
+import { Building2, Check, ChevronDown, ChevronRight, ChevronUp, MapPinned, Phone, Send, User, X, Zap } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { getAllGroups } from '@/api/groups/groups';
+import { getPois } from '@/api/mapping/mapping';
 import { getAllPersonnelStaffings, getAllPersonnelStatuses } from '@/api/satuses';
 import { UdfFieldsRenderer } from '@/components/calls/udf-fields-renderer';
 import { Actionsheet, ActionsheetBackdrop, ActionsheetContent, ActionsheetDragIndicator, ActionsheetDragIndicatorWrapper } from '@/components/ui/actionsheet';
@@ -14,9 +15,12 @@ import { Icon } from '@/components/ui/icon';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { getDefaultDestinationTab, getDestinationCapabilities, type DestinationTab } from '@/lib/destination-helpers';
+import { getPoiSelectionLabel } from '@/lib/poi-display';
 import { invertColor, isCallActive } from '@/lib/utils';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { useCallsStore } from '@/stores/calls/store';
@@ -64,16 +68,18 @@ const StatusSheetOption: React.FC<{
 
 // Destination option for the action sheet
 const DestinationSheetOption: React.FC<{
-  type: 'call' | 'station' | 'none';
-  item?: CallResultData | GroupResultData;
+  type: 'call' | 'station' | 'poi' | 'none';
+  item?: CallResultData | GroupResultData | PoiResultData;
   isSelected: boolean;
   onSelect: () => void;
   label?: string;
 }> = ({ type, item, isSelected, onSelect, label }) => {
   const isCall = type === 'call';
+  const isPoi = type === 'poi';
   const isNone = type === 'none';
   const call = isCall && item ? (item as CallResultData) : null;
-  const station = !isCall && !isNone && item ? (item as GroupResultData) : null;
+  const poi = isPoi && item ? (item as PoiResultData) : null;
+  const station = !isCall && !isPoi && !isNone && item ? (item as GroupResultData) : null;
 
   return (
     <Pressable onPress={onSelect}>
@@ -86,10 +92,10 @@ const DestinationSheetOption: React.FC<{
           {isNone ? (
             <Icon as={X} size="sm" className={isSelected ? 'text-indigo-500' : 'text-gray-400'} />
           ) : (
-            <Icon as={isCall ? Phone : Building2} size="sm" className={isSelected ? 'text-indigo-500' : 'text-gray-500'} />
+            <Icon as={isCall ? Phone : isPoi ? MapPinned : Building2} size="sm" className={isSelected ? 'text-indigo-500' : 'text-gray-500'} />
           )}
           <Text className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100" numberOfLines={1}>
-            {isNone ? label : isCall ? `#${call?.Number} - ${call?.Name}` : station?.Name}
+            {isNone ? label : isCall ? `#${call?.Number} - ${call?.Name}` : isPoi ? getPoiSelectionLabel(poi!) : station?.Name}
           </Text>
         </HStack>
         {isSelected ? <Icon as={Check} size="sm" className="text-indigo-500" /> : null}
@@ -109,7 +115,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
   const [isStatusSheetOpen, setIsStatusSheetOpen] = useState(false);
   const [isStaffingSheetOpen, setIsStaffingSheetOpen] = useState(false);
   const [isDestinationSheetOpen, setIsDestinationSheetOpen] = useState(false);
-  const [destinationTab, setDestinationTab] = useState<'calls' | 'stations'>('calls');
+  const [destinationTab, setDestinationTab] = useState<DestinationTab>('calls');
   const [isAdditionalFieldsExpanded, setIsAdditionalFieldsExpanded] = useState(false);
 
   // Local state for selected status and staffing (to fix synchronization issues)
@@ -123,6 +129,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     statusDestinationType,
     statusSelectedCall,
     statusSelectedStation,
+    statusSelectedPoi,
     statusNote,
     isSubmittingStatus,
     selectedStaffing: storeSelectedStaffing,
@@ -131,6 +138,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     availableStatuses,
     availableStaffings,
     availableStations,
+    availablePois,
     isLoadingOptions,
     statusError,
     staffingError,
@@ -139,6 +147,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     setStatusDestinationType,
     setStatusSelectedCall,
     setStatusSelectedStation,
+    setStatusSelectedPoi,
     setStatusNote,
     submitStatus: storeSubmitStatus,
     setSelectedStaffing: setStoreSelectedStaffing,
@@ -148,6 +157,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     setAvailableStaffings,
     setAvailableCalls,
     setAvailableStations,
+    setAvailablePois,
     setIsLoadingOptions,
   } = usePersonnelActionsStore();
 
@@ -189,7 +199,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     const loadOptions = async () => {
       setIsLoadingOptions(true);
       try {
-        const [statusesResult, staffingsResult, groupsResult] = await Promise.all([getAllPersonnelStatuses(), getAllPersonnelStaffings(), getAllGroups()]);
+        const [statusesResult, staffingsResult, groupsResult, poisResult] = await Promise.all([getAllPersonnelStatuses(), getAllPersonnelStaffings(), getAllGroups(), getPois({ destinationOnly: true })]);
 
         if (statusesResult?.Data) {
           setAvailableStatuses(statusesResult.Data);
@@ -201,6 +211,9 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
           const stations = groupsResult.Data.filter((g) => g.GroupType?.toLowerCase().includes('station'));
           setAvailableStations(stations.length > 0 ? stations : groupsResult.Data);
         }
+        if (poisResult?.Data) {
+          setAvailablePois(poisResult.Data);
+        }
       } catch (error) {
         console.error('Failed to load personnel action options:', error);
       } finally {
@@ -211,7 +224,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     if (selectedPersonnel) {
       loadOptions();
     }
-  }, [selectedPersonnel, setAvailableStatuses, setAvailableStaffings, setAvailableStations, setIsLoadingOptions]);
+  }, [selectedPersonnel, setAvailableStatuses, setAvailableStaffings, setAvailableStations, setAvailablePois, setIsLoadingOptions]);
 
   // Update available calls from calls store
   useEffect(() => {
@@ -262,12 +275,19 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
       return;
     }
 
+    const matchingPoi = availablePois.find((poi) => poi.PoiId.toString() === destinationId);
+    if (matchingPoi) {
+      setStatusDestinationType('poi');
+      setStatusSelectedPoi(matchingPoi);
+      lastInitializedPersonnelIdRef.current = selectedPersonnel.UserId;
+      return;
+    }
+
     // If we couldn't match but have data loaded, mark as initialized anyway
-    // (the personnel has a destination that doesn't exist in our lists)
-    if (calls.length > 0 || availableStations.length > 0) {
+    if (calls.length > 0 || availableStations.length > 0 || availablePois.length > 0) {
       lastInitializedPersonnelIdRef.current = selectedPersonnel.UserId;
     }
-  }, [selectedPersonnel, calls, availableStations, setStatusDestinationType, setStatusSelectedCall, setStatusSelectedStation]);
+  }, [selectedPersonnel, calls, availableStations, availablePois, setStatusDestinationType, setStatusSelectedCall, setStatusSelectedStation, setStatusSelectedPoi]);
 
   const handleSubmitStatus = useCallback(async () => {
     // Pass current personnel and status directly to avoid state sync issues
@@ -301,32 +321,14 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     if (statusDestinationType === 'station' && statusSelectedStation) {
       return statusSelectedStation.Name;
     }
+    if (statusDestinationType === 'poi' && statusSelectedPoi) {
+      return getPoiSelectionLabel(statusSelectedPoi);
+    }
     return t('dispatch.personnel_actions.no_destination');
-  }, [statusDestinationType, statusSelectedCall, statusSelectedStation, t]);
+  }, [statusDestinationType, statusSelectedCall, statusSelectedStation, statusSelectedPoi, t]);
 
-  // Check if status detail requires a destination
-  // Detail: 0 = No destination, 1 = Station only, 2 = Call only, 3 = Both
-  const requiresDestination = useMemo(() => {
-    if (!selectedStatus) return false;
-    return selectedStatus.Detail > 0;
-  }, [selectedStatus]);
-
-  // Check destination type allowed based on Detail
-  // Detail: 0 = No destination needed, 1 = Station only, 2 = Call only, 3 = Both
-  // When Detail > 0, the destination sheet can be opened
   const destinationConfig = useMemo(() => {
-    if (!selectedStatus) {
-      return { showStations: true, showCalls: true }; // Default to both when no status
-    }
-    // Detail 0 means no destination, but if sheet is open, show both as fallback
-    if (selectedStatus.Detail === 0) {
-      return { showStations: true, showCalls: true };
-    }
-    // Detail 1 = Station only, 2 = Call only, 3 = Both
-    return {
-      showStations: selectedStatus.Detail === 1 || selectedStatus.Detail === 3,
-      showCalls: selectedStatus.Detail === 2 || selectedStatus.Detail === 3,
-    };
+    return getDestinationCapabilities(selectedStatus?.Detail);
   }, [selectedStatus]);
 
   // Check note requirement based on Note field
@@ -374,6 +376,12 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     return filtered;
   }, [calls]);
 
+  useEffect(() => {
+    if (selectedStatus) {
+      setDestinationTab(getDefaultDestinationTab(selectedStatus.Detail));
+    }
+  }, [selectedStatus]);
+
   // Refresh calls when destination sheet opens
   useEffect(() => {
     if (isDestinationSheetOpen) {
@@ -386,7 +394,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
     setSelectedStatus(status);
     setIsStatusSheetOpen(false);
     // If status requires destination, open destination sheet
-    if (status.Detail > 0) {
+    if (getDestinationCapabilities(status.Detail).supportsDestination) {
       setTimeout(() => setIsDestinationSheetOpen(true), 300);
     }
   };
@@ -398,15 +406,18 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
   };
 
   // Handle destination selection
-  const handleDestinationSelect = (type: 'none' | 'call' | 'station', item?: CallResultData | GroupResultData) => {
+  const handleDestinationSelect = (type: 'none' | 'call' | 'station' | 'poi', item?: CallResultData | GroupResultData | PoiResultData) => {
     if (type === 'none') {
       setStatusDestinationType('none');
       setStatusSelectedCall(null);
       setStatusSelectedStation(null);
+      setStatusSelectedPoi(null);
     } else if (type === 'call' && item) {
       setStatusSelectedCall(item as CallResultData);
     } else if (type === 'station' && item) {
       setStatusSelectedStation(item as GroupResultData);
+    } else if (type === 'poi' && item) {
+      setStatusSelectedPoi(item as PoiResultData);
     }
     setIsDestinationSheetOpen(false);
   };
@@ -469,11 +480,11 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
             </Pressable>
 
             {/* Destination Button (only show if status is selected and supports destination) */}
-            {selectedStatus && selectedStatus.Detail > 0 ? (
+            {selectedStatus && destinationConfig.supportsDestination ? (
               <Pressable onPress={() => setIsDestinationSheetOpen(true)}>
                 <HStack className="items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
                   <HStack className="flex-1 items-center" space="sm">
-                    <Icon as={statusDestinationType === 'call' ? Phone : Building2} size="sm" className="text-amber-500" />
+                    <Icon as={statusDestinationType === 'call' ? Phone : statusDestinationType === 'poi' ? MapPinned : Building2} size="sm" className="text-amber-500" />
                     <VStack className="flex-1">
                       <Text className="text-xs text-gray-500 dark:text-gray-400">{t('dispatch.personnel_actions.destination')}</Text>
                       <Text className="text-sm font-medium text-gray-800 dark:text-gray-100" numberOfLines={1}>
@@ -625,7 +636,7 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
             <DestinationSheetOption type="none" isSelected={statusDestinationType === 'none'} onSelect={() => handleDestinationSelect('none')} label={t('dispatch.personnel_actions.no_destination')} />
 
             {/* Tabs for Calls and Stations */}
-            {destinationConfig.showCalls || destinationConfig.showStations ? (
+            {destinationConfig.showCalls || destinationConfig.showStations || destinationConfig.showPois ? (
               <>
                 <HStack className="rounded-lg bg-gray-100 p-1 dark:bg-gray-800" space="xs">
                   {destinationConfig.showCalls ? (
@@ -639,6 +650,13 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
                     <Pressable onPress={() => setDestinationTab('stations')} className={`flex-1 rounded-md px-3 py-2 ${destinationTab === 'stations' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
                       <Text className={`text-center text-sm font-medium ${destinationTab === 'stations' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
                         {t('dispatch.stations')} ({availableStations.length})
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  {destinationConfig.showPois ? (
+                    <Pressable onPress={() => setDestinationTab('pois')} className={`flex-1 rounded-md px-3 py-2 ${destinationTab === 'pois' ? 'bg-white shadow-sm dark:bg-gray-700' : ''}`}>
+                      <Text className={`text-center text-sm font-medium ${destinationTab === 'pois' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {t('menu.pois')} ({availablePois.length})
                       </Text>
                     </Pressable>
                   ) : null}
@@ -680,6 +698,24 @@ export const PersonnelActionsPanel: React.FC<PersonnelActionsPanelProps> = ({ pe
                         ))
                       ) : (
                         <Text className="py-8 text-center text-sm text-gray-400">{t('dispatch.personnel_actions.no_stations_available')}</Text>
+                      )}
+                    </VStack>
+                  ) : null}
+
+                  {destinationTab === 'pois' && destinationConfig.showPois ? (
+                    <VStack space="xs">
+                      {availablePois.length > 0 ? (
+                        availablePois.map((poi) => (
+                          <DestinationSheetOption
+                            key={poi.PoiId}
+                            type="poi"
+                            item={poi}
+                            isSelected={statusDestinationType === 'poi' && statusSelectedPoi?.PoiId === poi.PoiId}
+                            onSelect={() => handleDestinationSelect('poi', poi)}
+                          />
+                        ))
+                      ) : (
+                        <Text className="py-8 text-center text-sm text-gray-400">{t('status.no_pois_available')}</Text>
                       )}
                     </VStack>
                   ) : null}

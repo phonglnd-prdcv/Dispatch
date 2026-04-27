@@ -236,8 +236,19 @@ export default function CallDetailWeb() {
           <View style={styles.tabContent}>
             <InfoRow label={t('call_detail.priority')} value={callPriority?.Name || '-'} valueColor={callPriority?.Color} isDark={isDark} />
             <InfoRow label={t('call_detail.timestamp')} value={format(new Date(call.LoggedOn), 'MMM d, yyyy h:mm a')} isDark={isDark} />
+            {(call.ScheduledOn || call.ScheduledOnUtc) ? (
+              <InfoRow
+                label={t('call_detail.scheduled_on')}
+                value={format(new Date(call.ScheduledOn || call.ScheduledOnUtc), 'MMM d, yyyy h:mm a')}
+                valueColor="#d97706"
+                isDark={isDark}
+              />
+            ) : null}
             <InfoRow label={t('call_detail.type')} value={call.Type || '-'} isDark={isDark} />
             <InfoRow label={t('call_detail.address')} value={call.Address || '-'} isDark={isDark} />
+            <InfoRow label={t('call_detail.destination')} value={call.DestinationName || '-'} isDark={isDark} />
+            <InfoRow label={t('call_detail.destination_type')} value={call.DestinationTypeName || '-'} isDark={isDark} />
+            <InfoRow label={t('call_detail.destination_address')} value={call.DestinationAddress || '-'} isDark={isDark} />
             <View style={styles.infoRow}>
               <Text style={StyleSheet.flatten([styles.infoLabel, isDark ? styles.infoLabelDark : styles.infoLabelLight])}>{t('call_detail.note')}</Text>
               <View style={StyleSheet.flatten([styles.noteContainer, isDark ? styles.noteContainerDark : styles.noteContainerLight])}>

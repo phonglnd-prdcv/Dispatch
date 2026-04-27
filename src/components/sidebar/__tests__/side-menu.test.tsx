@@ -14,6 +14,7 @@ jest.mock('react-i18next', () => ({
         'menu.calls_list': 'Calls List',
         'menu.new_call': 'New Call',
         'menu.map': 'Map',
+        'menu.pois': 'POIs',
         'menu.personnel': 'Personnel',
         'menu.units': 'Units',
         'menu.messages': 'Messages',
@@ -57,6 +58,7 @@ describe('SideMenu', () => {
     expect(screen.getByText('Home')).toBeTruthy();
     expect(screen.getByText('Calls')).toBeTruthy();
     expect(screen.getByText('Map')).toBeTruthy();
+    expect(screen.getByText('POIs')).toBeTruthy();
     expect(screen.getByText('Personnel')).toBeTruthy();
     expect(screen.getByText('Units')).toBeTruthy();
     expect(screen.getByText('Protocols')).toBeTruthy();
@@ -84,6 +86,19 @@ describe('SideMenu', () => {
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/settings');
+    });
+  });
+
+  it('should navigate to the POIs route when the POIs item is pressed', async () => {
+    const mockOnNavigate = jest.fn();
+    render(<SideMenu onNavigate={mockOnNavigate} />);
+
+    const poisItem = screen.getByText('POIs');
+    fireEvent.press(poisItem);
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/pois');
+      expect(mockOnNavigate).toHaveBeenCalled();
     });
   });
 
@@ -141,6 +156,7 @@ describe('SideMenu', () => {
     expect(screen.getByText('Home')).toBeTruthy();
     expect(screen.getByText('Calls')).toBeTruthy();
     expect(screen.getByText('Map')).toBeTruthy();
+    expect(screen.getByText('POIs')).toBeTruthy();
     expect(screen.getByText('Personnel')).toBeTruthy();
     expect(screen.getByText('Units')).toBeTruthy();
     expect(screen.getByText('Protocols')).toBeTruthy();

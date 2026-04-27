@@ -1,5 +1,5 @@
 import { type Href, useRouter } from 'expo-router';
-import { CloudLightning, Contact, FileText, Home, List, type LucideIcon, Map as MapIcon, MessageCircle, Phone, Plus, Settings, Truck, Users } from 'lucide-react-native';
+import { CalendarClock, CloudLightning, Contact, FileText, Home, List, type LucideIcon, Map as MapIcon, MapPinned, MessageCircle, Phone, Plus, Settings, Truck, Users } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -25,9 +25,11 @@ const getMenuItems = (t: (key: string) => string): MenuItem[] => [
     icon: Phone,
     children: [
       { id: 'calls-list', label: t('menu.calls_list'), icon: List, route: '/calls' },
+      { id: 'scheduled-calls', label: t('menu.scheduled_calls'), icon: CalendarClock, route: '/scheduled-calls' },
       { id: 'new-call', label: t('menu.new_call'), icon: Plus, route: '/call/new' },
     ],
   },
+  { id: 'pois', label: t('menu.pois'), icon: MapPinned, route: '/pois' },
   { id: 'map', label: t('menu.map'), icon: MapIcon, route: '/map' },
   { id: 'personnel', label: t('menu.personnel'), icon: Users, route: '/personnel' },
   { id: 'units', label: t('menu.units'), icon: Truck, route: '/units' },

@@ -2,10 +2,12 @@ import { type ActiveCallsResult } from '@/models/v4/calls/activeCallsResult';
 import { type CallExtraDataResult } from '@/models/v4/calls/callExtraDataResult';
 import { type CallResult } from '@/models/v4/calls/callResult';
 import { type SaveCallResult } from '@/models/v4/calls/saveCallResult';
+import { type ScheduledCallsResult } from '@/models/v4/calls/scheduledCallsResult';
 
 import { createApiEndpoint } from '../common/client';
 
 const callsApi = createApiEndpoint('/Calls/GetActiveCalls');
+const pendingScheduledCallsApi = createApiEndpoint('/Calls/GetAllPendingScheduledCalls');
 const getCallApi = createApiEndpoint('/Calls/GetCall');
 const getCallExtraDataApi = createApiEndpoint('/Calls/GetCallExtraData');
 const createCallApi = createApiEndpoint('/Calls/SaveCall');
@@ -15,6 +17,11 @@ const closeCallApi = createApiEndpoint('/Calls/CloseCall');
 export const getCalls = async () => {
   // Add timestamp to prevent any caching
   const response = await callsApi.get<ActiveCallsResult>({ _t: Date.now() });
+  return response.data;
+};
+
+export const getPendingScheduledCalls = async () => {
+  const response = await pendingScheduledCallsApi.get<ScheduledCallsResult>({ _t: Date.now() });
   return response.data;
 };
 
@@ -55,6 +62,7 @@ export interface CreateCallRequest {
   externalId?: string;
   referenceId?: string;
   scheduledOn?: string;
+  destinationPoiId?: number | null;
 }
 
 export interface UpdateCallRequest {
@@ -80,6 +88,7 @@ export interface UpdateCallRequest {
   linkedCallId?: string;
   externalId?: string;
   referenceId?: string;
+  destinationPoiId?: number | null;
 }
 
 export interface CloseCallRequest {
@@ -117,6 +126,7 @@ export const createCall = async (callData: CreateCallRequest) => {
     Nature: callData.nature,
     Note: callData.note || '',
     Address: callData.address || '',
+    DestinationPoiId: callData.destinationPoiId ?? null,
     Geolocation: `${callData.latitude?.toString() || ''},${callData.longitude?.toString() || ''}`,
     Priority: callData.priority,
     Type: callData.type || '',
@@ -166,6 +176,7 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     Nature: callData.nature,
     Note: callData.note || '',
     Address: callData.address || '',
+    DestinationPoiId: callData.destinationPoiId ?? null,
     Geolocation: `${callData.latitude?.toString() || ''},${callData.longitude?.toString() || ''}`,
     Priority: callData.priority,
     Type: callData.type || '',
