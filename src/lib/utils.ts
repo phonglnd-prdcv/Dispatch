@@ -153,8 +153,10 @@ export function padZero(str: string, len: number): string {
 }
 
 export function toRgbaWithAlpha(color: string, alpha: number): string {
-  if (!color) return `rgba(0, 0, 0, ${alpha})`;
+  const a = Number.isFinite(alpha) ? Math.min(1, Math.max(0, alpha)) : 1;
+  if (!color) return `rgba(0, 0, 0, ${a})`;
 
+  const clamp = (n: number) => (Number.isFinite(n) ? Math.min(255, Math.max(0, n)) : 0);
   const trimmed = color.trim();
 
   // hex: #RGB, #RRGGBB, #RRGGBBAA
@@ -164,17 +166,20 @@ export function toRgbaWithAlpha(color: string, alpha: number): string {
       hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
     }
     if (hex.length >= 6) {
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      const r = clamp(parseInt(hex.slice(0, 2), 16));
+      const g = clamp(parseInt(hex.slice(2, 4), 16));
+      const b = clamp(parseInt(hex.slice(4, 6), 16));
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
     }
   }
 
   // rgb(r, g, b) or rgba(r, g, b, a)
   const rgbMatch = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
   if (rgbMatch) {
-    return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${alpha})`;
+    const r = clamp(Number(rgbMatch[1]));
+    const g = clamp(Number(rgbMatch[2]));
+    const b = clamp(Number(rgbMatch[3]));
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
 
   return trimmed;
@@ -226,9 +231,9 @@ export function getMinutesBetweenDates(startDate: Date, endDate: Date): number {
   return diff / 60000;
 }
 
-export function parseDateISOString(s: string | undefined | null): Date {
+export function parseDateISOString(s: string | undefined | null): Date | null {
   if (!s) {
-    return new Date(0);
+    return null;
   }
   const b = s.split(/\D/);
   // Ensure we have all required parts
@@ -250,7 +255,7 @@ export function getDate(date: string): string {
   return datestring;
 }
 
-export function formatDateForDisplay(date: Date, format: string): string {
+export function formatDateForDisplay(date: Date | null, format: string): string {
   // Original idea from: https://weblog.west-wind.com/posts/2008/Mar/18/A-simple-formatDate-function-for-JavaScript
 
   if (!date) {

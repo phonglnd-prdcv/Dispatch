@@ -1,7 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { type Href, router, Stack } from 'expo-router';
 import { CalendarClockIcon, Search, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useColorScheme } from 'nativewind';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text as RNText, View } from 'react-native';
 
@@ -22,8 +23,12 @@ export default function ScheduledCalls() {
   const { fetchCallPriorities, callPriorities } = useCallsStore();
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const themedStyles = useMemo(() => getThemedStyles(isDark), [isDark]);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,13 +74,13 @@ export default function ScheduledCalls() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View>
           {/* Table Header */}
-          <View style={styles.tableHeader}>
-            <RNText style={[styles.headerCell, styles.cellNumber]}>{t('scheduled_calls.table_number')}</RNText>
-            <RNText style={[styles.headerCell, styles.cellName]}>{t('scheduled_calls.table_name')}</RNText>
-            <RNText style={[styles.headerCell, styles.cellType]}>{t('scheduled_calls.table_type')}</RNText>
-            <RNText style={[styles.headerCell, styles.cellPriority]}>{t('scheduled_calls.table_priority')}</RNText>
-            <RNText style={[styles.headerCell, styles.cellAddress]}>{t('scheduled_calls.table_address')}</RNText>
-            <RNText style={[styles.headerCell, styles.cellScheduled]}>{t('scheduled_calls.table_scheduled')}</RNText>
+          <View style={[styles.tableHeader, { backgroundColor: themedStyles.headerBg, borderBottomColor: themedStyles.borderColor }]}>
+            <RNText style={[styles.headerCell, styles.cellNumber, { color: themedStyles.headerTextColor }]}>{t('scheduled_calls.table_number')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellName, { color: themedStyles.headerTextColor }]}>{t('scheduled_calls.table_name')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellType, { color: themedStyles.headerTextColor }]}>{t('scheduled_calls.table_type')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellPriority, { color: themedStyles.headerTextColor }]}>{t('scheduled_calls.table_priority')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellAddress, { color: themedStyles.headerTextColor }]}>{t('scheduled_calls.table_address')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellScheduled, { color: themedStyles.headerTextColor }]}>{t('scheduled_calls.table_scheduled')}</RNText>
           </View>
 
           {/* Table Rows */}
@@ -85,40 +90,40 @@ export default function ScheduledCalls() {
             renderItem={({ item, index }: { item: CallResultData; index: number }) => {
               const priority = callPriorities.find((p) => p.Id === item.Priority);
               const scheduledDate = formatDateForDisplay(parseDateISOString(item.ScheduledOn || item.ScheduledOnUtc), 'MMM d, yyyy h:mm a');
-              const rowBg = index % 2 === 0 ? styles.rowEven : styles.rowOdd;
+              const rowBg = { backgroundColor: index % 2 === 0 ? themedStyles.rowEvenBg : themedStyles.rowOddBg };
 
               return (
-                <Pressable onPress={() => router.push(`/call/${item.CallId}` as Href)} style={[styles.tableRow, rowBg]}>
+                <Pressable onPress={() => router.push(`/call/${item.CallId}` as Href)} style={[styles.tableRow, { borderBottomColor: themedStyles.borderColor }, rowBg]}>
                   <View style={[styles.cellNumber, styles.cellContainer]}>
-                    <RNText style={styles.cellTextBold} numberOfLines={1}>
+                    <RNText style={[styles.cellTextBold, { color: themedStyles.textPrimary }]} numberOfLines={1}>
                       {item.Number || item.CallId}
                     </RNText>
                   </View>
                   <View style={[styles.cellName, styles.cellContainer]}>
-                    <RNText style={styles.cellText} numberOfLines={1}>
+                    <RNText style={[styles.cellText, { color: themedStyles.textPrimary }]} numberOfLines={1}>
                       {item.Name}
                     </RNText>
                   </View>
                   <View style={[styles.cellType, styles.cellContainer]}>
-                    <RNText style={styles.cellTextSecondary} numberOfLines={1}>
+                    <RNText style={[styles.cellTextSecondary, { color: themedStyles.textSecondary }]} numberOfLines={1}>
                       {item.Type || '-'}
                     </RNText>
                   </View>
                   <View style={[styles.cellPriority, styles.cellContainer]}>
                     <View style={styles.priorityBadge}>
                       <View style={[styles.priorityDot, { backgroundColor: priority?.Color || '#6b7280' }]} />
-                      <RNText style={styles.cellTextSecondary} numberOfLines={1}>
+                      <RNText style={[styles.cellTextSecondary, { color: themedStyles.textSecondary }]} numberOfLines={1}>
                         {priority?.Name || '-'}
                       </RNText>
                     </View>
                   </View>
                   <View style={[styles.cellAddress, styles.cellContainer]}>
-                    <RNText style={styles.cellTextSecondary} numberOfLines={1}>
+                    <RNText style={[styles.cellTextSecondary, { color: themedStyles.textSecondary }]} numberOfLines={1}>
                       {item.Address || '-'}
                     </RNText>
                   </View>
                   <View style={[styles.cellScheduled, styles.cellContainer]}>
-                    <RNText style={styles.cellTextScheduled} numberOfLines={1}>
+                    <RNText style={[styles.cellTextScheduled, { color: themedStyles.scheduledColor }]} numberOfLines={1}>
                       {scheduledDate}
                     </RNText>
                   </View>
@@ -162,6 +167,17 @@ export default function ScheduledCalls() {
   );
 }
 
+const getThemedStyles = (isDark: boolean) => ({
+  headerBg: isDark ? '#1f2937' : '#f9fafb',
+  borderColor: isDark ? '#374151' : '#e5e7eb',
+  headerTextColor: isDark ? '#9ca3af' : '#6b7280',
+  rowEvenBg: isDark ? '#111827' : '#ffffff',
+  rowOddBg: isDark ? '#1f2937' : '#f9fafb',
+  textPrimary: isDark ? '#f3f4f6' : '#111827',
+  textSecondary: isDark ? '#d1d5db' : '#4b5563',
+  scheduledColor: isDark ? '#fbbf24' : '#d97706',
+});
+
 const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
@@ -169,13 +185,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 2,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#f9fafb',
   },
   headerCell: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6b7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -185,34 +198,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
-  },
-  rowEven: {
-    backgroundColor: '#ffffff',
-  },
-  rowOdd: {
-    backgroundColor: '#f9fafb',
   },
   cellContainer: {
     justifyContent: 'center',
   },
   cellText: {
     fontSize: 14,
-    color: '#111827',
     fontWeight: '500',
   },
   cellTextBold: {
     fontSize: 14,
-    color: '#111827',
     fontWeight: '700',
   },
   cellTextSecondary: {
     fontSize: 13,
-    color: '#4b5563',
   },
   cellTextScheduled: {
     fontSize: 13,
-    color: '#d97706',
     fontWeight: '600',
   },
   priorityBadge: {
