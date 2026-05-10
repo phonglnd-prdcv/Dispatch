@@ -13,10 +13,7 @@ import { useUnitsStore } from '@/stores/units/store';
  * 2. Units store (by every possible ID match)
  * 3. Personnel store (by every possible ID match)
  */
-function enrichTimerNames(
-  statuses: CheckInTimerStatusResultData[],
-  resolved: ResolvedCheckInTimerResultData[]
-): CheckInTimerStatusResultData[] {
+function enrichTimerNames(statuses: CheckInTimerStatusResultData[], resolved: ResolvedCheckInTimerResultData[]): CheckInTimerStatusResultData[] {
   // Build name lookup from resolved timers
   const resolvedNameMap = new Map<string, string>();
   for (const r of resolved) {
@@ -57,9 +54,7 @@ function enrichTimerNames(
 
   return statuses.map((s) => {
     // Skip if TargetName is a real entity name (not a type label like "UnitType")
-    const nameIsTypeLabel = !s.TargetName
-      || /type$/i.test(s.TargetName)
-      || s.TargetName === s.TargetTypeName;
+    const nameIsTypeLabel = !s.TargetName || /type$/i.test(s.TargetName) || s.TargetName === s.TargetTypeName;
     if (s.TargetName && !nameIsTypeLabel) return s;
 
     let name: string | undefined;
@@ -152,10 +147,7 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   fetchTimerStatuses: async (callId: number) => {
     set({ isLoadingStatuses: true, statusError: null });
     try {
-      const [statusResult, resolvedResult] = await Promise.all([
-        getTimerStatuses(callId),
-        getTimersForCall(callId).catch(() => ({ Data: [] as ResolvedCheckInTimerResultData[] })),
-      ]);
+      const [statusResult, resolvedResult] = await Promise.all([getTimerStatuses(callId), getTimersForCall(callId).catch(() => ({ Data: [] as ResolvedCheckInTimerResultData[] }))]);
       const enriched = enrichTimerNames(statusResult.Data || [], resolvedResult.Data || []);
       const sorted = enriched.sort(sortByStatusSeverity);
       set({ timerStatuses: sorted, resolvedTimers: resolvedResult.Data || [], isLoadingStatuses: false });
@@ -174,10 +166,7 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
     }
     set({ isLoadingStatuses: true, statusError: null });
     try {
-      const [statusResult, ...resolvedResults] = await Promise.all([
-        getTimerStatusesForCalls(callIds),
-        ...callIds.map((id) => getTimersForCall(id).catch(() => ({ Data: [] as ResolvedCheckInTimerResultData[] }))),
-      ]);
+      const [statusResult, ...resolvedResults] = await Promise.all([getTimerStatusesForCalls(callIds), ...callIds.map((id) => getTimersForCall(id).catch(() => ({ Data: [] as ResolvedCheckInTimerResultData[] })))]);
       const allResolved = resolvedResults.flatMap((r) => r.Data || []);
       const enriched = enrichTimerNames(statusResult.Data || [], allResolved);
       const sorted = enriched.sort(sortByStatusSeverity);

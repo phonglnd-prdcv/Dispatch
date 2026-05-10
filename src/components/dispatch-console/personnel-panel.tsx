@@ -1,5 +1,5 @@
 import { type Href, router } from 'expo-router';
-import { Building2, Circle, ExternalLink, Filter, Phone, Plus, Search, User, Users, X } from 'lucide-react-native';
+import { Circle, ExternalLink, Filter, MapPin, Plus, Search, User, Users, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -71,7 +71,7 @@ const PersonnelItem: React.FC<{
               ) : null}
               {hasDestination ? (
                 <HStack className="mt-0.5 items-center" space="xs">
-                  <Icon as={person.StatusDestinationId?.startsWith('call-') ? Phone : Building2} size="xs" className="text-amber-500" />
+                  <Icon as={MapPin} size="xs" className="text-amber-500" />
                   <Text className="text-xs font-medium text-amber-600 dark:text-amber-400" numberOfLines={1}>
                     {person.StatusDestinationName}
                   </Text>

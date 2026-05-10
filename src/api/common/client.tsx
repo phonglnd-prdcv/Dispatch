@@ -35,6 +35,10 @@ const processQueue = (error: Error | null) => {
 // Request interceptor for API calls
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Dynamically resolve baseURL to support custom server URLs
+    // that may have been changed after app startup (e.g. via settings/login)
+    config.baseURL = getBaseApiUrl();
+
     const accessToken = useAuthStore.getState().accessToken;
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;

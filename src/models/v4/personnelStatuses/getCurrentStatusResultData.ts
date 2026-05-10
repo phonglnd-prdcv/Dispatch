@@ -4,8 +4,11 @@ export class GetCurrentStatusResultData {
   public StatusType: number = 0;
   public TimestampUtc: string = '';
   public Timestamp: string = '';
+  public DestinationName: string = '';
+  public DestinationAddress: string = '';
+  public DestinationTypeName: string = '';
   public Note: string = '';
-  public DestinationId: string = '';
-  public DestinationType: string = '';
+  public DestinationId: number | null = null;
+  public DestinationType: number | null = null;
   public GeoLocationData: string = '';
 }

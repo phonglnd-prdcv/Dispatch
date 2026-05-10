@@ -4,6 +4,8 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity } from 'react-native';
 
+import { DestinationEntityType, type DestinationTab, getDefaultDestinationTab, getDestinationCapabilities, getEnabledDestinationTabs } from '@/lib/destination-helpers';
+import { getPoiSelectionLabel } from '@/lib/poi-display';
 import { invertColor } from '@/lib/utils';
 import { type CustomStatusResultData } from '@/models/v4/customStatuses/customStatusResultData';
 import { SaveUnitStatusInput, SaveUnitStatusRoleInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
@@ -25,7 +27,7 @@ import { VStack } from '../ui/vstack';
 export const StatusBottomSheet = () => {
   const { t } = useTranslation();
   const { colorScheme } = useColorScheme();
-  const [selectedTab, setSelectedTab] = React.useState<'calls' | 'stations'>('calls');
+  const [selectedTab, setSelectedTab] = React.useState<DestinationTab>('calls');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const hasPreselectedRef = React.useRef(false);
   const { showToast } = useToastStore();
@@ -35,17 +37,20 @@ export const StatusBottomSheet = () => {
     currentStep,
     selectedCall,
     selectedStation,
+    selectedPoi,
     selectedDestinationType,
     selectedStatus,
     cameFromStatusSelection,
     note,
     availableCalls,
     availableStations,
+    availablePois,
     isLoading,
     setIsOpen,
     setCurrentStep,
     setSelectedCall,
     setSelectedStation,
+    setSelectedPoi,
     setSelectedDestinationType,
     setSelectedStatus,
     setNote,
@@ -82,6 +87,7 @@ export const StatusBottomSheet = () => {
       setSelectedCall(call);
       setSelectedDestinationType('call');
       setSelectedStation(null);
+      setSelectedPoi(null);
     }
   };
 
@@ -91,6 +97,17 @@ export const StatusBottomSheet = () => {
       setSelectedStation(station);
       setSelectedDestinationType('station');
       setSelectedCall(null);
+      setSelectedPoi(null);
+    }
+  };
+
+  const handlePoiSelect = (poiId: number) => {
+    const poi = availablePois.find((currentPoi) => currentPoi.PoiId === poiId);
+    if (poi) {
+      setSelectedPoi(poi);
+      setSelectedDestinationType('poi');
+      setSelectedCall(null);
+      setSelectedStation(null);
     }
   };
 
@@ -98,6 +115,7 @@ export const StatusBottomSheet = () => {
     setSelectedDestinationType('none');
     setSelectedCall(null);
     setSelectedStation(null);
+    setSelectedPoi(null);
   };
 
   const handleNext = () => {
@@ -172,8 +190,16 @@ export const StatusBottomSheet = () => {
       // Set RespondingTo based on destination selection
       if (selectedDestinationType === 'call' && selectedCall) {
         input.RespondingTo = selectedCall.CallId;
+        input.RespondingToType = DestinationEntityType.Call;
       } else if (selectedDestinationType === 'station' && selectedStation) {
         input.RespondingTo = selectedStation.GroupId;
+        input.RespondingToType = DestinationEntityType.Station;
+      } else if (selectedDestinationType === 'poi' && selectedPoi) {
+        input.RespondingTo = selectedPoi.PoiId.toString();
+        input.RespondingToType = DestinationEntityType.Poi;
+      } else {
+        input.RespondingTo = '';
+        input.RespondingToType = null;
       }
 
       // Include GPS coordinates if available
@@ -228,6 +254,7 @@ export const StatusBottomSheet = () => {
     selectedDestinationType,
     selectedCall,
     selectedStation,
+    selectedPoi,
     unitRoleAssignments,
     saveUnitStatus,
     reset,
@@ -252,6 +279,14 @@ export const StatusBottomSheet = () => {
     }
   }, [isOpen, activeUnit, selectedStatus, fetchDestinationData]);
 
+  React.useEffect(() => {
+    if (!selectedStatus) {
+      return;
+    }
+
+    setSelectedTab(getDefaultDestinationTab(selectedStatus.Detail));
+  }, [selectedStatus]);
+
   // Pre-select active call when opening with calls enabled
   React.useLayoutEffect(() => {
     // Reset the pre-selection flag when bottom sheet closes
@@ -262,7 +297,9 @@ export const StatusBottomSheet = () => {
 
     // Immediate pre-selection: if we have the conditions met, pre-select right away
     // This runs on every render to catch the case where availableCalls loads in
-    if (isOpen && selectedStatus && (selectedStatus.Detail === 2 || selectedStatus.Detail === 3) && activeCallId && !selectedCall && selectedDestinationType === 'none' && !hasPreselectedRef.current) {
+    const capabilities = getDestinationCapabilities(selectedStatus?.Detail);
+
+    if (isOpen && selectedStatus && capabilities.showCalls && activeCallId && !selectedCall && selectedDestinationType === 'none' && !hasPreselectedRef.current) {
       // Check if we have calls available (loaded) or should wait
       if (!isLoading && availableCalls.length > 0) {
         const activeCall = availableCalls.find((call) => call.CallId === activeCallId);
@@ -282,7 +319,7 @@ export const StatusBottomSheet = () => {
 
     // Handle case where destination type is already 'call' but call hasn't been set yet
     // This covers the scenario from the removed redundant effect
-    if (isOpen && selectedStatus && (selectedStatus.Detail === 2 || selectedStatus.Detail === 3) && activeCallId && !selectedCall && selectedDestinationType === 'call' && !isLoading && availableCalls.length > 0) {
+    if (isOpen && selectedStatus && capabilities.showCalls && activeCallId && !selectedCall && selectedDestinationType === 'call' && !isLoading && availableCalls.length > 0) {
       const activeCall = availableCalls.find((call) => call.CallId === activeCallId);
       if (activeCall) {
         setSelectedCall(activeCall);
@@ -294,12 +331,12 @@ export const StatusBottomSheet = () => {
   // Don't show it as selected if we're about to pre-select an active call or already have one selected
   const shouldShowNoDestinationAsSelected = React.useMemo(() => {
     // If something else is already selected, don't show no destination as selected
-    if (selectedCall || selectedStation) {
+    if (selectedCall || selectedStation || selectedPoi) {
       return false;
     }
 
     // If we're in a state where we should pre-select an active call, don't show no destination as selected
-    const shouldPreSelectActiveCall = isOpen && selectedStatus && (selectedStatus.Detail === 2 || selectedStatus.Detail === 3) && activeCallId && !selectedCall;
+    const shouldPreSelectActiveCall = isOpen && selectedStatus && getDestinationCapabilities(selectedStatus.Detail).showCalls && activeCallId && !selectedCall;
 
     if (shouldPreSelectActiveCall) {
       return false;
@@ -307,14 +344,38 @@ export const StatusBottomSheet = () => {
 
     // Otherwise, show it as selected only if explicitly set to 'none'
     return selectedDestinationType === 'none';
-  }, [selectedDestinationType, selectedCall, selectedStation, isOpen, selectedStatus, activeCallId]);
+  }, [selectedDestinationType, selectedCall, selectedStation, selectedPoi, isOpen, selectedStatus, activeCallId]);
 
   // Determine step logic
   const detailLevel = getStatusProperty('Detail', 0);
-  const shouldShowDestinationStep = detailLevel > 0;
+  const destinationCapabilities = getDestinationCapabilities(detailLevel);
+  const enabledDestinationTabs = getEnabledDestinationTabs(detailLevel);
+  const shouldShowDestinationStep = destinationCapabilities.supportsDestination;
   const noteType = getStatusProperty('Note', 0);
   const isNoteRequired = noteType === 2; // NoteType 2 = required
   const isNoteOptional = noteType === 1; // NoteType 1 = optional
+  const shouldShowTabHeaders = enabledDestinationTabs.length > 1;
+
+  const getStatusDetailDescription = (detail: number) => {
+    switch (detail) {
+      case 1:
+        return t('status.station_destination_enabled');
+      case 2:
+        return t('status.call_destination_enabled');
+      case 3:
+        return t('status.both_destinations_enabled');
+      case 4:
+        return t('status.poi_destination_enabled');
+      case 5:
+        return t('status.calls_and_pois_destination_enabled');
+      case 6:
+        return t('status.stations_and_pois_destination_enabled');
+      case 7:
+        return t('status.all_destinations_enabled');
+      default:
+        return '';
+    }
+  };
 
   const getStepTitle = () => {
     switch (currentStep) {
@@ -416,6 +477,10 @@ export const StatusBottomSheet = () => {
       return selectedStation.Name;
     }
 
+    if (selectedPoi) {
+      return getPoiSelectionLabel(selectedPoi);
+    }
+
     // Then check destination type for other scenarios
     if (selectedDestinationType === 'call') {
       if (activeCallId) {
@@ -476,13 +541,7 @@ export const StatusBottomSheet = () => {
                             <Text className="font-bold" style={{ color: invertColor(status.BColor || '#ffffff', true) }}>
                               {status.Text}
                             </Text>
-                            {status.Detail > 0 && (
-                              <Text className="text-sm text-gray-600 dark:text-gray-400">
-                                {status.Detail === 1 && t('status.station_destination_enabled')}
-                                {status.Detail === 2 && t('status.call_destination_enabled')}
-                                {status.Detail === 3 && t('status.both_destinations_enabled')}
-                              </Text>
-                            )}
+                            {status.Detail > 0 && <Text className="text-sm text-gray-600 dark:text-gray-400">{getStatusDetailDescription(status.Detail)}</Text>}
                             {status.Note > 0 && (
                               <Text className="text-xs text-gray-500 dark:text-gray-500">
                                 {status.Note === 1 && t('status.note_optional')}
@@ -526,25 +585,30 @@ export const StatusBottomSheet = () => {
                 </HStack>
               </TouchableOpacity>
 
-              {/* Show tabs only if we have both calls and stations to choose from */}
-              {((detailLevel === 1 && availableStations.length > 0) || (detailLevel === 2 && availableCalls.length > 0) || (detailLevel === 3 && (availableCalls.length > 0 || availableStations.length > 0))) && (
+              {enabledDestinationTabs.length > 0 && (
                 <>
-                  {/* Tab Headers - only show if we have both types or multiple options */}
-                  {detailLevel === 3 && (
+                  {shouldShowTabHeaders && (
                     <HStack space="xs" className="mb-4">
-                      <TouchableOpacity onPress={() => setSelectedTab('calls')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'calls' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                        <Text className={`text-center font-semibold ${selectedTab === 'calls' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.calls_tab')}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => setSelectedTab('stations')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'stations' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                        <Text className={`text-center font-semibold ${selectedTab === 'stations' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.stations_tab')}</Text>
-                      </TouchableOpacity>
+                      {enabledDestinationTabs.includes('calls') ? (
+                        <TouchableOpacity onPress={() => setSelectedTab('calls')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'calls' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <Text className={`text-center font-semibold ${selectedTab === 'calls' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.calls_tab')}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {enabledDestinationTabs.includes('stations') ? (
+                        <TouchableOpacity onPress={() => setSelectedTab('stations')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'stations' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <Text className={`text-center font-semibold ${selectedTab === 'stations' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.stations_tab')}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {enabledDestinationTabs.includes('pois') ? (
+                        <TouchableOpacity onPress={() => setSelectedTab('pois')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'pois' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <Text className={`text-center font-semibold ${selectedTab === 'pois' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.pois_tab')}</Text>
+                        </TouchableOpacity>
+                      ) : null}
                     </HStack>
                   )}
 
-                  {/* Tab Content */}
-                  <ScrollView className={detailLevel === 3 ? 'max-h-[200px]' : 'max-h-[300px]'}>
-                    {/* Show calls if detailLevel 2 or 3, and either no tabs or calls tab selected */}
-                    {(detailLevel === 2 || (detailLevel === 3 && selectedTab === 'calls')) && (
+                  <ScrollView className={shouldShowTabHeaders ? 'max-h-[200px]' : 'max-h-[300px]'}>
+                    {enabledDestinationTabs.includes('calls') && (!shouldShowTabHeaders || selectedTab === 'calls') && (
                       <VStack space="sm">
                         {isLoading ? (
                           <VStack space="md" className="w-full items-center justify-center">
@@ -575,8 +639,7 @@ export const StatusBottomSheet = () => {
                       </VStack>
                     )}
 
-                    {/* Show stations if detailLevel 1 or 3, and either no tabs or stations tab selected */}
-                    {(detailLevel === 1 || (detailLevel === 3 && selectedTab === 'stations')) && (
+                    {enabledDestinationTabs.includes('stations') && (!shouldShowTabHeaders || selectedTab === 'stations') && (
                       <VStack space="sm">
                         {isLoading ? (
                           <VStack space="md" className="w-full items-center justify-center">
@@ -602,6 +665,36 @@ export const StatusBottomSheet = () => {
                           ))
                         ) : (
                           <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('status.no_stations_available')}</Text>
+                        )}
+                      </VStack>
+                    )}
+
+                    {enabledDestinationTabs.includes('pois') && (!shouldShowTabHeaders || selectedTab === 'pois') && (
+                      <VStack space="sm">
+                        {isLoading ? (
+                          <VStack space="md" className="w-full items-center justify-center">
+                            <Spinner size="large" />
+                            <Text className="text-center text-gray-600 dark:text-gray-400">{t('status.loading_pois')}</Text>
+                          </VStack>
+                        ) : availablePois && availablePois.length > 0 ? (
+                          availablePois.map((poi) => (
+                            <TouchableOpacity
+                              key={poi.PoiId}
+                              onPress={() => handlePoiSelect(poi.PoiId)}
+                              className={`mb-3 rounded-lg border-2 p-3 ${selectedPoi?.PoiId === poi.PoiId ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'}`}
+                            >
+                              <HStack space="sm" className="items-center">
+                                <Check size={20} color={selectedPoi?.PoiId === poi.PoiId ? '#3b82f6' : 'transparent'} />
+                                <VStack className="flex-1">
+                                  <Text className="font-bold">{getPoiSelectionLabel(poi)}</Text>
+                                  {poi.Note ? <Text className="text-sm text-gray-600 dark:text-gray-400">{poi.Note}</Text> : null}
+                                  {poi.PoiTypeName ? <Text className="text-xs text-gray-500 dark:text-gray-500">{poi.PoiTypeName}</Text> : null}
+                                </VStack>
+                              </HStack>
+                            </TouchableOpacity>
+                          ))
+                        ) : (
+                          <Text className="mt-4 italic text-gray-600 dark:text-gray-400">{t('status.no_pois_available')}</Text>
                         )}
                       </VStack>
                     )}

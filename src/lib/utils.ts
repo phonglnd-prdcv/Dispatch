@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import type { StoreApi, UseBoundStore } from 'zustand';
 
 import { Env } from './env';
+import { getBaseApiUrl } from './storage/app';
 
 /**
  * Call State Constants
@@ -111,7 +112,7 @@ export function onSortOptions(a: any, b: any) {
 }
 
 export function getAvatarUrl(userId: string) {
-  return Env.BASE_API_URL + Env.RESGRID_API_URL + '/Avatars/Get?id=' + userId;
+  return getBaseApiUrl() + '/Avatars/Get?id=' + userId;
 }
 
 export function invertColor(hex: string, bw: boolean): string {
@@ -149,6 +150,39 @@ export function padZero(str: string, len: number): string {
   len = len || 2;
   var zeros = new Array(len).join('0');
   return (zeros + str).slice(-len);
+}
+
+export function toRgbaWithAlpha(color: string, alpha: number): string {
+  const a = Number.isFinite(alpha) ? Math.min(1, Math.max(0, alpha)) : 1;
+  if (!color) return `rgba(0, 0, 0, ${a})`;
+
+  const clamp = (n: number) => (Number.isFinite(n) ? Math.min(255, Math.max(0, n)) : 0);
+  const trimmed = color.trim();
+
+  // hex: #RGB, #RRGGBB, #RRGGBBAA
+  if (trimmed.startsWith('#')) {
+    let hex = trimmed.slice(1);
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    if (hex.length >= 6) {
+      const r = clamp(parseInt(hex.slice(0, 2), 16));
+      const g = clamp(parseInt(hex.slice(2, 4), 16));
+      const b = clamp(parseInt(hex.slice(4, 6), 16));
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+  }
+
+  // rgb(r, g, b) or rgba(r, g, b, a)
+  const rgbMatch = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgbMatch) {
+    const r = clamp(Number(rgbMatch[1]));
+    const g = clamp(Number(rgbMatch[2]));
+    const b = clamp(Number(rgbMatch[3]));
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+
+  return trimmed;
 }
 
 export function uuidv4() {
@@ -197,7 +231,10 @@ export function getMinutesBetweenDates(startDate: Date, endDate: Date): number {
   return diff / 60000;
 }
 
-export function parseDateISOString(s: string): Date {
+export function parseDateISOString(s: string | undefined | null): Date | null {
+  if (!s) {
+    return null;
+  }
   const b = s.split(/\D/);
   // Ensure we have all required parts
   const [year, month, day, hour = '0', minute = '0', second = '0'] = b;
@@ -218,7 +255,7 @@ export function getDate(date: string): string {
   return datestring;
 }
 
-export function formatDateForDisplay(date: Date, format: string): string {
+export function formatDateForDisplay(date: Date | null, format: string): string {
   // Original idea from: https://weblog.west-wind.com/posts/2008/Mar/18/A-simple-formatDate-function-for-JavaScript
 
   if (!date) {

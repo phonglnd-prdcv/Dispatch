@@ -3,12 +3,13 @@ import { useCallback, useEffect, useRef } from 'react';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { logger } from '@/lib/logging';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
+import { type PoiLayerData } from '@/models/v4/mapping/poiLayerData';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 
 // Debounce delay in milliseconds to prevent rapid consecutive API calls
 const DEBOUNCE_DELAY = 1000;
 
-export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData[]) => void) => {
+export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData[]) => void, onPoiLayersUpdate?: (poiLayers: PoiLayerData[]) => void) => {
   const lastProcessedTimestamp = useRef<number>(0);
   const isUpdating = useRef<boolean>(false);
   const pendingTimestamp = useRef<number | null>(null);
@@ -67,6 +68,10 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
           });
 
           onMarkersUpdate(mapDataAndMarkers.Data.MapMakerInfos);
+
+          if (onPoiLayersUpdate) {
+            onPoiLayersUpdate(mapDataAndMarkers.Data.PoiLayers ?? []);
+          }
         }
 
         // Update the last processed timestamp after successful API call
@@ -112,7 +117,7 @@ export const useMapSignalRUpdates = (onMarkersUpdate: (markers: MapMakerInfoData
         }
       }
     },
-    [lastUpdateTimestamp, onMarkersUpdate]
+    [lastUpdateTimestamp, onMarkersUpdate, onPoiLayersUpdate]
   );
 
   useEffect(() => {

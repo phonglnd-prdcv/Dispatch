@@ -2,13 +2,15 @@ import { create } from 'zustand';
 
 import { savePersonsStaffings } from '@/api/personnel/personnelStaffing';
 import { savePersonsStatuses } from '@/api/personnel/personnelStatuses';
+import { DestinationEntityType, type DestinationSelectionType } from '@/lib/destination-helpers';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 
 export type PersonnelActionTab = 'status' | 'staffing';
-export type DestinationType = 'none' | 'call' | 'station';
+export type DestinationType = DestinationSelectionType;
 
 interface PersonnelActionsState {
   // Panel visibility
@@ -25,6 +27,7 @@ interface PersonnelActionsState {
   statusDestinationType: DestinationType;
   statusSelectedCall: CallResultData | null;
   statusSelectedStation: GroupResultData | null;
+  statusSelectedPoi: PoiResultData | null;
   statusNote: string;
   isSubmittingStatus: boolean;
 
@@ -38,6 +41,7 @@ interface PersonnelActionsState {
   availableStaffings: StatusesResultData[];
   availableCalls: CallResultData[];
   availableStations: GroupResultData[];
+  availablePois: PoiResultData[];
   isLoadingOptions: boolean;
 
   // Error handling
@@ -54,6 +58,7 @@ interface PersonnelActionsState {
   setStatusDestinationType: (type: DestinationType) => void;
   setStatusSelectedCall: (call: CallResultData | null) => void;
   setStatusSelectedStation: (station: GroupResultData | null) => void;
+  setStatusSelectedPoi: (poi: PoiResultData | null) => void;
   setStatusNote: (note: string) => void;
   submitStatus: (overrides?: { personnel?: PersonnelInfoResultData; status?: StatusesResultData }) => Promise<boolean>;
   resetStatusForm: () => void;
@@ -69,6 +74,7 @@ interface PersonnelActionsState {
   setAvailableStaffings: (staffings: StatusesResultData[]) => void;
   setAvailableCalls: (calls: CallResultData[]) => void;
   setAvailableStations: (stations: GroupResultData[]) => void;
+  setAvailablePois: (pois: PoiResultData[]) => void;
   setIsLoadingOptions: (loading: boolean) => void;
 
   // Reset everything
@@ -83,6 +89,7 @@ const initialState = {
   statusDestinationType: 'none' as DestinationType,
   statusSelectedCall: null,
   statusSelectedStation: null,
+  statusSelectedPoi: null,
   statusNote: '',
   isSubmittingStatus: false,
   selectedStaffing: null,
@@ -92,6 +99,7 @@ const initialState = {
   availableStaffings: [],
   availableCalls: [],
   availableStations: [],
+  availablePois: [],
   isLoadingOptions: false,
   statusError: null,
   staffingError: null,
@@ -110,6 +118,7 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
       statusDestinationType: 'none',
       statusSelectedCall: null,
       statusSelectedStation: null,
+      statusSelectedPoi: null,
       statusNote: '',
       selectedStaffing: null,
       staffingNote: '',
@@ -136,10 +145,16 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
     if (type === 'none') {
       updates.statusSelectedCall = null;
       updates.statusSelectedStation = null;
+      updates.statusSelectedPoi = null;
     } else if (type === 'call') {
       updates.statusSelectedStation = null;
+      updates.statusSelectedPoi = null;
     } else if (type === 'station') {
       updates.statusSelectedCall = null;
+      updates.statusSelectedPoi = null;
+    } else if (type === 'poi') {
+      updates.statusSelectedCall = null;
+      updates.statusSelectedStation = null;
     }
     set(updates);
   },
@@ -149,6 +164,7 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
       statusSelectedCall: call,
       statusDestinationType: 'call',
       statusSelectedStation: null,
+      statusSelectedPoi: null,
     }),
 
   setStatusSelectedStation: (station) =>
@@ -156,6 +172,15 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
       statusSelectedStation: station,
       statusDestinationType: 'station',
       statusSelectedCall: null,
+      statusSelectedPoi: null,
+    }),
+
+  setStatusSelectedPoi: (poi) =>
+    set({
+      statusSelectedPoi: poi,
+      statusDestinationType: 'poi',
+      statusSelectedCall: null,
+      statusSelectedStation: null,
     }),
 
   setStatusNote: (note) => set({ statusNote: note }),
@@ -164,7 +189,7 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
     const storeState = get();
     const selectedPersonnel = overrides?.personnel ?? storeState.selectedPersonnel;
     const selectedStatus = overrides?.status ?? storeState.selectedStatus;
-    const { statusDestinationType, statusSelectedCall, statusSelectedStation, statusNote } = storeState;
+    const { statusDestinationType, statusSelectedCall, statusSelectedStation, statusSelectedPoi, statusNote } = storeState;
 
     if (!selectedPersonnel || !selectedStatus) {
       set({ statusError: 'Please select a status' });
@@ -181,12 +206,25 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
         respondingTo = statusSelectedCall.CallId;
       } else if (statusDestinationType === 'station' && statusSelectedStation) {
         respondingTo = statusSelectedStation.GroupId;
+      } else if (statusDestinationType === 'poi' && statusSelectedPoi) {
+        respondingTo = statusSelectedPoi.PoiId.toString();
+      }
+
+      let respondingToType: number | null = null;
+
+      if (statusDestinationType === 'call' && statusSelectedCall) {
+        respondingToType = DestinationEntityType.Call;
+      } else if (statusDestinationType === 'station' && statusSelectedStation) {
+        respondingToType = DestinationEntityType.Station;
+      } else if (statusDestinationType === 'poi' && statusSelectedPoi) {
+        respondingToType = DestinationEntityType.Poi;
       }
 
       await savePersonsStatuses({
         UserIds: [selectedPersonnel.UserId],
         Type: selectedStatus.Id.toString(),
         RespondingTo: respondingTo,
+        RespondingToType: respondingToType,
         TimestampUtc: date.toUTCString().replace('UTC', 'GMT'),
         Timestamp: date.toISOString(),
         Note: statusNote,
@@ -207,6 +245,7 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
         statusDestinationType: 'none',
         statusSelectedCall: null,
         statusSelectedStation: null,
+        statusSelectedPoi: null,
         statusNote: '',
       });
 
@@ -226,6 +265,7 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
       statusDestinationType: 'none',
       statusSelectedCall: null,
       statusSelectedStation: null,
+      statusSelectedPoi: null,
       statusNote: '',
       statusError: null,
     }),
@@ -289,6 +329,7 @@ export const usePersonnelActionsStore = create<PersonnelActionsState>((set, get)
   setAvailableStaffings: (staffings) => set({ availableStaffings: staffings }),
   setAvailableCalls: (calls) => set({ availableCalls: calls }),
   setAvailableStations: (stations) => set({ availableStations: stations }),
+  setAvailablePois: (pois) => set({ availablePois: pois }),
   setIsLoadingOptions: (loading) => set({ isLoadingOptions: loading }),
 
   // Reset everything

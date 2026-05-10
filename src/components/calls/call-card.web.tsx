@@ -30,6 +30,7 @@ interface CallCardProps {
 export const CallCard: React.FC<CallCardProps> = ({ call, priority }) => {
   const textColor = invertColor(getColor(call, priority), true);
   const bgColor = getColor(call, priority);
+  const destinationText = call.DestinationName ? (call.DestinationTypeName ? `${call.DestinationTypeName}: ${call.DestinationName}` : call.DestinationName) : '';
 
   return (
     <Box
@@ -88,6 +89,20 @@ export const CallCard: React.FC<CallCardProps> = ({ call, priority }) => {
             {call.Address}
           </Text>
         </HStack>
+
+        {destinationText ? (
+          <HStack className="items-center space-x-2">
+            <Icon as={MapPin} className="text-gray-500" size="md" />
+            <Text
+              style={{
+                color: textColor,
+              }}
+              className="font-medium text-gray-700"
+            >
+              {destinationText}
+            </Text>
+          </HStack>
+        ) : null}
       </VStack>
 
       {/* Nature of Call - Use iframe for web instead of WebView */}

@@ -36,6 +36,14 @@ export const CallCard: React.FC<CallCardProps> = React.memo(({ call, priority })
     return stripHtmlTags(call.Nature).trim();
   }, [call.Nature]);
 
+  const destinationText = useMemo(() => {
+    if (!call.DestinationName) {
+      return '';
+    }
+
+    return call.DestinationTypeName ? `${call.DestinationTypeName}: ${call.DestinationName}` : call.DestinationName;
+  }, [call.DestinationName, call.DestinationTypeName]);
+
   return (
     <Box style={[styles.card, { backgroundColor: bgColor }]}>
       {/* Header Row: Call Number, Name, and Time */}
@@ -60,6 +68,15 @@ export const CallCard: React.FC<CallCardProps> = React.memo(({ call, priority })
           <MapPin size={12} color={textColor} style={styles.mapIcon} />
           <Text style={[styles.addressText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
             {call.Address}
+          </Text>
+        </HStack>
+      ) : null}
+
+      {destinationText ? (
+        <HStack style={styles.destinationRow}>
+          <MapPin size={12} color={textColor} style={styles.mapIcon} />
+          <Text style={[styles.destinationText, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">
+            {destinationText}
           </Text>
         </HStack>
       ) : null}
@@ -130,6 +147,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     flex: 1,
     opacity: 0.9,
+  },
+  destinationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  destinationText: {
+    fontSize: 11,
+    flex: 1,
+    opacity: 0.9,
+    fontWeight: '600',
   },
   natureContainer: {
     marginTop: 4,

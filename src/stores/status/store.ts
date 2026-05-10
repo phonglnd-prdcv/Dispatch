@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 
 import { getCalls } from '@/api/calls/calls';
+import { getSetUnitStatusData } from '@/api/dispatch/dispatch';
 import { getAllGroups } from '@/api/groups/groups';
 import { saveUnitStatus } from '@/api/units/unitStatuses';
+import { type DestinationSelectionType } from '@/lib/destination-helpers';
 import { logger } from '@/lib/logging';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type CustomStatusResultData } from '@/models/v4/customStatuses/customStatusResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData';
 import { type SaveUnitStatusInput, type SaveUnitStatusRoleInput } from '@/models/v4/unitStatus/saveUnitStatusInput';
 
@@ -15,7 +18,7 @@ import { useLocationStore } from '../app/location-store';
 import { useRolesStore } from '../roles/store';
 
 type StatusStep = 'select-status' | 'select-destination' | 'add-note';
-type DestinationType = 'none' | 'call' | 'station';
+type DestinationType = DestinationSelectionType;
 
 // Status type that can accept both custom statuses and regular statuses
 type StatusType = CustomStatusResultData | StatusesResultData;
@@ -25,18 +28,21 @@ interface StatusBottomSheetStore {
   currentStep: StatusStep;
   selectedCall: CallResultData | null;
   selectedStation: GroupResultData | null;
+  selectedPoi: PoiResultData | null;
   selectedDestinationType: DestinationType;
   selectedStatus: StatusType | null;
   cameFromStatusSelection: boolean; // Track whether we came from status selection flow
   note: string;
   availableCalls: CallResultData[];
   availableStations: GroupResultData[];
+  availablePois: PoiResultData[];
   isLoading: boolean;
   error: string | null;
   setIsOpen: (isOpen: boolean, status?: StatusType) => void;
   setCurrentStep: (step: StatusStep) => void;
   setSelectedCall: (call: CallResultData | null) => void;
   setSelectedStation: (station: GroupResultData | null) => void;
+  setSelectedPoi: (poi: PoiResultData | null) => void;
   setSelectedDestinationType: (type: DestinationType) => void;
   setSelectedStatus: (status: StatusType | null) => void;
   setNote: (note: string) => void;
@@ -49,12 +55,14 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
   currentStep: 'select-destination',
   selectedCall: null,
   selectedStation: null,
+  selectedPoi: null,
   selectedDestinationType: 'none',
   selectedStatus: null,
   cameFromStatusSelection: false,
   note: '',
   availableCalls: [],
   availableStations: [],
+  availablePois: [],
   isLoading: false,
   error: null,
   setIsOpen: (isOpen, status) => {
@@ -69,25 +77,47 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
   setCurrentStep: (step) => set({ currentStep: step }),
   setSelectedCall: (call) => set({ selectedCall: call }),
   setSelectedStation: (station) => set({ selectedStation: station }),
+  setSelectedPoi: (poi) => set({ selectedPoi: poi }),
   setSelectedDestinationType: (type) => set({ selectedDestinationType: type }),
   setSelectedStatus: (status) => set({ selectedStatus: status }),
   setNote: (note) => set({ note }),
   fetchDestinationData: async (unitId: string) => {
     set({ isLoading: true, error: null });
     try {
-      // Fetch calls and groups (stations) in parallel
-      const [callsResponse, groupsResponse] = await Promise.all([getCalls(), getAllGroups()]);
+      const response = await getSetUnitStatusData(unitId);
+      const destinationData = response?.Data;
 
       set({
-        availableCalls: callsResponse.Data || [],
-        availableStations: groupsResponse.Data || [],
+        availableCalls: destinationData?.Calls || [],
+        availableStations: destinationData?.Stations || [],
+        availablePois: destinationData?.DestinationPois || [],
         isLoading: false,
       });
-    } catch (error) {
-      set({
-        error: 'Failed to fetch destination data',
-        isLoading: false,
+    } catch (primaryError) {
+      logger.error({
+        message: 'Failed to fetch destination data via getSetUnitStatusData, falling back',
+        context: { unitId, error: primaryError },
       });
+      try {
+        const [callsResponse, groupsResponse] = await Promise.all([getCalls(), getAllGroups()]);
+
+        set({
+          availableCalls: callsResponse.Data || [],
+          availableStations: groupsResponse.Data || [],
+          availablePois: [],
+          isLoading: false,
+        });
+      } catch (fallbackError) {
+        logger.error({
+          message: 'Failed to fetch destination data via fallback',
+          context: { unitId, primaryError, fallbackError },
+        });
+        const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Failed to fetch destination data';
+        set({
+          error: errorMessage,
+          isLoading: false,
+        });
+      }
     }
   },
   reset: () =>
@@ -96,12 +126,14 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
       currentStep: 'select-destination',
       selectedCall: null,
       selectedStation: null,
+      selectedPoi: null,
       selectedDestinationType: 'none',
       selectedStatus: null,
       cameFromStatusSelection: false,
       note: '',
       availableCalls: [],
       availableStations: [],
+      availablePois: [],
       isLoading: false,
       error: null,
     }),

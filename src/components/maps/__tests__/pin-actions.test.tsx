@@ -152,7 +152,15 @@ const mockCallPin = {
   Type: 1,
   InfoWindowContent: 'Medical emergency at Main St',
   Color: '#ff0000',
-  zIndex: '1',
+  zIndex: 1,
+  PoiImage: '',
+  Marker: '',
+  PoiTypeId: null,
+  PoiTypeName: '',
+  Address: '',
+  Note: '',
+  LayerId: '',
+  LayerName: '',
 };
 
 const mockUnitPin = {
@@ -164,7 +172,15 @@ const mockUnitPin = {
   Type: 2,
   InfoWindowContent: 'Engine 1 available',
   Color: '#00ff00',
-  zIndex: '1',
+  zIndex: 1,
+  PoiImage: '',
+  Marker: '',
+  PoiTypeId: null,
+  PoiTypeName: '',
+  Address: '',
+  Note: '',
+  LayerId: '',
+  LayerName: '',
 };
 
 describe('Pin Actions Integration Tests', () => {
@@ -531,7 +547,15 @@ describe('Pin Actions Integration Tests', () => {
         Type: 0,
         InfoWindowContent: '',
         Color: '',
-        zIndex: '1',
+        zIndex: 0,
+        PoiImage: '',
+        Marker: '',
+        PoiTypeId: null,
+        PoiTypeName: '',
+        Address: '',
+        Note: '',
+        LayerId: '',
+        LayerName: '',
       };
 
       render(

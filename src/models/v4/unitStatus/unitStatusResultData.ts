@@ -5,12 +5,17 @@ export class UnitStatusResultData {
   public StateCss: string = '';
   public StateStyle: string = '';
   public Timestamp: string = '';
-  public DestinationId: string = '';
+  public TimestampUtc: string = '';
+  public DestinationId: number | null = null;
+  public DestinationType: number | null = null;
+  public DestinationName: string = '';
+  public DestinationAddress: string = '';
+  public DestinationTypeName: string = '';
   public Note: string = '';
-  public Latitude: string = '';
-  public Longitude: string = '';
+  public Latitude: number | null = null;
+  public Longitude: number | null = null;
   public GroupName: string = '';
-  public GroupId: string = '';
+  public GroupId: number = 0;
   public Eta: string = '';
   public UnitId: string = '';
 }

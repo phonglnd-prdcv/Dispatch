@@ -10,6 +10,7 @@ import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 're
 import * as z from 'zod';
 
 import { createCall } from '@/api/calls/calls';
+import { getNewCallData } from '@/api/dispatch/dispatch';
 import { getNewCallForm } from '@/api/forms/forms';
 import { saveUdfValues } from '@/api/userDefinedFields/userDefinedFields';
 import { CallFormRenderer } from '@/components/calls/call-form-renderer';
@@ -31,9 +32,11 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useToast } from '@/hooks/use-toast';
+import { getPoiDestinationOptionLabel } from '@/lib/poi-display';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type ContactResultData } from '@/models/v4/contacts/contactResultData';
 import { type FormResultData } from '@/models/v4/forms/formResultData';
+import { type PoiResultData } from '@/models/v4/mapping/poiResultData';
 import { type UdfFieldValueInput } from '@/models/v4/userDefinedFields/udfFieldValueInput';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useCallsStore } from '@/stores/calls/store';
@@ -44,6 +47,7 @@ const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
   nature: z.string().min(1, { message: 'Nature is required' }),
   note: z.string().optional(),
+  destinationPoiId: z.string().optional(),
   address: z.string().optional(),
   coordinates: z.string().optional(),
   what3words: z.string().optional(),
@@ -67,6 +71,8 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+const NO_DESTINATION_VALUE = '__none__';
 
 // Google Maps Geocoding API response types
 interface GeocodingResult {
@@ -220,9 +226,10 @@ interface WebSelectProps {
   options: Array<{ id: string | number; name: string; color?: string }>;
   error?: string;
   required?: boolean;
+  useIdValue?: boolean;
 }
 
-const WebSelect: React.FC<WebSelectProps> = ({ label, placeholder, value, onChange, options, error, required = false }) => {
+const WebSelect: React.FC<WebSelectProps> = ({ label, placeholder, value, onChange, options, error, required = false, useIdValue = false }) => {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -243,7 +250,7 @@ const WebSelect: React.FC<WebSelectProps> = ({ label, placeholder, value, onChan
       <select className="web-input-accessible" style={accessibleSelectStyles} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{placeholder}</option>
         {options.map((option) => (
-          <option key={option.id} value={option.name}>
+          <option key={option.id} value={useIdValue ? String(option.id) : option.name}>
             {option.name}
           </option>
         ))}
@@ -271,6 +278,8 @@ export default function NewCallWeb() {
   const [showLinkedCallsModal, setShowLinkedCallsModal] = useState(false);
   const [callFormData, setCallFormData] = useState<string | null>(null);
   const [callForm, setCallForm] = useState<FormResultData | null>(null);
+  const [destinationPois, setDestinationPois] = useState<PoiResultData[]>([]);
+  const [isLoadingDestinationPois, setIsLoadingDestinationPois] = useState(false);
   const [udfValues, setUdfValues] = useState<UdfFieldValueInput[]>([]);
   const [selectedProtocols, setSelectedProtocols] = useState<SelectedProtocol[]>([]);
   const [linkedCall, setLinkedCall] = useState<{ callId: string; number: string; name: string } | null>(null);
@@ -326,6 +335,7 @@ export default function NewCallWeb() {
       name: '',
       nature: '',
       note: '',
+      destinationPoiId: '',
       address: '',
       coordinates: '',
       what3words: '',
@@ -363,6 +373,30 @@ export default function NewCallWeb() {
         if (result?.Data?.Data) setCallForm(result.Data);
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    setIsLoadingDestinationPois(true);
+    getNewCallData()
+      .then((result) => {
+        if (isMounted) {
+          setDestinationPois(result?.Data?.DestinationPois || []);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load destination POIs:', error);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingDestinationPois(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -413,6 +447,7 @@ export default function NewCallWeb() {
           priority: priority.Id,
           type: type.Name,
           note: data.note,
+          destinationPoiId: data.destinationPoiId ? Number(data.destinationPoiId) : null,
           address: data.address,
           latitude: data.latitude,
           longitude: data.longitude,
@@ -1088,6 +1123,33 @@ export default function NewCallWeb() {
                         </Pressable>
                       )}
                     </View>
+
+                    <Controller
+                      control={control}
+                      name="destinationPoiId"
+                      render={({ field: { onChange, value } }) => (
+                        <WebSelect
+                          label={t('calls.destination_poi')}
+                          placeholder={t('calls.select_destination_poi')}
+                          value={value || NO_DESTINATION_VALUE}
+                          onChange={(selectedValue) => onChange(selectedValue === NO_DESTINATION_VALUE ? '' : selectedValue)}
+                          useIdValue
+                          options={[
+                            { id: NO_DESTINATION_VALUE, name: t('calls.no_destination') },
+                            ...destinationPois.map((poi) => ({
+                              id: poi.PoiId,
+                              name: getPoiDestinationOptionLabel(poi),
+                            })),
+                          ]}
+                        />
+                      )}
+                    />
+                    {isLoadingDestinationPois ? (
+                      <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight, { marginTop: -4 }])}>{t('calls.loading_destination_pois')}</Text>
+                    ) : null}
+                    {!isLoadingDestinationPois && destinationPois.length === 0 ? (
+                      <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight, { marginTop: -4 }])}>{t('calls.no_destination_pois_available')}</Text>
+                    ) : null}
                   </View>
                 ) : null}
               </Card>
