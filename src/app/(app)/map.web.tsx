@@ -8,13 +8,12 @@ import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacit
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
-import { getMapIconWebUrl, MAP_ICONS } from '@/constants/map-icons';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
-import { isPoiMarker } from '@/lib/destination-helpers';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
-import { getMapMarkerColor, getMapPinSummary, hasValidMapCoordinates, resolveMapMarkerIconKey } from '@/lib/map-markers';
+import { hasValidMapCoordinates, getMapPinSummary } from '@/lib/map-markers';
+import { createMapMarkerElement } from '@/lib/map-markers-web';
 import { createDefaultVisiblePoiLayerIds, filterMapPinsByPoiLayers, getPoiMapLayerId } from '@/lib/poi-map-layers';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';
@@ -23,8 +22,6 @@ import { useLocationStore } from '@/stores/app/location-store';
 
 // Mapbox GL CSS needs to be injected for web
 const MAPBOX_GL_CSS_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css';
-
-type MapIconKey = keyof typeof MAP_ICONS;
 
 export default function MapWeb() {
   const { t } = useTranslation();
@@ -224,69 +221,8 @@ export default function MapWeb() {
     visibleMapPins.forEach((pin) => {
       if (!hasValidMapCoordinates(pin)) return;
 
-      // Create custom marker element
-      const el = document.createElement('div');
-      el.className = 'map-marker';
-      el.style.display = 'flex';
-      el.style.flexDirection = 'column';
-      el.style.alignItems = 'center';
-      el.style.cursor = 'pointer';
-
-      const iconContainer = document.createElement('div');
-      iconContainer.style.display = 'flex';
-      iconContainer.style.alignItems = 'center';
-      iconContainer.style.justifyContent = 'center';
-      iconContainer.style.position = 'relative';
-
-      if (isPoiMarker(pin.Type)) {
-        iconContainer.style.width = '22px';
-        iconContainer.style.height = '22px';
-        iconContainer.style.borderRadius = '999px';
-        iconContainer.style.backgroundColor = getMapMarkerColor(pin);
-        iconContainer.style.border = '2px solid #ffffff';
-        iconContainer.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.35)';
-
-        const innerDot = document.createElement('div');
-        innerDot.style.width = '8px';
-        innerDot.style.height = '8px';
-        innerDot.style.borderRadius = '999px';
-        innerDot.style.backgroundColor = '#ffffff';
-        iconContainer.appendChild(innerDot);
-      } else {
-        iconContainer.style.width = '32px';
-        iconContainer.style.height = '32px';
-
-        const iconKey = resolveMapMarkerIconKey(pin) as MapIconKey;
-        const iconData = MAP_ICONS[iconKey] || MAP_ICONS['call'];
-        const img = document.createElement('img');
-        const imgSrc = getMapIconWebUrl(iconData);
-        img.src = imgSrc;
-        img.style.width = '32px';
-        img.style.height = '32px';
-        img.style.objectFit = 'contain';
-        img.alt = pin.Title;
-        img.onerror = () => {
-          img.src = getMapIconWebUrl(MAP_ICONS['call']);
-        };
-        iconContainer.appendChild(img);
-      }
-
-      el.appendChild(iconContainer);
-
-      // Create title label
-      const title = document.createElement('div');
-      title.textContent = pin.Title;
-      title.style.fontSize = '10px';
-      title.style.fontWeight = '600';
-      title.style.textAlign = 'center';
-      title.style.marginTop = '2px';
-      title.style.maxWidth = '80px';
-      title.style.overflow = 'hidden';
-      title.style.textOverflow = 'ellipsis';
-      title.style.whiteSpace = 'nowrap';
-      title.style.color = colorScheme === 'dark' ? '#ffffff' : '#000000';
-      title.style.textShadow = colorScheme === 'dark' ? '0 0 2px rgba(0,0,0,0.8)' : '0 0 2px rgba(255,255,255,0.8)';
-      el.appendChild(title);
+      // Create custom marker element using shared utility
+      const el = createMapMarkerElement(pin, colorScheme);
 
       // Create popup
       const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(

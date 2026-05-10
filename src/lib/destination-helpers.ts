@@ -106,7 +106,30 @@ export const isPoiDestinationType = (type?: number | null) => type === Destinati
 
 export const isCallMarker = (type?: number | null, imagePath?: string | null) => type === MapMarkerEntityType.Call || imagePath?.toLowerCase() === 'call';
 
-export const isPoiMarker = (type?: number | null) => type === MapMarkerEntityType.Poi;
+export const isPoiMarker = (params: {
+  type?: number | null;
+  poiTypeId?: number | null;
+  layerId?: string | null;
+  imagePath?: string | null;
+  poiImage?: string | null;
+}): boolean => {
+  const { type, poiTypeId, layerId, imagePath, poiImage } = params;
+
+  // Condition 1: Explicit POI type (Type === 4)
+  if (type === MapMarkerEntityType.Poi) return true;
+
+  // Condition 2: PoiTypeId is a number greater than 0
+  if (typeof poiTypeId === 'number' && poiTypeId > 0) return true;
+
+  // Condition 3: LayerId starts with "poi-type-"
+  if (layerId && typeof layerId === 'string' && layerId.startsWith('poi-type-')) return true;
+
+  // Condition 4: PoiImage or ImagePath starts with "map-icon-" (case-insensitive)
+  const iconField = poiImage || imagePath;
+  if (iconField && typeof iconField === 'string' && iconField.toLowerCase().startsWith('map-icon-')) return true;
+
+  return false;
+};
 
 export const getEnabledDestinationTabs = (detail?: number | null): DestinationTab[] => {
   const capabilities = getDestinationCapabilities(detail);

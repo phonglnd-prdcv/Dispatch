@@ -40,7 +40,13 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
   if (!pin) return null;
 
   const isCallPin = isCallMarker(pin.Type, pin.ImagePath);
-  const isPoiPin = isPoiMarker(pin.Type);
+  const isPoiPin = isPoiMarker({
+    type: pin.Type,
+    poiTypeId: pin.PoiTypeId,
+    layerId: pin.LayerId,
+    imagePath: pin.ImagePath,
+    poiImage: pin.PoiImage,
+  });
   const summaryText = getMapPinSummary(pin);
 
   const handleRouteToLocation = async () => {
