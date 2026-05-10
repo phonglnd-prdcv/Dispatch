@@ -25,13 +25,7 @@ const MapPins: React.FC<MapPinsProps> = ({ pins, onPinPress }) => {
       {pins
         .filter((pin) => hasValidMapCoordinates(pin))
         .map((pin) => (
-          <Mapbox.MarkerView
-            key={`pin-${pin.Id}`}
-            id={`pin-${pin.Id}`}
-            coordinate={[pin.Longitude, pin.Latitude]}
-            anchor={BOTTOM_CENTER_ANCHOR}
-            allowOverlap={true}
-          >
+          <Mapbox.MarkerView key={`pin-${pin.Id}`} id={`pin-${pin.Id}`} coordinate={[pin.Longitude, pin.Latitude]} anchor={BOTTOM_CENTER_ANCHOR} allowOverlap={true}>
             <PinMarker pin={pin} size={32} onPress={() => onPinPress?.(pin)} />
           </Mapbox.MarkerView>
         ))}

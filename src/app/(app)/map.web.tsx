@@ -12,7 +12,7 @@ import { useAnalytics } from '@/hooks/use-analytics';
 import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
-import { hasValidMapCoordinates, getMapPinSummary } from '@/lib/map-markers';
+import { getMapPinSummary, hasValidMapCoordinates } from '@/lib/map-markers';
 import { createMapMarkerElement } from '@/lib/map-markers-web';
 import { createDefaultVisiblePoiLayerIds, filterMapPinsByPoiLayers, getPoiMapLayerId } from '@/lib/poi-map-layers';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
@@ -338,7 +338,7 @@ export default function MapWeb() {
 
   // Track when map view is rendered
   useEffect(() => {
-      trackEvent('map_view_rendered', {
+    trackEvent('map_view_rendered', {
       hasMapPins: mapPins.length > 0,
       mapPinsCount: mapPins.length,
       theme: colorScheme || 'light',

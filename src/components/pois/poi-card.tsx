@@ -1,4 +1,5 @@
 import { MapPin, MapPinned } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -14,18 +15,26 @@ interface PoiCardProps {
 
 export const PoiCard: React.FC<PoiCardProps> = ({ poi, onPress }) => {
   const { t } = useTranslation();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const primaryText = getPoiPrimaryDisplayText(poi);
   const secondaryText = getPoiSecondaryDisplayText(poi);
   const accentStyle = StyleSheet.flatten([styles.accent, { backgroundColor: poi.Color || '#2563eb' }]);
 
+  const cardStyle = StyleSheet.flatten([styles.card, isDark ? styles.cardDark : styles.cardLight]);
+  const titleColor = isDark ? '#f9fafb' : '#111827';
+  const secondaryColor = isDark ? '#9ca3af' : '#6b7280';
+  const detailColor = isDark ? '#d1d5db' : '#4b5563';
+  const iconColor = isDark ? '#9ca3af' : '#6b7280';
+
   return (
-    <Pressable style={styles.card} onPress={() => onPress(poi)}>
+    <Pressable style={cardStyle} onPress={() => onPress(poi)}>
       <View style={styles.cardHeader}>
         <View style={styles.titleContainer}>
           <View style={accentStyle} />
           <View style={styles.titleTextContainer}>
-            <Text style={styles.titleText}>{primaryText || t('pois.unnamed')}</Text>
-            <Text style={styles.typeText}>{poi.PoiTypeName || t('pois.unknown_type')}</Text>
+            <Text style={[styles.titleText, { color: titleColor }]}>{primaryText || t('pois.unnamed')}</Text>
+            <Text style={[styles.typeText, { color: secondaryColor }]}>{poi.PoiTypeName || t('pois.unknown_type')}</Text>
           </View>
         </View>
         {poi.IsDestination ? (
@@ -37,8 +46,8 @@ export const PoiCard: React.FC<PoiCardProps> = ({ poi, onPress }) => {
 
       {secondaryText ? (
         <View style={styles.detailRow}>
-          <MapPin size={14} color="#6b7280" />
-          <Text style={styles.detailText} numberOfLines={2}>
+          <MapPin size={14} color={iconColor} />
+          <Text style={[styles.detailText, { color: detailColor }]} numberOfLines={2}>
             {secondaryText}
           </Text>
         </View>
@@ -46,8 +55,8 @@ export const PoiCard: React.FC<PoiCardProps> = ({ poi, onPress }) => {
 
       {poi.Note ? (
         <View style={styles.detailRow}>
-          <MapPinned size={14} color="#6b7280" />
-          <Text style={styles.noteText} numberOfLines={2}>
+          <MapPinned size={14} color={iconColor} />
+          <Text style={[styles.noteText, { color: detailColor }]} numberOfLines={2}>
             {poi.Note}
           </Text>
         </View>
@@ -60,13 +69,18 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 12,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
     padding: 16,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
+  },
+  cardLight: {
+    backgroundColor: '#ffffff',
+  },
+  cardDark: {
+    backgroundColor: '#1f2937',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -91,12 +105,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   titleText: {
-    color: '#111827',
     fontSize: 16,
     fontWeight: '600',
   },
   typeText: {
-    color: '#6b7280',
     fontSize: 13,
     marginTop: 2,
   },
@@ -106,13 +118,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   detailText: {
-    color: '#4b5563',
     flex: 1,
     fontSize: 14,
     marginLeft: 8,
   },
   noteText: {
-    color: '#4b5563',
     flex: 1,
     fontSize: 13,
     marginLeft: 8,

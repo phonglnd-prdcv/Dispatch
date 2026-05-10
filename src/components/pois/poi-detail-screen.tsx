@@ -33,11 +33,11 @@ export const PoiDetailScreen: React.FC = () => {
   const poiId = useMemo(() => {
     const rawId = Array.isArray(id) ? id[0] : id;
     const parsedId = Number(rawId);
-    return Number.isFinite(parsedId) ? parsedId : null;
+    return Number.isFinite(parsedId) && parsedId > 0 ? parsedId : null;
   }, [id]);
 
   useEffect(() => {
-    if (poiId) {
+    if (poiId !== null) {
       fetchPoi(poiId, true);
     }
 
@@ -59,7 +59,7 @@ export const PoiDetailScreen: React.FC = () => {
     }
   };
 
-  if (!poiId) {
+  if (poiId === null) {
     return (
       <>
         <Stack.Screen options={{ title: t('pois.detail_title') }} />
@@ -89,11 +89,7 @@ export const PoiDetailScreen: React.FC = () => {
         <Stack.Screen options={{ title: t('pois.detail_title') }} />
         <View style={styles.screen}>
           <FocusAwareStatusBar />
-          <ZeroState
-            heading={t('pois.detail_not_found')}
-            description={detailError || t('pois.detail_not_found_description')}
-            isError={true}
-          >
+          <ZeroState heading={t('pois.detail_not_found')} description={detailError || t('pois.detail_not_found_description')} isError={true}>
             <Button onPress={() => router.back()}>
               <ButtonText>{t('common.go_back')}</ButtonText>
             </Button>

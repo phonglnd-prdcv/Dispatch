@@ -582,6 +582,20 @@
     "units": "Einheiten",
     "weatherAlerts": "Wetterwarnungen"
   },
+  "scheduled_calls": {
+    "title": "Scheduled Calls",
+    "loading": "Loading scheduled calls...",
+    "no_scheduled_calls": "No scheduled calls",
+    "no_scheduled_calls_description": "There are no pending scheduled calls at this time.",
+    "search": "Search scheduled calls...",
+    "scheduled_for": "Scheduled for",
+    "table_number": "Call #",
+    "table_name": "Name",
+    "table_type": "Type",
+    "table_priority": "Priority",
+    "table_address": "Address",
+    "table_scheduled": "Scheduled For"
+  },
   "map": {
     "call_set_as_current": "Einsatz als aktuellen Einsatz gesetzt",
     "failed_to_open_maps": "Kartenanwendung konnte nicht geöffnet werden",

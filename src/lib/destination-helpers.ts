@@ -106,13 +106,7 @@ export const isPoiDestinationType = (type?: number | null) => type === Destinati
 
 export const isCallMarker = (type?: number | null, imagePath?: string | null) => type === MapMarkerEntityType.Call || imagePath?.toLowerCase() === 'call';
 
-export const isPoiMarker = (params: {
-  type?: number | null;
-  poiTypeId?: number | null;
-  layerId?: string | null;
-  imagePath?: string | null;
-  poiImage?: string | null;
-}): boolean => {
+export const isPoiMarker = (params: { type?: number | null; poiTypeId?: number | null; layerId?: string | null; imagePath?: string | null; poiImage?: string | null }): boolean => {
   const { type, poiTypeId, layerId, imagePath, poiImage } = params;
 
   // Condition 1: Explicit POI type (Type === 4)
@@ -162,12 +156,7 @@ export interface DestinationSelectionState {
   selectedPoi: PoiResultData | null;
 }
 
-export const getSelectedDestinationId = ({
-  selectedDestinationType,
-  selectedCall,
-  selectedStation,
-  selectedPoi,
-}: DestinationSelectionState): string => {
+export const getSelectedDestinationId = ({ selectedDestinationType, selectedCall, selectedStation, selectedPoi }: DestinationSelectionState): string => {
   switch (selectedDestinationType) {
     case 'call':
       return selectedCall?.CallId ?? '';

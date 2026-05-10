@@ -6,12 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { MAP_ICONS } from '@/constants/map-icons';
 import { isPoiMarker } from '@/lib/destination-helpers';
-import {
-  getMapMarkerColor,
-  getPoiMarkerIconChar,
-  getPoiMarkerShapePath,
-  resolveMapMarkerIconKey,
-} from '@/lib/map-markers';
+import { getMapMarkerColor, getPoiMarkerIconChar, getPoiMarkerShapePath, resolveMapMarkerIconKey } from '@/lib/map-markers';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 
 type MapIconKey = keyof typeof MAP_ICONS;
@@ -93,11 +88,7 @@ const PinMarker: React.FC<PinMarkerProps> = ({ pin, size = 32, onPress }) => {
       <TouchableOpacity style={styles.poiContainer} onPress={onPress} activeOpacity={0.7}>
         <View style={[styles.poiShapeWrapper, { width: svgWidth, height: svgHeight }, shadowStyle]}>
           {/* SVG background shape */}
-          <Svg
-            viewBox="-24 -48 48 48"
-            width={svgWidth}
-            height={svgHeight}
-          >
+          <Svg viewBox="-24 -48 48 48" width={svgWidth} height={svgHeight}>
             <Path d={poiShapePath} fill={poiColor} />
           </Svg>
 
@@ -107,13 +98,7 @@ const PinMarker: React.FC<PinMarkerProps> = ({ pin, size = 32, onPress }) => {
           </Text>
         </View>
 
-        <Text
-          style={StyleSheet.flatten([
-            styles.title,
-            { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' },
-          ])}
-          numberOfLines={2}
-        >
+        <Text style={StyleSheet.flatten([styles.title, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }])} numberOfLines={2}>
           {pin.Title}
         </Text>
       </TouchableOpacity>
@@ -123,18 +108,8 @@ const PinMarker: React.FC<PinMarkerProps> = ({ pin, size = 32, onPress }) => {
   // Non-POI legacy marker rendering
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <Image
-        fadeDuration={0}
-        source={icon.uri}
-        style={StyleSheet.flatten([styles.image, { width: size, height: size }])}
-      />
-      <Text
-        style={StyleSheet.flatten([
-          styles.title,
-          { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' },
-        ])}
-        numberOfLines={2}
-      >
+      <Image fadeDuration={0} source={icon.uri} style={StyleSheet.flatten([styles.image, { width: size, height: size }])} />
+      <Text style={StyleSheet.flatten([styles.title, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }])} numberOfLines={2}>
         {pin.Title}
       </Text>
     </TouchableOpacity>

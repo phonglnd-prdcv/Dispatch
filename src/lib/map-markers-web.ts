@@ -1,11 +1,6 @@
 import { getMapIconWebUrl, MAP_ICONS } from '@/constants/map-icons';
 import { isPoiMarker } from '@/lib/destination-helpers';
-import {
-  getMapMarkerColor,
-  getPoiMarkerIconChar,
-  getPoiMarkerShapePath,
-  resolveMapMarkerIconKey,
-} from '@/lib/map-markers';
+import { getMapMarkerColor, getPoiMarkerIconChar, getPoiMarkerShapePath, resolveMapMarkerIconKey } from '@/lib/map-markers';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 
 type MapIconKey = keyof typeof MAP_ICONS;
@@ -108,8 +103,10 @@ const createPoiMarkerElement = (pin: MapMakerInfoData): HTMLElement => {
 
   // Font icon span
   const iconSpan = document.createElement('span');
+  const glyph = getPoiMarkerIconChar(iconClass);
   iconSpan.className = `map-icon ${iconClass}`;
   iconSpan.classList.add('rg-map__poi-marker-icon');
+  iconSpan.textContent = glyph;
   iconSpan.style.position = 'absolute';
   iconSpan.style.top = `${POI_ICON_TOP_OFFSET}px`;
   iconSpan.style.left = '50%';
@@ -129,11 +126,7 @@ const createPoiMarkerElement = (pin: MapMakerInfoData): HTMLElement => {
  * Handles both POI markers (SVG shape + map-icons font) and
  * non-POI legacy markers (PNG images).
  */
-export const createMapMarkerElement = (
-  pin: MapMakerInfoData,
-  colorScheme: 'dark' | 'light' = 'light',
-  onClick?: () => void,
-): HTMLElement => {
+export const createMapMarkerElement = (pin: MapMakerInfoData, colorScheme: 'dark' | 'light' = 'light', onClick?: () => void): HTMLElement => {
   const isPoi = isPoiMarker({
     type: pin.Type,
     poiTypeId: pin.PoiTypeId,
@@ -193,10 +186,7 @@ export const createMapMarkerElement = (
   title.style.textOverflow = 'ellipsis';
   title.style.whiteSpace = 'nowrap';
   title.style.color = colorScheme === 'dark' ? '#ffffff' : '#000000';
-  title.style.textShadow =
-    colorScheme === 'dark'
-      ? '0 0 2px rgba(0,0,0,0.8)'
-      : '0 0 2px rgba(255,255,255,0.8)';
+  title.style.textShadow = colorScheme === 'dark' ? '0 0 2px rgba(0,0,0,0.8)' : '0 0 2px rgba(255,255,255,0.8)';
   el.appendChild(title);
 
   if (onClick) {

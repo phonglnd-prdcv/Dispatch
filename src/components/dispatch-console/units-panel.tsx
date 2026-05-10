@@ -1,5 +1,5 @@
 import { type Href, router } from 'expo-router';
-import { ExternalLink, Circle, Filter, MapPin, Plus, Search, Truck, X } from 'lucide-react-native';
+import { Circle, ExternalLink, Filter, MapPin, Plus, Search, Truck, X } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';

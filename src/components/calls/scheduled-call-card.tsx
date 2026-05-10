@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text as RNText, View } from 'react-native';
 
-import { invertColor, stripHtmlTags } from '@/lib/utils';
+import { invertColor, stripHtmlTags, toRgbaWithAlpha } from '@/lib/utils';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
@@ -109,11 +109,11 @@ export const ScheduledCallCard: React.FC<ScheduledCallCardProps> = React.memo(({
       ) : null}
 
       {/* Dispatched Units Row */}
-      <View style={StyleSheet.flatten([styles.dispatchDivider, { backgroundColor: `${textColor}40` }])} />
+      <View style={StyleSheet.flatten([styles.dispatchDivider, { backgroundColor: toRgbaWithAlpha(textColor, 0.25) }])} />
       <View style={styles.dispatchRow}>
         <Radio size={10} color={textColor} style={styles.dispatchIcon} />
         {isLoadingDispatches ? (
-          <RNText style={StyleSheet.flatten([styles.dispatchPlaceholder, { color: `${textColor}80` }])}>…</RNText>
+          <RNText style={StyleSheet.flatten([styles.dispatchPlaceholder, { color: toRgbaWithAlpha(textColor, 0.5) }])}>…</RNText>
         ) : dispatches && dispatches.length > 0 ? (
           <View style={styles.dispatchBadgeList}>
             {dispatches.map((d, i) => (
@@ -124,7 +124,7 @@ export const ScheduledCallCard: React.FC<ScheduledCallCardProps> = React.memo(({
             ))}
           </View>
         ) : (
-          <RNText style={StyleSheet.flatten([styles.dispatchPlaceholder, { color: `${textColor}80` }])}>—</RNText>
+          <RNText style={StyleSheet.flatten([styles.dispatchPlaceholder, { color: toRgbaWithAlpha(textColor, 0.5) }])}>—</RNText>
         )}
       </View>
     </View>

@@ -124,7 +124,7 @@ export const usePoisStore = create<PoisState>((set, get) => ({
       set({
         selectedPoi: nextPoi,
         pois: nextPoi ? upsertPoi(currentPois, nextPoi) : currentPois,
-        destinationPois: nextPoi?.IsDestination ? upsertPoi(currentDestinationPois, nextPoi) : currentDestinationPois,
+        destinationPois: nextPoi?.IsDestination ? upsertPoi(currentDestinationPois, nextPoi) : nextPoi ? currentDestinationPois.filter((p) => p.PoiId !== nextPoi.PoiId) : currentDestinationPois,
         isLoadingDetail: false,
       });
     } catch (error) {

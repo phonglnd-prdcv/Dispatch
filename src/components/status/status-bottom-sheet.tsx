@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, TouchableOpacity } from 'react-native';
 
-import { DestinationEntityType, getDefaultDestinationTab, getDestinationCapabilities, getEnabledDestinationTabs, type DestinationTab } from '@/lib/destination-helpers';
+import { DestinationEntityType, type DestinationTab, getDefaultDestinationTab, getDestinationCapabilities, getEnabledDestinationTabs } from '@/lib/destination-helpers';
 import { getPoiSelectionLabel } from '@/lib/poi-display';
 import { invertColor } from '@/lib/utils';
 import { type CustomStatusResultData } from '@/models/v4/customStatuses/customStatusResultData';
@@ -541,11 +541,7 @@ export const StatusBottomSheet = () => {
                             <Text className="font-bold" style={{ color: invertColor(status.BColor || '#ffffff', true) }}>
                               {status.Text}
                             </Text>
-                            {status.Detail > 0 && (
-                              <Text className="text-sm text-gray-600 dark:text-gray-400">
-                                 {getStatusDetailDescription(status.Detail)}
-                               </Text>
-                             )}
+                            {status.Detail > 0 && <Text className="text-sm text-gray-600 dark:text-gray-400">{getStatusDetailDescription(status.Detail)}</Text>}
                             {status.Note > 0 && (
                               <Text className="text-xs text-gray-500 dark:text-gray-500">
                                 {status.Note === 1 && t('status.note_optional')}
@@ -592,24 +588,24 @@ export const StatusBottomSheet = () => {
               {enabledDestinationTabs.length > 0 && (
                 <>
                   {shouldShowTabHeaders && (
-                     <HStack space="xs" className="mb-4">
-                       {enabledDestinationTabs.includes('calls') ? (
-                         <TouchableOpacity onPress={() => setSelectedTab('calls')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'calls' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                           <Text className={`text-center font-semibold ${selectedTab === 'calls' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.calls_tab')}</Text>
-                         </TouchableOpacity>
-                       ) : null}
-                       {enabledDestinationTabs.includes('stations') ? (
-                         <TouchableOpacity onPress={() => setSelectedTab('stations')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'stations' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                           <Text className={`text-center font-semibold ${selectedTab === 'stations' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.stations_tab')}</Text>
-                         </TouchableOpacity>
-                       ) : null}
-                       {enabledDestinationTabs.includes('pois') ? (
-                         <TouchableOpacity onPress={() => setSelectedTab('pois')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'pois' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                           <Text className={`text-center font-semibold ${selectedTab === 'pois' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.pois_tab')}</Text>
-                         </TouchableOpacity>
-                       ) : null}
-                     </HStack>
-                   )}
+                    <HStack space="xs" className="mb-4">
+                      {enabledDestinationTabs.includes('calls') ? (
+                        <TouchableOpacity onPress={() => setSelectedTab('calls')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'calls' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <Text className={`text-center font-semibold ${selectedTab === 'calls' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.calls_tab')}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {enabledDestinationTabs.includes('stations') ? (
+                        <TouchableOpacity onPress={() => setSelectedTab('stations')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'stations' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <Text className={`text-center font-semibold ${selectedTab === 'stations' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.stations_tab')}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {enabledDestinationTabs.includes('pois') ? (
+                        <TouchableOpacity onPress={() => setSelectedTab('pois')} className={`flex-1 rounded-lg py-3 ${selectedTab === 'pois' ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                          <Text className={`text-center font-semibold ${selectedTab === 'pois' ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>{t('status.pois_tab')}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </HStack>
+                  )}
 
                   <ScrollView className={shouldShowTabHeaders ? 'max-h-[200px]' : 'max-h-[300px]'}>
                     {enabledDestinationTabs.includes('calls') && (!shouldShowTabHeaders || selectedTab === 'calls') && (

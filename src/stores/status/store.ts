@@ -3,8 +3,8 @@ import { create } from 'zustand';
 import { getCalls } from '@/api/calls/calls';
 import { getSetUnitStatusData } from '@/api/dispatch/dispatch';
 import { getAllGroups } from '@/api/groups/groups';
-import { type DestinationSelectionType } from '@/lib/destination-helpers';
 import { saveUnitStatus } from '@/api/units/unitStatuses';
+import { type DestinationSelectionType } from '@/lib/destination-helpers';
 import { logger } from '@/lib/logging';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type CustomStatusResultData } from '@/models/v4/customStatuses/customStatusResultData';
@@ -93,7 +93,11 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
         availablePois: destinationData?.DestinationPois || [],
         isLoading: false,
       });
-    } catch (error) {
+    } catch (primaryError) {
+      logger.error({
+        message: 'Failed to fetch destination data via getSetUnitStatusData, falling back',
+        context: { unitId, error: primaryError },
+      });
       try {
         const [callsResponse, groupsResponse] = await Promise.all([getCalls(), getAllGroups()]);
 
@@ -103,9 +107,14 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
           availablePois: [],
           isLoading: false,
         });
-      } catch {
+      } catch (fallbackError) {
+        logger.error({
+          message: 'Failed to fetch destination data via fallback',
+          context: { unitId, primaryError, fallbackError },
+        });
+        const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Failed to fetch destination data';
         set({
-          error: 'Failed to fetch destination data',
+          error: errorMessage,
           isLoading: false,
         });
       }

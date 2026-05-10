@@ -14,6 +14,7 @@ import { FlatList } from '@/components/ui/flat-list';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { CallState } from '@/lib/utils';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { useCallsStore } from '@/stores/calls/store';
 import { useSecurityStore } from '@/stores/security/store';
@@ -54,8 +55,10 @@ export default function Calls() {
     router.push('/call/new/' as Href);
   };
 
-  // Filter calls based on search query
-  const filteredCalls = calls.filter((call) => call.CallId.toLowerCase().includes(searchQuery.toLowerCase()) || (call.Nature?.toLowerCase() || '').includes(searchQuery.toLowerCase()));
+  // Filter calls: exclude scheduled calls and apply search
+  const filteredCalls = calls
+    .filter((call) => call.State !== CallState.SCHEDULED)
+    .filter((call) => call.CallId.toLowerCase().includes(searchQuery.toLowerCase()) || (call.Nature?.toLowerCase() || '').includes(searchQuery.toLowerCase()));
 
   // Render content based on loading, error, and data states
   const renderContent = () => {

@@ -11,7 +11,7 @@ export const createDefaultVisiblePoiLayerIds = (poiLayers: PoiLayerData[]) => {
 
 export const filterMapPinsByPoiLayers = (pins: MapMakerInfoData[], visiblePoiLayerIds: Set<string>) => {
   return pins.filter((pin) => {
-    if (pin.Type !== MapMarkerEntityType.Poi || !pin.PoiTypeId) {
+    if (pin.Type !== MapMarkerEntityType.Poi || pin.PoiTypeId == null) {
       return true;
     }
 

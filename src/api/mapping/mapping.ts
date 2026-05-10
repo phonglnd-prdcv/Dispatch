@@ -1,8 +1,8 @@
 import { type GetMapDataAndMarkersResult } from '@/models/v4/mapping/getMapDataAndMarkersResult';
 import { type GetMapLayersResult } from '@/models/v4/mapping/getMapLayersResult';
 import { type PoiResult } from '@/models/v4/mapping/poiResult';
-import { type PoiTypesResult } from '@/models/v4/mapping/poiTypesResult';
 import { type PoisResult } from '@/models/v4/mapping/poisResult';
+import { type PoiTypesResult } from '@/models/v4/mapping/poiTypesResult';
 
 import { api, createApiEndpoint } from '../common/client';
 

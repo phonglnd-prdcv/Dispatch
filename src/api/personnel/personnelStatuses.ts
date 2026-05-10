@@ -1,8 +1,8 @@
 import { type GetCurrentStatusResult } from '@/models/v4/personnelStatuses/getCurrentStatusResult';
-import { type SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
-import { type SavePersonStatusResult } from '@/models/v4/personnelStatuses/savePersonStatusResult';
 import { type SavePersonsStatusesInput } from '@/models/v4/personnelStatuses/savePersonsStatusesInput';
 import { type SavePersonsStatusesResult } from '@/models/v4/personnelStatuses/savePersonsStatusesResult';
+import { type SavePersonStatusInput } from '@/models/v4/personnelStatuses/savePersonStatusInput';
+import { type SavePersonStatusResult } from '@/models/v4/personnelStatuses/savePersonStatusResult';
 
 import { createApiEndpoint } from '../common/client';
 

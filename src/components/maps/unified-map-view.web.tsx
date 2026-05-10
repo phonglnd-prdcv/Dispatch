@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
-import { hasValidMapCoordinates, getMapPinSummary } from '@/lib/map-markers';
+import { getMapPinSummary, hasValidMapCoordinates } from '@/lib/map-markers';
 import { createMapMarkerElement } from '@/lib/map-markers-web';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';

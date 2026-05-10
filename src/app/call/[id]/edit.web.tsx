@@ -818,9 +818,7 @@ export default function EditCallWeb() {
                     />
                   )}
                 />
-                {isLoadingDestinationPois ? (
-                  <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight, { marginTop: -4 }])}>{t('calls.loading_destination_pois')}</Text>
-                ) : null}
+                {isLoadingDestinationPois ? <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight, { marginTop: -4 }])}>{t('calls.loading_destination_pois')}</Text> : null}
                 {!isLoadingDestinationPois && destinationPois.length === 0 ? (
                   <Text style={StyleSheet.flatten([styles.webLabel, isDark ? styles.webLabelDark : styles.webLabelLight, { marginTop: -4 }])}>{t('calls.no_destination_pois_available')}</Text>
                 ) : null}

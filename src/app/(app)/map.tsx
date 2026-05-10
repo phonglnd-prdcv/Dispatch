@@ -18,11 +18,11 @@ import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { useMapSignalRUpdates } from '@/hooks/use-map-signalr-updates';
 import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
-import { filterMapPinsByPoiLayers, createDefaultVisiblePoiLayerIds, getPoiMapLayerId } from '@/lib/poi-map-layers';
+import { createDefaultVisiblePoiLayerIds, filterMapPinsByPoiLayers, getPoiMapLayerId } from '@/lib/poi-map-layers';
 import { onSortOptions } from '@/lib/utils';
-import { type PoiLayerData } from '@/models/v4/mapping/poiLayerData';
 import { type MapMakerInfoData } from '@/models/v4/mapping/getMapDataAndMarkersData';
 import { type GetMapLayersData } from '@/models/v4/mapping/getMapLayersResultData';
+import { type PoiLayerData } from '@/models/v4/mapping/poiLayerData';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useToastStore } from '@/stores/toast/store';
@@ -72,12 +72,13 @@ export default function Map() {
   const [styleURL, setStyleURL] = useState({ styleURL: getMapStyle() });
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  useMapSignalRUpdates(setMapPins);
 
   const syncPoiLayers = useCallback((nextPoiLayers: PoiLayerData[]) => {
     setPoiLayers(nextPoiLayers);
     setVisiblePoiLayerIds(createDefaultVisiblePoiLayerIds(nextPoiLayers));
   }, []);
+
+  useMapSignalRUpdates(setMapPins, syncPoiLayers);
 
   const togglePoiLayer = useCallback((layerId: string) => {
     setVisiblePoiLayerIds((currentLayerIds) => {
@@ -271,7 +272,7 @@ export default function Map() {
 
   // Track when map view is rendered
   useEffect(() => {
-      trackEvent('map_view_rendered', {
+    trackEvent('map_view_rendered', {
       hasMapPins: mapPins.length > 0,
       mapPinsCount: mapPins.length,
       isMapLocked: location.isMapLocked,
@@ -492,35 +493,35 @@ export default function Map() {
             </View>
 
             <View style={styles.layersPanelActions}>
-               <TouchableOpacity onPress={showAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                 <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</Text>
-               </TouchableOpacity>
-               <TouchableOpacity onPress={hideAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
-                 <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</Text>
-               </TouchableOpacity>
-             </View>
+              <TouchableOpacity onPress={showAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.show_all')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={hideAllMapLayers} style={[styles.actionButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}>
+                <Text style={[styles.actionButtonText, { color: isDark ? '#ffffff' : '#000000' }]}>{t('map.hide_all')}</Text>
+              </TouchableOpacity>
+            </View>
 
-             <ScrollView style={styles.layersList}>
-               {combinedLayers.length === 0 ? (
-                 <Text style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</Text>
-               ) : (
-                 combinedLayers.map((layer) => (
-                   <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}>
-                     <View style={styles.layerInfo}>
-                       <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
-                       <Text style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
+            <ScrollView style={styles.layersList}>
+              {combinedLayers.length === 0 ? (
+                <Text style={[styles.noLayersText, { color: isDark ? '#9ca3af' : '#6b7280' }]}>{isLayersLoading ? t('common.loading') : t('map.no_layers')}</Text>
+              ) : (
+                combinedLayers.map((layer) => (
+                  <Pressable key={layer.Id} style={[styles.layerItem, { borderBottomColor: isDark ? '#374151' : '#e5e7eb' }]} onPress={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}>
+                    <View style={styles.layerInfo}>
+                      <View style={[styles.layerColorIndicator, { backgroundColor: layer.Color || '#3b82f6' }]} />
+                      <Text style={[styles.layerName, { color: isDark ? '#ffffff' : '#000000' }]} numberOfLines={1}>
                         {layer.Name}
                       </Text>
-                     </View>
-                     <Switch
-                       value={layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)}
-                       onValueChange={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}
-                       trackColor={{ false: isDark ? '#4b5563' : '#d1d5db', true: '#3b82f6' }}
-                       thumbColor={(layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)) ? '#ffffff' : '#f4f3f4'}
-                     />
-                   </Pressable>
-                 ))
-               )}
+                    </View>
+                    <Switch
+                      value={layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)}
+                      onValueChange={() => (layer.kind === 'custom' ? toggleLayer(layer.Id) : togglePoiLayer(layer.Id))}
+                      trackColor={{ false: isDark ? '#4b5563' : '#d1d5db', true: '#3b82f6' }}
+                      thumbColor={(layer.kind === 'custom' ? visibleLayers.has(layer.Id) : visiblePoiLayerIds.has(layer.Id)) ? '#ffffff' : '#f4f3f4'}
+                    />
+                  </Pressable>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -590,7 +591,7 @@ export default function Map() {
               </Animated.View>
             </Mapbox.PointAnnotation>
           ) : null}
-           <MapPins pins={visibleMapPins} onPinPress={handlePinPress} />
+          <MapPins pins={visibleMapPins} onPinPress={handlePinPress} />
         </Mapbox.MapView>
 
         {/* Layers Button */}

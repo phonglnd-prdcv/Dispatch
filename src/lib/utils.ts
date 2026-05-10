@@ -152,6 +152,34 @@ export function padZero(str: string, len: number): string {
   return (zeros + str).slice(-len);
 }
 
+export function toRgbaWithAlpha(color: string, alpha: number): string {
+  if (!color) return `rgba(0, 0, 0, ${alpha})`;
+
+  const trimmed = color.trim();
+
+  // hex: #RGB, #RRGGBB, #RRGGBBAA
+  if (trimmed.startsWith('#')) {
+    let hex = trimmed.slice(1);
+    if (hex.length === 3) {
+      hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    if (hex.length >= 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+  }
+
+  // rgb(r, g, b) or rgba(r, g, b, a)
+  const rgbMatch = trimmed.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgbMatch) {
+    return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${alpha})`;
+  }
+
+  return trimmed;
+}
+
 export function uuidv4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     var r = (Math.random() * 16) | 0,
@@ -198,7 +226,10 @@ export function getMinutesBetweenDates(startDate: Date, endDate: Date): number {
   return diff / 60000;
 }
 
-export function parseDateISOString(s: string): Date {
+export function parseDateISOString(s: string | undefined | null): Date {
+  if (!s) {
+    return new Date(0);
+  }
   const b = s.split(/\D/);
   // Ensure we have all required parts
   const [year, month, day, hour = '0', minute = '0', second = '0'] = b;

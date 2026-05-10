@@ -3,10 +3,8 @@ import { type Href, router, Stack } from 'expo-router';
 import { CalendarClockIcon, Search, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text as RNText, View } from 'react-native';
 
-import { getCallExtraData } from '@/api/calls/calls';
-import { ScheduledCallCard } from '@/components/calls/scheduled-call-card';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
 import { Box } from '@/components/ui/box';
@@ -14,8 +12,8 @@ import { FlatList } from '@/components/ui/flat-list';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { Input, InputField, InputIcon, InputSlot } from '@/components/ui/input';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
-import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { useScheduledCallsStore } from '@/stores/calls/scheduled-store';
 import { useCallsStore } from '@/stores/calls/store';
 
@@ -25,9 +23,7 @@ export default function ScheduledCalls() {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const [searchQuery, setSearchQuery] = useState('');
-  const [callDispatchesMap, setCallDispatchesMap] = useState<Record<string, DispatchedEventResultData[]>>({});
-  const [loadingDispatchIds, setLoadingDispatchIds] = useState<Set<string>>(new Set());
-  const fetchedIdsRef = useRef<Set<string>>(new Set());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,46 +38,9 @@ export default function ScheduledCalls() {
     });
   }, [trackEvent, scheduledCalls.length]);
 
-  useEffect(() => {
-    const toFetch = scheduledCalls.filter((c) => !fetchedIdsRef.current.has(c.CallId)).map((c) => c.CallId);
-
-    if (toFetch.length === 0) return;
-
-    toFetch.forEach((id) => fetchedIdsRef.current.add(id));
-
-    setLoadingDispatchIds((prev) => {
-      const next = new Set(prev);
-      toFetch.forEach((id) => next.add(id));
-      return next;
-    });
-
-    Promise.all(
-      toFetch.map((callId) =>
-        getCallExtraData(callId)
-          .then((res) => ({ callId, dispatches: res?.Data?.Dispatches ?? ([] as DispatchedEventResultData[]) }))
-          .catch(() => ({ callId, dispatches: [] as DispatchedEventResultData[] }))
-      )
-    ).then((results) => {
-      setCallDispatchesMap((prev) => {
-        const next = { ...prev };
-        results.forEach(({ callId, dispatches }) => {
-          next[callId] = dispatches;
-        });
-        return next;
-      });
-      setLoadingDispatchIds((prev) => {
-        const next = new Set(prev);
-        toFetch.forEach((id) => next.delete(id));
-        return next;
-      });
-    });
-  }, [scheduledCalls]);
-
   const handleRefresh = useCallback(() => {
-    fetchedIdsRef.current = new Set();
-    setCallDispatchesMap({});
-    setLoadingDispatchIds(new Set());
-    fetchScheduledCalls();
+    setIsRefreshing(true);
+    fetchScheduledCalls().finally(() => setIsRefreshing(false));
   }, [fetchScheduledCalls]);
 
   const filteredCalls = scheduledCalls.filter(
@@ -102,20 +61,76 @@ export default function ScheduledCalls() {
       return <ZeroState heading={t('common.errorOccurred')} description={error} isError={true} />;
     }
 
+    if (filteredCalls.length === 0) {
+      return <ZeroState heading={t('scheduled_calls.no_scheduled_calls')} description={t('scheduled_calls.no_scheduled_calls_description')} icon={CalendarClockIcon} />;
+    }
+
     return (
-      <FlatList<CallResultData>
-        testID="scheduled-calls-list"
-        data={filteredCalls}
-        renderItem={({ item }: { item: CallResultData }) => (
-          <Pressable onPress={() => router.push(`/call/${item.CallId}` as Href)}>
-            <ScheduledCallCard call={item} priority={callPriorities.find((p) => p.Id === item.Priority)} dispatches={callDispatchesMap[item.CallId]} isLoadingDispatches={loadingDispatchIds.has(item.CallId)} />
-          </Pressable>
-        )}
-        keyExtractor={(item: CallResultData) => item.CallId}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={handleRefresh} />}
-        ListEmptyComponent={<ZeroState heading={t('scheduled_calls.no_scheduled_calls')} description={t('scheduled_calls.no_scheduled_calls_description')} icon={CalendarClockIcon} />}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View>
+          {/* Table Header */}
+          <View style={styles.tableHeader}>
+            <RNText style={[styles.headerCell, styles.cellNumber]}>{t('scheduled_calls.table_number')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellName]}>{t('scheduled_calls.table_name')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellType]}>{t('scheduled_calls.table_type')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellPriority]}>{t('scheduled_calls.table_priority')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellAddress]}>{t('scheduled_calls.table_address')}</RNText>
+            <RNText style={[styles.headerCell, styles.cellScheduled]}>{t('scheduled_calls.table_scheduled')}</RNText>
+          </View>
+
+          {/* Table Rows */}
+          <FlatList<CallResultData>
+            testID="scheduled-calls-list"
+            data={filteredCalls}
+            renderItem={({ item, index }: { item: CallResultData; index: number }) => {
+              const priority = callPriorities.find((p) => p.Id === item.Priority);
+              const scheduledDate = formatDateForDisplay(parseDateISOString(item.ScheduledOn || item.ScheduledOnUtc), 'MMM d, yyyy h:mm a');
+              const rowBg = index % 2 === 0 ? styles.rowEven : styles.rowOdd;
+
+              return (
+                <Pressable onPress={() => router.push(`/call/${item.CallId}` as Href)} style={[styles.tableRow, rowBg]}>
+                  <View style={[styles.cellNumber, styles.cellContainer]}>
+                    <RNText style={styles.cellTextBold} numberOfLines={1}>
+                      {item.Number || item.CallId}
+                    </RNText>
+                  </View>
+                  <View style={[styles.cellName, styles.cellContainer]}>
+                    <RNText style={styles.cellText} numberOfLines={1}>
+                      {item.Name}
+                    </RNText>
+                  </View>
+                  <View style={[styles.cellType, styles.cellContainer]}>
+                    <RNText style={styles.cellTextSecondary} numberOfLines={1}>
+                      {item.Type || '-'}
+                    </RNText>
+                  </View>
+                  <View style={[styles.cellPriority, styles.cellContainer]}>
+                    <View style={styles.priorityBadge}>
+                      <View style={[styles.priorityDot, { backgroundColor: priority?.Color || '#6b7280' }]} />
+                      <RNText style={styles.cellTextSecondary} numberOfLines={1}>
+                        {priority?.Name || '-'}
+                      </RNText>
+                    </View>
+                  </View>
+                  <View style={[styles.cellAddress, styles.cellContainer]}>
+                    <RNText style={styles.cellTextSecondary} numberOfLines={1}>
+                      {item.Address || '-'}
+                    </RNText>
+                  </View>
+                  <View style={[styles.cellScheduled, styles.cellContainer]}>
+                    <RNText style={styles.cellTextScheduled} numberOfLines={1}>
+                      {scheduledDate}
+                    </RNText>
+                  </View>
+                </Pressable>
+              );
+            }}
+            keyExtractor={(item: CallResultData) => item.CallId}
+            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
+        </View>
+      </ScrollView>
     );
   };
 
@@ -146,3 +161,86 @@ export default function ScheduledCalls() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  headerCell: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+  },
+  rowEven: {
+    backgroundColor: '#ffffff',
+  },
+  rowOdd: {
+    backgroundColor: '#f9fafb',
+  },
+  cellContainer: {
+    justifyContent: 'center',
+  },
+  cellText: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  cellTextBold: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '700',
+  },
+  cellTextSecondary: {
+    fontSize: 13,
+    color: '#4b5563',
+  },
+  cellTextScheduled: {
+    fontSize: 13,
+    color: '#d97706',
+    fontWeight: '600',
+  },
+  priorityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  priorityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  cellNumber: {
+    width: 80,
+  },
+  cellName: {
+    width: 160,
+  },
+  cellType: {
+    width: 100,
+  },
+  cellPriority: {
+    width: 100,
+  },
+  cellAddress: {
+    width: 180,
+  },
+  cellScheduled: {
+    width: 160,
+  },
+});

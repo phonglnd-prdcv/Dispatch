@@ -53,12 +53,13 @@ export const CheckInTimerCard: React.FC<CheckInTimerCardProps> = React.memo(({ t
   // The API's TargetName often contains the check-in TYPE name (e.g. "UnitType")
   // rather than the actual entity name (e.g. "Engine 1"). Detect this and look up
   // the real name from the units/personnel stores using TargetEntityId.
-  const isTargetNameActuallyTypeName = !timer.TargetName
-    || timer.TargetName === timer.TargetTypeName
-    || /type$/i.test(timer.TargetName)
-    || Object.keys(CHECK_IN_TYPE_KEYS).some((k) => k.toLowerCase() === timer.TargetName.toLowerCase())
-    || timer.TargetName.toLowerCase() === 'unittype'
-    || timer.TargetName.toLowerCase() === 'personneltype';
+  const isTargetNameActuallyTypeName =
+    !timer.TargetName ||
+    timer.TargetName === timer.TargetTypeName ||
+    /type$/i.test(timer.TargetName) ||
+    Object.keys(CHECK_IN_TYPE_KEYS).some((k) => k.toLowerCase() === timer.TargetName.toLowerCase()) ||
+    timer.TargetName.toLowerCase() === 'unittype' ||
+    timer.TargetName.toLowerCase() === 'personneltype';
 
   const displayName = useMemo(() => {
     // If TargetName is a real entity name (not a type label), use it directly

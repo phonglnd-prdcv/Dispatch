@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ClockIcon, EditIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, MapPinIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon, XCircleIcon } from 'lucide-react-native';
@@ -20,6 +19,7 @@ import { Text } from '@/components/ui/text';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
+import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
@@ -235,14 +235,9 @@ export default function CallDetailWeb() {
         return (
           <View style={styles.tabContent}>
             <InfoRow label={t('call_detail.priority')} value={callPriority?.Name || '-'} valueColor={callPriority?.Color} isDark={isDark} />
-            <InfoRow label={t('call_detail.timestamp')} value={format(new Date(call.LoggedOn), 'MMM d, yyyy h:mm a')} isDark={isDark} />
-            {(call.ScheduledOn || call.ScheduledOnUtc) ? (
-              <InfoRow
-                label={t('call_detail.scheduled_on')}
-                value={format(new Date(call.ScheduledOn || call.ScheduledOnUtc), 'MMM d, yyyy h:mm a')}
-                valueColor="#d97706"
-                isDark={isDark}
-              />
+            <InfoRow label={t('call_detail.timestamp')} value={formatDateForDisplay(parseDateISOString(call.LoggedOn), 'MMM d, yyyy h:mm a')} isDark={isDark} />
+            {call.ScheduledOn || call.ScheduledOnUtc ? (
+              <InfoRow label={t('call_detail.scheduled_on')} value={formatDateForDisplay(parseDateISOString(call.ScheduledOn || call.ScheduledOnUtc), 'MMM d, yyyy h:mm a')} valueColor="#d97706" isDark={isDark} />
             ) : null}
             <InfoRow label={t('call_detail.type')} value={call.Type || '-'} isDark={isDark} />
             <InfoRow label={t('call_detail.address')} value={call.Address || '-'} isDark={isDark} />

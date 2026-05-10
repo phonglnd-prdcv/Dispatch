@@ -1,5 +1,5 @@
 import { type Href, router } from 'expo-router';
-import { ExternalLink, Circle, Filter, MapPin, Plus, Search, User, Users, X } from 'lucide-react-native';
+import { Circle, ExternalLink, Filter, MapPin, Plus, Search, User, Users, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

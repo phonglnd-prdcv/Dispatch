@@ -105,18 +105,18 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
             </Text>
           </Box>
 
-          {summaryText && (
+          {summaryText ? (
             <Box>
               <Text className="text-sm">{summaryText}</Text>
             </Box>
-          )}
+          ) : null}
 
-          {pin.Color && (
+          {pin.Color ? (
             <Box className="flex-row items-center">
               <Box className="mr-2 size-4 rounded-full" style={{ backgroundColor: pin.Color }} />
               <Text className="text-sm text-gray-600">{t('map.pin_color')}</Text>
             </Box>
-          )}
+          ) : null}
         </VStack>
 
         <Divider className="my-4" />
@@ -129,7 +129,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
           </Button>
 
           {/* Call-specific actions */}
-          {isCallPin && (
+          {isCallPin ? (
             <>
               <Button onPress={handleViewCallDetails} variant="outline" className="w-full">
                 <ButtonIcon as={PhoneIcon} />
@@ -141,7 +141,7 @@ export const PinDetailModal: React.FC<PinDetailModalProps> = ({ pin, isOpen, onC
                 <ButtonText>{t('map.set_as_current_call')}</ButtonText>
               </Button>
             </>
-          )}
+          ) : null}
 
           {isPoiPin ? (
             <Button onPress={handleViewPoiDetails} variant="outline" className="w-full">

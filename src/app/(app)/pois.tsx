@@ -5,9 +5,9 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, View } from 'react-native';
 
-import { PoiCard } from '@/components/pois/poi-card';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import { PoiCard } from '@/components/pois/poi-card';
 import { FocusAwareStatusBar } from '@/components/ui';
 import { Box } from '@/components/ui/box';
 import { FlatList } from '@/components/ui/flat-list';
