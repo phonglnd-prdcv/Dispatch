@@ -810,6 +810,8 @@
     "links": "Links",
     "login_info": "Login Info",
     "logout": "Logout",
+    "modern_notification_sounds": "Modern Notification Sounds",
+    "modern_notification_sounds_description": "Use the new modern sounds for push notifications. Turn this off to use the classic notification sounds.",
     "more": "More",
     "no_units_available": "No units available",
     "none_selected": "None Selected",

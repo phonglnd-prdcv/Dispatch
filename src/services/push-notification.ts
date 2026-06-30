@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 import { registerUnitDevice } from '@/api/devices/push';
 import { logger } from '@/lib/logging';
 import { isNativePushSupported } from '@/lib/platform';
+import { storage } from '@/lib/storage';
 import { getDeviceUuid } from '@/lib/storage/app';
 import { electronNotificationService } from '@/services/electron-notification';
 import { useCoreStore } from '@/stores/app/core-store';
@@ -18,6 +19,40 @@ export interface PushNotificationData {
   body?: string;
   data?: Record<string, unknown>;
 }
+
+// Storage key for the Android "use modern notification sounds" preference.
+// Android-only; defaults to enabled (modern sounds) when no preference is saved.
+export const MODERN_NOTIFICATION_SOUNDS_ENABLED = 'MODERN_NOTIFICATION_SOUNDS_ENABLED';
+
+/**
+ * Whether the modern notification sounds preference is enabled. Android-only
+ * setting that defaults to true (modern sounds) when the user has not changed it.
+ */
+export const getModernNotificationSoundsEnabled = (): boolean => storage.getBoolean(MODERN_NOTIFICATION_SOUNDS_ENABLED) ?? true;
+
+interface ManagedNotificationChannel {
+  id: string;
+  name: string;
+  description: string;
+  /** Sound resource (res/raw name, no extension) used when modern sounds are enabled. */
+  modernSound?: string;
+  /** Sound resource used when modern sounds are disabled (the classic/legacy sound). */
+  classicSound?: string;
+  vibration?: boolean;
+}
+
+// Channels whose sound switches between the modern and classic sets based on the
+// MODERN_NOTIFICATION_SOUNDS_ENABLED preference. Custom call channels (c1-c25)
+// use user-defined tones and are created separately, unaffected by this toggle.
+const MANAGED_NOTIFICATION_CHANNELS: ManagedNotificationChannel[] = [
+  { id: 'calls', name: 'Generic Call', description: 'Generic Call', modernSound: 'modernnotification' },
+  { id: '0', name: 'Emergency Call', description: 'Emergency Call', modernSound: 'moderncallemergency', classicSound: 'callemergency' },
+  { id: '1', name: 'High Call', description: 'High Call', modernSound: 'moderncallhigh', classicSound: 'callhigh' },
+  { id: '2', name: 'Medium Call', description: 'Medium Call', modernSound: 'moderncallmedium', classicSound: 'callmedium' },
+  { id: '3', name: 'Low Call', description: 'Low Call', modernSound: 'moderncalllow', classicSound: 'calllow' },
+  { id: 'notif', name: 'Notification', description: 'Notifications', modernSound: 'modernnotification', vibration: false },
+  { id: 'message', name: 'Message', description: 'Messages', modernSound: 'modernmessage', vibration: false },
+];
 
 // Configure notifications behavior – only on native platforms where
 // expo-notifications is fully supported (iOS / Android).
@@ -65,18 +100,16 @@ class PushNotificationService {
   private async setupAndroidNotificationChannels(): Promise<void> {
     if (Platform.OS === 'android') {
       try {
-        // Standard call channels
-        await this.createNotificationChannel('calls', 'Generic Call', 'Generic Call');
-        await this.createNotificationChannel('0', 'Emergency Call', 'Emergency Call', 'callemergency');
-        await this.createNotificationChannel('1', 'High Call', 'High Call', 'callhigh');
-        await this.createNotificationChannel('2', 'Medium Call', 'Medium Call', 'callmedium');
-        await this.createNotificationChannel('3', 'Low Call', 'Low Call', 'calllow');
+        // Pick the modern or classic sound set based on the user preference (defaults to modern).
+        const useModernSounds = getModernNotificationSoundsEnabled();
 
-        // Message and notification channels
-        await this.createNotificationChannel('notif', 'Notification', 'Notifications', undefined, false);
-        await this.createNotificationChannel('message', 'Message', 'Messages', undefined, false);
+        // Standard call / message / notification channels
+        for (const channel of MANAGED_NOTIFICATION_CHANNELS) {
+          const sound = useModernSounds ? channel.modernSound : channel.classicSound;
+          await this.createNotificationChannel(channel.id, channel.name, channel.description, sound, channel.vibration ?? true);
+        }
 
-        // Custom call channels (c1-c25)
+        // Custom call channels (c1-c25) - user-defined tones, unaffected by the modern/classic toggle
         for (let i = 1; i <= 25; i++) {
           const channelId = `c${i}`;
           await this.createNotificationChannel(channelId, `Custom Call ${i}`, `Custom Call Tone ${i}`, channelId);
@@ -84,6 +117,7 @@ class PushNotificationService {
 
         logger.info({
           message: 'Android notification channels setup completed',
+          context: { useModernSounds },
         });
       } catch (error) {
         logger.error({
@@ -91,6 +125,36 @@ class PushNotificationService {
           context: { error },
         });
       }
+    }
+  }
+
+  /**
+   * Recreates the managed Android notification channels so a change to the
+   * modern/classic sound preference takes effect. Android notification channels
+   * are immutable once created, so the channels must be deleted and recreated
+   * for a new sound to apply.
+   */
+  public async refreshNotificationChannels(): Promise<void> {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    try {
+      for (const channel of MANAGED_NOTIFICATION_CHANNELS) {
+        await Notifications.deleteNotificationChannelAsync(channel.id);
+      }
+
+      await this.setupAndroidNotificationChannels();
+
+      logger.info({
+        message: 'Android notification channels refreshed',
+        context: { useModernSounds: getModernNotificationSoundsEnabled() },
+      });
+    } catch (error) {
+      logger.error({
+        message: 'Error refreshing Android notification channels',
+        context: { error },
+      });
     }
   }
 

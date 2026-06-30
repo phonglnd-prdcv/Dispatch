@@ -760,6 +760,8 @@
     "links": "Linki",
     "login_info": "Dane logowania",
     "logout": "Wyloguj się",
+    "modern_notification_sounds": "Nowoczesne dźwięki powiadomień",
+    "modern_notification_sounds_description": "Używaj nowych nowoczesnych dźwięków dla powiadomień push. Wyłącz tę opcję, aby używać klasycznych dźwięków powiadomień.",
     "more": "Więcej",
     "no_units_available": "Brak dostępnych jednostek",
     "none_selected": "Nie wybrano",
