@@ -23,6 +23,7 @@ import { Card } from '@/components/ui/card';
 import { FormControl, FormControlError, FormControlLabel, FormControlLabelText } from '@/components/ui/form-control';
 import { Input, InputField } from '@/components/ui/input';
 import { Select, SelectBackdrop, SelectContent, SelectIcon, SelectInput, SelectItem, SelectPortal, SelectTrigger } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Text } from '@/components/ui/text';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
@@ -58,6 +59,7 @@ const formSchema = z.object({
     roles: z.array(z.string()),
     units: z.array(z.string()),
   }),
+  notifyCancelledEntities: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -145,6 +147,7 @@ export default function EditCall() {
         roles: [],
         units: [],
       },
+      notifyCancelledEntities: false,
     },
   });
 
@@ -289,6 +292,7 @@ export default function EditCall() {
         dispatchRoles: data.dispatchSelection?.roles,
         dispatchUnits: data.dispatchSelection?.units,
         dispatchEveryone: data.dispatchSelection?.everyone,
+        notifyCancelledEntities: data.notifyCancelledEntities,
       });
 
       if (udfValues.length > 0 && callId) {
@@ -759,6 +763,16 @@ export default function EditCall() {
               <Button onPress={() => setShowDispatchModal(true)} className="w-full">
                 <ButtonText>{getDispatchSummary()}</ButtonText>
               </Button>
+            </Card>
+
+            <Card className={`mb-8 rounded-lg border p-4 ${colorScheme === 'dark' ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+              <View className="flex-row items-center justify-between">
+                <View className="mr-3 flex-1">
+                  <Text className="text-base font-semibold">{t('calls.notify_cancelled_entities')}</Text>
+                  <Text className="text-sm text-gray-500">{t('calls.notify_cancelled_entities_description')}</Text>
+                </View>
+                <Controller control={control} name="notifyCancelledEntities" render={({ field: { onChange, value } }) => <Switch size="md" value={!!value} onValueChange={onChange} />} />
+              </View>
             </Card>
 
             <Box className="mb-6 flex-row space-x-4">

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
-import { getCallFiles, getCallImages, saveCallImage } from '@/api/calls/callFiles';
+import { getCallAudio, getCallFiles, getCallImages, saveCallImage } from '@/api/calls/callFiles';
 import { getCallNotes, saveCallNote } from '@/api/calls/callNotes';
-import { closeCall, type CloseCallRequest, getCall, getCallExtraData, updateCall, type UpdateCallRequest } from '@/api/calls/calls';
+import { closeCall, type CloseCallRequest, deleteCall, getCall, getCallExtraData, updateCall, type UpdateCallRequest, updateScheduledDispatchTime } from '@/api/calls/calls';
 import { type CallFileResultData } from '@/models/v4/callFiles/callFileResultData';
 import { type CallNoteResultData } from '@/models/v4/callNotes/callNoteResultData';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
@@ -32,9 +32,15 @@ interface CallDetailState {
   isLoadingImages: boolean;
   errorImages: string | null;
   fetchCallImages: (callId: string) => Promise<void>;
+  callAudio: CallFileResultData[] | null;
+  isLoadingAudio: boolean;
+  errorAudio: string | null;
+  fetchCallAudio: (callId: string) => Promise<void>;
   uploadCallImage: (callId: string, userId: string, note: string, name: string, latitude: number | null, longitude: number | null, file: string) => Promise<void>;
   updateCall: (callData: UpdateCallRequest) => Promise<void>;
   closeCall: (callData: CloseCallRequest) => Promise<void>;
+  deleteCall: (callId: string) => Promise<void>;
+  rescheduleDispatchTime: (callId: string, date: string) => Promise<void>;
 }
 
 export const useCallDetailStore = create<CallDetailState>((set, get) => ({
@@ -51,6 +57,9 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
   callFiles: null,
   isLoadingFiles: false,
   errorFiles: null,
+  callAudio: null,
+  isLoadingAudio: false,
+  errorAudio: null,
   reset: () =>
     set({
       call: null,
@@ -164,6 +173,22 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
       });
     }
   },
+  fetchCallAudio: async (callId: string) => {
+    set({ isLoadingAudio: true, errorAudio: null });
+    try {
+      const callAudio = await getCallAudio(callId, false);
+      set({
+        callAudio: callAudio.Data || [],
+        isLoadingAudio: false,
+      });
+    } catch (error) {
+      set({
+        callAudio: [],
+        isLoadingAudio: false,
+        errorAudio: error instanceof Error ? error.message : 'Failed to fetch call audio',
+      });
+    }
+  },
   updateCall: async (callData: UpdateCallRequest) => {
     set({ isLoading: true, error: null });
     try {
@@ -188,6 +213,34 @@ export const useCallDetailStore = create<CallDetailState>((set, get) => ({
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to close call',
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+  deleteCall: async (callId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await deleteCall(callId);
+      // The calling component handles list refresh + navigation.
+      set({ isLoading: false });
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to delete call',
+        isLoading: false,
+      });
+      throw error;
+    }
+  },
+  rescheduleDispatchTime: async (callId: string, date: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await updateScheduledDispatchTime({ callId, date });
+      // Refresh the call so the new scheduled time is reflected.
+      await get().fetchCallDetail(callId);
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Failed to reschedule call',
         isLoading: false,
       });
       throw error;

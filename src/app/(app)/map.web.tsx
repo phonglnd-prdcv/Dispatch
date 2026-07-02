@@ -8,6 +8,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacit
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
+import { useActiveMapLayers } from '@/hooks/use-active-map-layers';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { Env } from '@/lib/env';
@@ -32,6 +33,8 @@ export default function MapWeb() {
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const layerIdsRef = useRef<string[]>([]);
   const sourceIdsRef = useRef<string[]>([]);
+  const activeSourceIdsRef = useRef<string[]>([]);
+  const activeLayerIdsRef = useRef<string[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
   const [poiLayers, setPoiLayers] = useState<PoiLayerData[]>([]);
@@ -45,6 +48,9 @@ export default function MapWeb() {
 
   // Map layers hook
   const { layers, visibleLayers, isLoading: isLayersLoading, fetchLayers, toggleLayer, showAllLayers, hideAllLayers, getVisibleLayerData } = useMapLayers({ initialLayerType: MapLayerType.ALL, autoFetch: true });
+
+  // Custom-map region layers (RE1-T105) rendered on top of the legacy vector layers.
+  const { activeLayers } = useActiveMapLayers();
 
   const syncPoiLayers = useCallback((nextPoiLayers: PoiLayerData[]) => {
     setPoiLayers(nextPoiLayers);
@@ -335,6 +341,37 @@ export default function MapWeb() {
       }
     });
   }, [visibleLayers, layers, isMapReady, getVisibleLayerData]);
+
+  // Render on-by-default custom-map region layers (GeoJSON) from GetAllActiveLayers.
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !isMapReady) return;
+
+    activeLayerIdsRef.current.forEach((id) => {
+      if (instance.getLayer(id)) instance.removeLayer(id);
+    });
+    activeSourceIdsRef.current.forEach((id) => {
+      if (instance.getSource(id)) instance.removeSource(id);
+    });
+    activeLayerIdsRef.current = [];
+    activeSourceIdsRef.current = [];
+
+    activeLayers.forEach((layer) => {
+      if (!layer.data?.features || layer.data.features.length === 0) return;
+      const sourceId = `active-layer-source-${layer.id}`;
+      const fillId = `active-layer-fill-${layer.id}`;
+      const lineId = `active-layer-line-${layer.id}`;
+      try {
+        instance.addSource(sourceId, { type: 'geojson', data: layer.data });
+        instance.addLayer({ id: fillId, type: 'fill', source: sourceId, paint: { 'fill-color': layer.color, 'fill-opacity': 0.25, 'fill-outline-color': layer.color } });
+        instance.addLayer({ id: lineId, type: 'line', source: sourceId, paint: { 'line-color': layer.color, 'line-width': 2, 'line-opacity': 0.8 } });
+        activeSourceIdsRef.current.push(sourceId);
+        activeLayerIdsRef.current.push(fillId, lineId);
+      } catch (error) {
+        logger.error({ message: 'Failed to add active map layer', context: { error, layerId: layer.id } });
+      }
+    });
+  }, [activeLayers, isMapReady]);
 
   // Track when map view is rendered
   useEffect(() => {

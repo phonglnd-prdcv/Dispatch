@@ -8,8 +8,18 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { SEVERITY_COLORS, WeatherAlertCategory, WeatherAlertCertainty, WeatherAlertSeverity, WeatherAlertUrgency } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { useWeatherAlertsStore } from '@/stores/weatherAlerts/store';
+
+const formatTimestamp = (value?: string | null): string => {
+  if (!value) return '—';
+  try {
+    return formatDateForDisplay(parseDateISOString(value), 'MMM d, yyyy h:mm a');
+  } catch {
+    return value;
+  }
+};
 
 const getCategoryIcon = (category: number) => {
   switch (category) {
@@ -152,10 +162,10 @@ export default function WeatherAlertDetailScreen() {
           {/* Timing */}
           <View style={StyleSheet.flatten([styles.section, isDark ? styles.sectionDark : styles.sectionLight])}>
             <VStack space="xs">
-              <DetailRow label={t('weatherAlerts.detail.effective')} value={alert.EffectiveUtc} isDark={isDark} />
-              {alert.OnsetUtc && <DetailRow label={t('weatherAlerts.detail.onset')} value={alert.OnsetUtc} isDark={isDark} />}
-              {alert.ExpiresUtc && <DetailRow label={t('weatherAlerts.detail.expires')} value={alert.ExpiresUtc} isDark={isDark} />}
-              {alert.SentUtc && <DetailRow label={t('weatherAlerts.detail.sent')} value={alert.SentUtc} isDark={isDark} />}
+              <DetailRow label={t('weatherAlerts.detail.effective')} value={formatTimestamp(alert.EffectiveUtc)} isDark={isDark} />
+              {alert.OnsetUtc && <DetailRow label={t('weatherAlerts.detail.onset')} value={formatTimestamp(alert.OnsetUtc)} isDark={isDark} />}
+              {alert.ExpiresUtc && <DetailRow label={t('weatherAlerts.detail.expires')} value={formatTimestamp(alert.ExpiresUtc)} isDark={isDark} />}
+              {alert.SentUtc && <DetailRow label={t('weatherAlerts.detail.sent')} value={formatTimestamp(alert.SentUtc)} isDark={isDark} />}
             </VStack>
           </View>
 

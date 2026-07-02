@@ -1,4 +1,4 @@
-import { EditIcon, MoreVerticalIcon, XIcon } from 'lucide-react-native';
+import { CalendarClockIcon, EditIcon, MoreVerticalIcon, Trash2Icon, XIcon } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,10 +10,12 @@ import { useAnalytics } from '@/hooks/use-analytics';
 interface CallDetailMenuProps {
   onEditCall: () => void;
   onCloseCall: () => void;
+  onDeleteCall?: () => void;
+  onRescheduleCall?: () => void;
   canUserCreateCalls?: boolean;
 }
 
-export const useCallDetailMenu = ({ onEditCall, onCloseCall, canUserCreateCalls = false }: CallDetailMenuProps) => {
+export const useCallDetailMenu = ({ onEditCall, onCloseCall, onDeleteCall, onRescheduleCall, canUserCreateCalls = false }: CallDetailMenuProps) => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const [isKebabMenuOpen, setIsKebabMenuOpen] = useState(false);
@@ -73,6 +75,21 @@ export const useCallDetailMenu = ({ onEditCall, onCloseCall, canUserCreateCalls 
             </HStack>
           </ActionsheetItem>
 
+          {onRescheduleCall ? (
+            <ActionsheetItem
+              onPress={() => {
+                closeMenu();
+                onRescheduleCall();
+              }}
+              testID="reschedule-call-button"
+            >
+              <HStack className="items-center">
+                <CalendarClockIcon size={16} className="mr-3 text-gray-700 dark:text-gray-300" />
+                <ActionsheetItemText>{t('call_detail.reschedule')}</ActionsheetItemText>
+              </HStack>
+            </ActionsheetItem>
+          ) : null}
+
           <ActionsheetItem
             onPress={() => {
               closeMenu();
@@ -85,6 +102,21 @@ export const useCallDetailMenu = ({ onEditCall, onCloseCall, canUserCreateCalls 
               <ActionsheetItemText>{t('call_detail.close_call')}</ActionsheetItemText>
             </HStack>
           </ActionsheetItem>
+
+          {onDeleteCall ? (
+            <ActionsheetItem
+              onPress={() => {
+                closeMenu();
+                onDeleteCall();
+              }}
+              testID="delete-call-button"
+            >
+              <HStack className="items-center">
+                <Trash2Icon size={16} className="mr-3 text-red-600 dark:text-red-400" />
+                <ActionsheetItemText className="text-red-600 dark:text-red-400">{t('call_detail.delete_call')}</ActionsheetItemText>
+              </HStack>
+            </ActionsheetItem>
+          ) : null}
         </ActionsheetContent>
       </Actionsheet>
     );

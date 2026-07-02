@@ -1,3 +1,4 @@
+import { type CallPersonnelCheckInStatusResult } from '@/models/v4/checkIn/callPersonnelCheckInStatusResult';
 import { type CheckInRecordResult } from '@/models/v4/checkIn/checkInRecordResult';
 import { type CheckInTimerStatusResult } from '@/models/v4/checkIn/checkInTimerStatusResult';
 import { type PerformCheckInResult } from '@/models/v4/checkIn/performCheckInResult';
@@ -10,6 +11,7 @@ const getTimersForCallApi = createApiEndpoint('/CheckInTimers/GetTimersForCall')
 const performCheckInApi = createApiEndpoint('/CheckInTimers/PerformCheckIn');
 const getCheckInHistoryApi = createApiEndpoint('/CheckInTimers/GetCheckInHistory');
 const toggleCallTimersApi = createApiEndpoint('/CheckInTimers/ToggleCallTimers');
+const getCallPersonnelCheckInStatusesApi = createApiEndpoint('/CheckInTimers/GetCallPersonnelCheckInStatuses');
 
 export const getTimerStatuses = async (callId: number) => {
   const response = await getTimerStatusesApi.get<CheckInTimerStatusResult>({ callId });
@@ -75,5 +77,11 @@ export const getCheckInHistory = async (callId: number) => {
 
 export const toggleCallTimers = async (callId: number, enabled: boolean) => {
   const response = await toggleCallTimersApi.put<PerformCheckInResult>({ callId, enabled });
+  return response.data;
+};
+
+/** Per-personnel accountability (PAR) roster for a call. */
+export const getCallPersonnelCheckInStatuses = async (callId: number) => {
+  const response = await getCallPersonnelCheckInStatusesApi.get<CallPersonnelCheckInStatusResult>({ callId });
   return response.data;
 };

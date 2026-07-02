@@ -1,6 +1,23 @@
 import DOMPurify from 'dompurify';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, EditIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, MapPinIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon, XCircleIcon } from 'lucide-react-native';
+import {
+  ClockIcon,
+  EditIcon,
+  FileTextIcon,
+  ImageIcon,
+  InfoIcon,
+  LoaderIcon,
+  MapPinIcon,
+  NetworkIcon,
+  PaperclipIcon,
+  RouteIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  UsersIcon,
+  VideoIcon,
+  Volume2Icon,
+  XCircleIcon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +27,7 @@ import { VideoFeedsTab } from '@/components/callVideoFeeds/video-feeds-tab';
 import { CheckInTab } from '@/components/checkIn/check-in-tab';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import { IncidentCommandTab } from '@/components/incident-command/incident-command-tab';
 import StaticMap from '@/components/maps/static-map';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
@@ -23,19 +41,22 @@ import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useCallsStore } from '@/stores/calls/store';
 import { useCheckInStore } from '@/stores/checkIn/store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
 
+import CallAudioModal from '../../components/calls/call-audio-modal';
 import { useCallDetailMenu } from '../../components/calls/call-detail-menu';
 import CallFilesModal from '../../components/calls/call-files-modal';
 import CallImagesModal from '../../components/calls/call-images-modal';
 import CallNotesModal from '../../components/calls/call-notes-modal';
 import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-sheet';
+import { RescheduleCallSheet } from '../../components/calls/reschedule-call-sheet';
 import { StatusBottomSheet } from '../../components/status/status-bottom-sheet';
 
-type TabKey = 'info' | 'contact' | 'protocols' | 'dispatched' | 'timeline' | 'video' | 'checkin';
+type TabKey = 'info' | 'contact' | 'protocols' | 'dispatched' | 'timeline' | 'video' | 'checkin' | 'command';
 
 export default function CallDetailWeb() {
   const { id } = useLocalSearchParams();
@@ -57,6 +78,8 @@ export default function CallDetailWeb() {
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isCloseCallModalOpen, setIsCloseCallModalOpen] = useState(false);
   const [isSettingActive, setIsSettingActive] = useState(false);
 
@@ -80,6 +103,24 @@ export default function CallDetailWeb() {
 
   const handleEditCall = useCallback(() => router.push(`/call/${callId}/edit` as Href), [router, callId]);
   const handleCloseCall = () => setIsCloseCallModalOpen(true);
+  const openAudioModal = () => setIsAudioModalOpen(true);
+  const handleRescheduleCall = () => setIsRescheduleModalOpen(true);
+
+  const handleDeleteCall = () => {
+    if (typeof window !== 'undefined' && !window.confirm(t('call_detail.delete_call_confirm'))) return;
+    void (async () => {
+      try {
+        await useCallDetailStore.getState().deleteCall(callId);
+        showToast('success', t('call_detail.delete_call_success'));
+        await useCallsStore.getState().fetchCalls();
+        router.back();
+      } catch {
+        showToast('error', t('call_detail.delete_call_error'));
+      }
+    })();
+  };
+
+  const isScheduledPending = !!(call?.ScheduledOn || call?.ScheduledOnUtc) && !call?.DispatchedOn;
 
   const handleSetActive = async () => {
     if (!call) return;
@@ -100,6 +141,8 @@ export default function CallDetailWeb() {
   const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
     onEditCall: handleEditCall,
     onCloseCall: handleCloseCall,
+    onDeleteCall: handleDeleteCall,
+    onRescheduleCall: isScheduledPending ? handleRescheduleCall : undefined,
     canUserCreateCalls,
   });
 
@@ -177,6 +220,7 @@ export default function CallDetailWeb() {
       { key: 'dispatched', title: t('call_detail.tabs.dispatched'), icon: UsersIcon },
       { key: 'timeline', title: t('call_detail.tabs.timeline'), icon: ClockIcon, badge: callExtraData?.Activity?.length || 0 },
       { key: 'video', title: t('call_detail.tabs.video'), icon: VideoIcon },
+      { key: 'command', title: t('incident_command.tab_title'), icon: NetworkIcon },
     ];
     if (call?.CheckInTimersEnabled) {
       baseTabs.push({
@@ -337,6 +381,12 @@ export default function CallDetailWeb() {
             )}
           </View>
         );
+      case 'command':
+        return (
+          <View style={styles.tabContent}>
+            <IncidentCommandTab callId={call.CallId} showOpenFull />
+          </View>
+        );
     }
   };
 
@@ -402,6 +452,7 @@ export default function CallDetailWeb() {
                 <ActionButton icon={FileTextIcon} label={t('call_detail.notes')} badge={call.NotesCount} onPress={openNotesModal} isDark={isDark} />
                 <ActionButton icon={ImageIcon} label={t('call_detail.images')} badge={call.ImgagesCount} onPress={() => setIsImagesModalOpen(true)} isDark={isDark} />
                 <ActionButton icon={PaperclipIcon} label={t('call_detail.files.button')} badge={call.FileCount} onPress={() => setIsFilesModalOpen(true)} isDark={isDark} />
+                <ActionButton icon={Volume2Icon} label={t('call_detail.audio')} badge={call.AudioCount} onPress={openAudioModal} isDark={isDark} />
                 <ActionButton icon={XCircleIcon} label={t('call_detail.close_call')} onPress={handleCloseCall} isDark={isDark} variant="danger" />
               </View>
             </View>
@@ -446,7 +497,9 @@ export default function CallDetailWeb() {
       <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId} />
       <CallImagesModal isOpen={isImagesModalOpen} onClose={() => setIsImagesModalOpen(false)} callId={callId} />
       <CallFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} callId={callId} />
+      <CallAudioModal isOpen={isAudioModalOpen} onClose={() => setIsAudioModalOpen(false)} callId={callId} />
       <CloseCallBottomSheet isOpen={isCloseCallModalOpen} onClose={() => setIsCloseCallModalOpen(false)} callId={callId} />
+      <RescheduleCallSheet isOpen={isRescheduleModalOpen} onClose={() => setIsRescheduleModalOpen(false)} callId={callId} />
       <StatusBottomSheet />
       <CallDetailActionSheet />
     </>

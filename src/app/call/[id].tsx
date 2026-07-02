@@ -1,15 +1,16 @@
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon } from 'lucide-react-native';
+import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, NetworkIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon, Volume2Icon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import WebView from 'react-native-webview';
 
 import { VideoFeedsTab } from '@/components/callVideoFeeds/video-feeds-tab';
 import { CheckInTab } from '@/components/checkIn/check-in-tab';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import { IncidentCommandTab } from '@/components/incident-command/incident-command-tab';
 // Import a static map component instead of react-native-maps
 import StaticMap from '@/components/maps/static-map';
 import { FocusAwareStatusBar, SafeAreaView } from '@/components/ui';
@@ -27,16 +28,19 @@ import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useCallsStore } from '@/stores/calls/store';
 import { useCheckInStore } from '@/stores/checkIn/store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
 
+import CallAudioModal from '../../components/calls/call-audio-modal';
 import { useCallDetailMenu } from '../../components/calls/call-detail-menu';
 import CallFilesModal from '../../components/calls/call-files-modal';
 import CallImagesModal from '../../components/calls/call-images-modal';
 import CallNotesModal from '../../components/calls/call-notes-modal';
 import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-sheet';
+import { RescheduleCallSheet } from '../../components/calls/reschedule-call-sheet';
 import { StatusBottomSheet } from '../../components/status/status-bottom-sheet';
 
 export default function CallDetail() {
@@ -62,6 +66,8 @@ export default function CallDetail() {
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isCloseCallModalOpen, setIsCloseCallModalOpen] = useState(false);
   const [isSettingActive, setIsSettingActive] = useState(false);
   const showToast = useToastStore((state) => state.showToast);
@@ -92,12 +98,40 @@ export default function CallDetail() {
     setIsFilesModalOpen(true);
   };
 
+  const openAudioModal = () => {
+    setIsAudioModalOpen(true);
+  };
+
   const handleEditCall = () => {
     router.push(`/call/${callId}/edit` as Href);
   };
 
   const handleCloseCall = () => {
     setIsCloseCallModalOpen(true);
+  };
+
+  const handleRescheduleCall = () => {
+    setIsRescheduleModalOpen(true);
+  };
+
+  const handleDeleteCall = () => {
+    Alert.alert(t('call_detail.delete_call'), t('call_detail.delete_call_confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('call_detail.delete_call'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await useCallDetailStore.getState().deleteCall(callId);
+            showToast('success', t('call_detail.delete_call_success'));
+            await useCallsStore.getState().fetchCalls();
+            router.back();
+          } catch {
+            showToast('error', t('call_detail.delete_call_error'));
+          }
+        },
+      },
+    ]);
   };
 
   const handleSetActive = async () => {
@@ -126,10 +160,14 @@ export default function CallDetail() {
     }
   };
 
+  const isScheduledPending = !!(call?.ScheduledOn || call?.ScheduledOnUtc) && !call?.DispatchedOn;
+
   // Initialize the call detail menu hook
   const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
     onEditCall: handleEditCall,
     onCloseCall: handleCloseCall,
+    onDeleteCall: handleDeleteCall,
+    onRescheduleCall: isScheduledPending ? handleRescheduleCall : undefined,
     canUserCreateCalls,
   });
 
@@ -497,6 +535,14 @@ export default function CallDetail() {
       },
     ];
 
+    // Incident Command tab — lets dispatch see and interact with the established incident command.
+    tabs.push({
+      key: 'command',
+      title: t('incident_command.tab_title'),
+      icon: <NetworkIcon size={16} />,
+      content: <IncidentCommandTab callId={call.CallId} showOpenFull />,
+    });
+
     // Video feeds tab
     tabs.push({
       key: 'video',
@@ -506,9 +552,11 @@ export default function CallDetail() {
     });
 
     if (call?.CheckInTimersEnabled) {
-      const overdueCount = timerStatuses.filter((s) => s.Status === 'Overdue').length;
-      const warningCount = timerStatuses.filter((s) => s.Status === 'Warning').length;
-      const badgeCount = overdueCount + warningCount;
+      // Align with the check-in tab's own summary, which treats Red==Overdue, Yellow==Warning, and counts Critical.
+      const overdueCount = timerStatuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Red').length;
+      const warningCount = timerStatuses.filter((s) => s.Status === 'Warning' || s.Status === 'Yellow').length;
+      const criticalCount = timerStatuses.filter((s) => s.Status === 'Critical').length;
+      const badgeCount = overdueCount + warningCount + criticalCount;
 
       tabs.push({
         key: 'checkin',
@@ -625,6 +673,17 @@ export default function CallDetail() {
             ) : null}
           </Box>
           <Box className="relative mx-1 flex-1">
+            <Button onPress={openAudioModal} variant="outline" className="w-full" size={isLandscape ? 'md' : 'sm'}>
+              <ButtonIcon as={Volume2Icon} />
+              <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('call_detail.audio')}</ButtonText>
+            </Button>
+            {call?.AudioCount ? (
+              <Box className="absolute -right-1 -top-1 h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1">
+                <Text className="text-xs font-medium text-white">{call.AudioCount}</Text>
+              </Box>
+            ) : null}
+          </Box>
+          <Box className="relative mx-1 flex-1">
             <Button onPress={handleRoute} variant="outline" className="w-full" size={isLandscape ? 'md' : 'sm'}>
               <ButtonIcon as={RouteIcon} />
               <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('common.route')}</ButtonText>
@@ -640,9 +699,13 @@ export default function CallDetail() {
       <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId} />
       <CallImagesModal isOpen={isImagesModalOpen} onClose={() => setIsImagesModalOpen(false)} callId={callId} />
       <CallFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} callId={callId} />
+      <CallAudioModal isOpen={isAudioModalOpen} onClose={() => setIsAudioModalOpen(false)} callId={callId} />
 
       {/* Close Call Bottom Sheet */}
       <CloseCallBottomSheet isOpen={isCloseCallModalOpen} onClose={() => setIsCloseCallModalOpen(false)} callId={callId} />
+
+      {/* Reschedule Bottom Sheet */}
+      <RescheduleCallSheet isOpen={isRescheduleModalOpen} onClose={() => setIsRescheduleModalOpen(false)} callId={callId} />
 
       {/* Status Bottom Sheet */}
       <StatusBottomSheet />
