@@ -10,11 +10,14 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { isUnitAvailable } from '@/lib/resource-availability';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
+import { useDashboardViewStore } from '@/stores/dispatch/dashboard-view-store';
 
 import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
+import { ResourcesPanel } from './resources-panel';
 
 interface UnitsPanelProps {
   units: UnitInfoResultData[];
@@ -133,6 +136,8 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const availableOnly = useDashboardViewStore((s) => s.availableOnly);
+  const singleList = useDashboardViewStore((s) => s.singleList);
 
   // Filter units based on call dispatches when filter is active and search query
   const displayedUnits = useMemo(() => {
@@ -159,8 +164,13 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
       });
     }
 
+    // Show only currently-available units when the dashboard toggle is on
+    if (availableOnly) {
+      filtered = filtered.filter(isUnitAvailable);
+    }
+
     return filtered;
-  }, [units, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
+  }, [units, isCallFilterActive, callDispatches, selectedCallId, searchQuery, availableOnly]);
 
   // Get list of unit names that are dispatched to the call
   const dispatchedUnitNames = useMemo(() => {
@@ -170,6 +180,12 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
 
   // Count available units
   const availableUnits = displayedUnits.filter((u) => !u.CurrentStatusId || u.CurrentStatusId === 'available').length;
+
+  // When "single list" is on, units + personnel are shown together in the combined ResourcesPanel
+  // (rendered from the units slot); the Personnel panel hides itself.
+  if (singleList) {
+    return <ResourcesPanel />;
+  }
 
   return (
     <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>

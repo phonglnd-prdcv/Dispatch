@@ -1,4 +1,4 @@
-import { CalendarClockIcon, EditIcon, MoreVerticalIcon, Trash2Icon, XIcon } from 'lucide-react-native';
+import { CalendarClockIcon, EditIcon, MoreVerticalIcon, Trash2Icon, UserPlusIcon, XIcon } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,10 +12,11 @@ interface CallDetailMenuProps {
   onCloseCall: () => void;
   onDeleteCall?: () => void;
   onRescheduleCall?: () => void;
+  onDispatchMore?: () => void;
   canUserCreateCalls?: boolean;
 }
 
-export const useCallDetailMenu = ({ onEditCall, onCloseCall, onDeleteCall, onRescheduleCall, canUserCreateCalls = false }: CallDetailMenuProps) => {
+export const useCallDetailMenu = ({ onEditCall, onCloseCall, onDeleteCall, onRescheduleCall, onDispatchMore, canUserCreateCalls = false }: CallDetailMenuProps) => {
   const { t } = useTranslation();
   const { trackEvent } = useAnalytics();
   const [isKebabMenuOpen, setIsKebabMenuOpen] = useState(false);
@@ -74,6 +75,21 @@ export const useCallDetailMenu = ({ onEditCall, onCloseCall, onDeleteCall, onRes
               <ActionsheetItemText>{t('call_detail.edit_call')}</ActionsheetItemText>
             </HStack>
           </ActionsheetItem>
+
+          {onDispatchMore ? (
+            <ActionsheetItem
+              onPress={() => {
+                closeMenu();
+                onDispatchMore();
+              }}
+              testID="dispatch-more-button"
+            >
+              <HStack className="items-center">
+                <UserPlusIcon size={16} className="mr-3 text-gray-700 dark:text-gray-300" />
+                <ActionsheetItemText>{t('call_detail.dispatch_more')}</ActionsheetItemText>
+              </HStack>
+            </ActionsheetItem>
+          ) : null}
 
           {onRescheduleCall ? (
             <ActionsheetItem

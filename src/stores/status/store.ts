@@ -6,6 +6,7 @@ import { getAllGroups } from '@/api/groups/groups';
 import { saveUnitStatus } from '@/api/units/unitStatuses';
 import { type DestinationSelectionType } from '@/lib/destination-helpers';
 import { logger } from '@/lib/logging';
+import { resolveUnitStatusOptions } from '@/lib/unit-status-helpers';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type CustomStatusResultData } from '@/models/v4/customStatuses/customStatusResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
@@ -16,6 +17,7 @@ import { type SaveUnitStatusInput, type SaveUnitStatusRoleInput } from '@/models
 import { useCoreStore } from '../app/core-store';
 import { useLocationStore } from '../app/location-store';
 import { useRolesStore } from '../roles/store';
+import { useUnitsStore } from '../units/store';
 
 type StatusStep = 'select-status' | 'select-destination' | 'add-note';
 type DestinationType = DestinationSelectionType;
@@ -36,6 +38,8 @@ interface StatusBottomSheetStore {
   availableCalls: CallResultData[];
   availableStations: GroupResultData[];
   availablePois: PoiResultData[];
+  /** Statuses scoped to the selected unit's custom status set (unit type). */
+  availableStatuses: StatusType[];
   isLoading: boolean;
   error: string | null;
   setIsOpen: (isOpen: boolean, status?: StatusType) => void;
@@ -63,6 +67,7 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
   availableCalls: [],
   availableStations: [],
   availablePois: [],
+  availableStatuses: [],
   isLoading: false,
   error: null,
   setIsOpen: (isOpen, status) => {
@@ -87,7 +92,18 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
       const response = await getSetUnitStatusData(unitId);
       const destinationData = response?.Data;
 
+      // Scope the selectable statuses to the unit's custom status set (unit type). The grouped
+      // unit statuses are keyed by the set id, so ensure they are loaded and match by CustomStatusSetId.
+      let groups = useUnitsStore.getState().unitStatuses;
+      if (!groups || groups.length === 0) {
+        await useUnitsStore.getState().fetchUnits();
+        groups = useUnitsStore.getState().unitStatuses;
+      }
+      const unit = useUnitsStore.getState().units.find((u) => u.UnitId === unitId);
+      const serverStatuses = (destinationData?.Statuses as unknown as StatusesResultData[]) || [];
+
       set({
+        availableStatuses: resolveUnitStatusOptions(unit, groups, serverStatuses),
         availableCalls: destinationData?.Calls || [],
         availableStations: destinationData?.Stations || [],
         availablePois: destinationData?.DestinationPois || [],
@@ -134,6 +150,7 @@ export const useStatusBottomSheetStore = create<StatusBottomSheetStore>((set, ge
       availableCalls: [],
       availableStations: [],
       availablePois: [],
+      availableStatuses: [],
       isLoading: false,
       error: null,
     }),

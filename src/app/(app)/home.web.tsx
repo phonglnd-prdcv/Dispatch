@@ -10,7 +10,20 @@ import { getCallExtraData } from '@/api/calls/calls';
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { AudioStreamBottomSheet } from '@/components/audio-stream/audio-stream-bottom-sheet';
 import { CloseCallBottomSheet } from '@/components/calls/close-call-bottom-sheet';
-import { ActiveCallFilterBanner, ActiveCallsPanel, ActivityLogPanel, AddNoteBottomSheet, MapWidget, NotesPanel, PersonnelPanel, PTTInterface, StatsHeader, UnitsPanel } from '@/components/dispatch-console';
+import {
+  ActiveCallFilterBanner,
+  ActiveCallsPanel,
+  ActivityLogPanel,
+  AddNoteBottomSheet,
+  DashboardViewToggles,
+  MapWidget,
+  NotesPanel,
+  PersonnelPanel,
+  PTTInterface,
+  ResourcesPanel,
+  StatsHeader,
+  UnitsPanel,
+} from '@/components/dispatch-console';
 import { Box } from '@/components/ui/box';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { HStack } from '@/components/ui/hstack';
@@ -22,6 +35,7 @@ import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInf
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import useAuthStore from '@/stores/auth/store';
 import { useCallsStore } from '@/stores/calls/store';
+import { useDashboardViewStore } from '@/stores/dispatch/dashboard-view-store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
 import { useHomeStore } from '@/stores/home/home-store';
 import { useNotesStore } from '@/stores/notes/store';
@@ -43,6 +57,7 @@ export default function DispatchConsoleWeb() {
   const { calls, callPriorities, isLoading: callsLoading, fetchCalls, fetchCallPriorities } = useCallsStore();
   const { units, isLoading: unitsLoading, fetchUnits } = useUnitsStore();
   const { personnel, isLoading: personnelLoading, fetchPersonnel } = usePersonnelStore();
+  const singleList = useDashboardViewStore((s) => s.singleList);
   const { notes, isLoading: notesLoading, fetchNotes } = useNotesStore();
 
   // SignalR store - subscribe to specific event timestamps
@@ -661,34 +676,38 @@ export default function DispatchConsoleWeb() {
 
           <MapWidget onExpandMap={handleExpandMap} />
 
-          <HStack space="sm">
-            <Box className="flex-1">
-              <UnitsPanel
-                units={units}
-                isLoading={unitsLoading}
-                onRefresh={fetchUnits}
-                selectedUnitId={selectedUnitId ?? undefined}
-                onSelectUnit={handleSelectUnit}
-                isCallFilterActive={isCallFilterActive}
-                selectedCallId={selectedCallId ?? undefined}
-                callDispatches={selectedCallExtraData?.Dispatches}
-                onSetUnitStatusForCall={handleSetUnitStatusForCall}
-              />
-            </Box>
-            <Box className="flex-1">
-              <PersonnelPanel
-                personnel={personnel}
-                isLoading={personnelLoading}
-                onRefresh={fetchPersonnel}
-                selectedPersonnelId={selectedPersonnelId ?? undefined}
-                onSelectPersonnel={handleSelectPersonnel}
-                isCallFilterActive={isCallFilterActive}
-                selectedCallId={selectedCallId ?? undefined}
-                callDispatches={selectedCallExtraData?.Dispatches}
-                onSetPersonnelStatusForCall={handleSetPersonnelStatusForCall}
-              />
-            </Box>
-          </HStack>
+          {singleList ? (
+            <ResourcesPanel />
+          ) : (
+            <HStack space="sm">
+              <Box className="flex-1">
+                <UnitsPanel
+                  units={units}
+                  isLoading={unitsLoading}
+                  onRefresh={fetchUnits}
+                  selectedUnitId={selectedUnitId ?? undefined}
+                  onSelectUnit={handleSelectUnit}
+                  isCallFilterActive={isCallFilterActive}
+                  selectedCallId={selectedCallId ?? undefined}
+                  callDispatches={selectedCallExtraData?.Dispatches}
+                  onSetUnitStatusForCall={handleSetUnitStatusForCall}
+                />
+              </Box>
+              <Box className="flex-1">
+                <PersonnelPanel
+                  personnel={personnel}
+                  isLoading={personnelLoading}
+                  onRefresh={fetchPersonnel}
+                  selectedPersonnelId={selectedPersonnelId ?? undefined}
+                  onSelectPersonnel={handleSelectPersonnel}
+                  isCallFilterActive={isCallFilterActive}
+                  selectedCallId={selectedCallId ?? undefined}
+                  callDispatches={selectedCallExtraData?.Dispatches}
+                  onSetPersonnelStatusForCall={handleSetPersonnelStatusForCall}
+                />
+              </Box>
+            </HStack>
+          )}
 
           <PTTInterface onPTTPress={handlePTTPress} onPTTRelease={handlePTTRelease} isTransmitting={isTransmitting} currentChannel={currentChannel} />
 
@@ -751,7 +770,10 @@ export default function DispatchConsoleWeb() {
       {isCallFilterActive && selectedCall && <ActiveCallFilterBanner call={selectedCall} priority={selectedCallPriority} onClearFilter={handleClearCallFilter} />}
 
       {/* Main Content */}
-      <Box className="flex-1 bg-gray-100 p-2 dark:bg-gray-950">{renderLayout()}</Box>
+      <Box className="flex-1 bg-gray-100 p-2 dark:bg-gray-950">
+        <DashboardViewToggles />
+        {renderLayout()}
+      </Box>
 
       {/* Audio Stream Bottom Sheet */}
       <AudioStreamBottomSheet />

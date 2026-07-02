@@ -1,5 +1,22 @@
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, NetworkIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon, Volume2Icon } from 'lucide-react-native';
+import {
+  ClockIcon,
+  FileTextIcon,
+  ImageIcon,
+  InfoIcon,
+  LoaderIcon,
+  MapPinIcon,
+  NavigationIcon,
+  NetworkIcon,
+  PaperclipIcon,
+  RouteIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  UserPlusIcon,
+  UsersIcon,
+  VideoIcon,
+  Volume2Icon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,14 +39,16 @@ import { SharedTabs, type TabItem } from '@/components/ui/shared-tabs';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { buildAddResourcesUpdateRequest, EMPTY_DISPATCH_SELECTION } from '@/lib/dispatch-helpers';
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
-import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
+import { formatDateForDisplay, isCallActive, parseDateISOString } from '@/lib/utils';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
 import { useCallsStore } from '@/stores/calls/store';
 import { useCheckInStore } from '@/stores/checkIn/store';
+import { type DispatchSelection } from '@/stores/dispatch/store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
@@ -40,6 +59,7 @@ import CallFilesModal from '../../components/calls/call-files-modal';
 import CallImagesModal from '../../components/calls/call-images-modal';
 import CallNotesModal from '../../components/calls/call-notes-modal';
 import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-sheet';
+import { DispatchSelectionModal } from '../../components/calls/dispatch-selection-modal';
 import { RescheduleCallSheet } from '../../components/calls/reschedule-call-sheet';
 import { StatusBottomSheet } from '../../components/status/status-bottom-sheet';
 
@@ -70,6 +90,8 @@ export default function CallDetail() {
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isCloseCallModalOpen, setIsCloseCallModalOpen] = useState(false);
   const [isSettingActive, setIsSettingActive] = useState(false);
+  const [mapView, setMapView] = useState<'call' | 'destination'>('call');
+  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const showToast = useToastStore((state) => state.showToast);
 
   const { colorScheme } = useColorScheme();
@@ -160,6 +182,21 @@ export default function CallDetail() {
     }
   };
 
+  // Dispatch additional resources to this (active) call. The picked resources are unioned with the
+  // call's existing dispatches so nothing is ever un-dispatched — the server then notifies only the
+  // newly-added resources (RebroadcastCall stays false).
+  const handleDispatchAdditional = async (selection: DispatchSelection) => {
+    if (!call) return;
+
+    try {
+      await useCallDetailStore.getState().updateCall(buildAddResourcesUpdateRequest(call, callExtraData?.Dispatches, selection));
+      showToast('success', t('call_detail.dispatch_more_success'));
+    } catch (error) {
+      logger.error({ message: 'Failed to dispatch additional resources', context: { error, callId: call.CallId } });
+      showToast('error', t('call_detail.dispatch_more_error'));
+    }
+  };
+
   const isScheduledPending = !!(call?.ScheduledOn || call?.ScheduledOnUtc) && !call?.DispatchedOn;
 
   // Initialize the call detail menu hook
@@ -168,6 +205,7 @@ export default function CallDetail() {
     onCloseCall: handleCloseCall,
     onDeleteCall: handleDeleteCall,
     onRescheduleCall: isScheduledPending ? handleRescheduleCall : undefined,
+    onDispatchMore: call && isCallActive(call.State) ? () => setIsDispatchModalOpen(true) : undefined,
     canUserCreateCalls,
   });
 
@@ -483,6 +521,12 @@ export default function CallDetail() {
         icon: <UsersIcon size={16} />,
         content: (
           <Box className="p-4">
+            {canUserCreateCalls && isCallActive(call.State) ? (
+              <Button variant="solid" action="primary" size="sm" className="mb-4" onPress={() => setIsDispatchModalOpen(true)}>
+                <ButtonIcon as={UserPlusIcon} className="mr-2" />
+                <ButtonText>{t('call_detail.dispatch_more')}</ButtonText>
+              </Button>
+            ) : null}
             {callExtraData?.Dispatches && callExtraData.Dispatches.length > 0 ? (
               <VStack className="space-y-3">
                 {callExtraData.Dispatches.map((dispatched, index) => (
@@ -570,6 +614,13 @@ export default function CallDetail() {
     return tabs;
   };
 
+  // Map can toggle between the call (dispatch) location and the call's destination POI location.
+  const hasDestinationLocation = call.DestinationLatitude != null && call.DestinationLongitude != null;
+  const showDestinationMap = mapView === 'destination' && hasDestinationLocation;
+  const mapLatitude = showDestinationMap ? call.DestinationLatitude : coordinates.latitude;
+  const mapLongitude = showDestinationMap ? call.DestinationLongitude : coordinates.longitude;
+  const mapAddress = showDestinationMap ? call.DestinationAddress || call.DestinationName : call.Address;
+
   return (
     <>
       <Stack.Screen
@@ -632,9 +683,21 @@ export default function CallDetail() {
           </VStack>
         </Box>
 
-        {/* Map */}
+        {/* Map (toggles between the call address and the destination POI when one exists) */}
         <Box className="w-full">
-          {coordinates.latitude && coordinates.longitude ? <StaticMap latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} height={200} showUserLocation={true} /> : null}
+          {hasDestinationLocation ? (
+            <HStack className={`px-4 pt-3 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`} space="sm">
+              <Button variant={mapView === 'call' ? 'solid' : 'outline'} size="sm" className="flex-1" onPress={() => setMapView('call')}>
+                <ButtonIcon as={MapPinIcon} className="mr-1" />
+                <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('call_detail.map_call')}</ButtonText>
+              </Button>
+              <Button variant={mapView === 'destination' ? 'solid' : 'outline'} size="sm" className="flex-1" onPress={() => setMapView('destination')}>
+                <ButtonIcon as={NavigationIcon} className="mr-1" />
+                <ButtonText className={isLandscape ? '' : 'text-xs'}>{t('call_detail.map_destination')}</ButtonText>
+              </Button>
+            </HStack>
+          ) : null}
+          {mapLatitude && mapLongitude ? <StaticMap latitude={mapLatitude} longitude={mapLongitude} address={mapAddress} zoom={15} height={200} showUserLocation={true} /> : null}
         </Box>
 
         {/* Action Buttons */}
@@ -709,6 +772,9 @@ export default function CallDetail() {
 
       {/* Status Bottom Sheet */}
       <StatusBottomSheet />
+
+      {/* Dispatch additional resources */}
+      <DispatchSelectionModal isVisible={isDispatchModalOpen} onClose={() => setIsDispatchModalOpen(false)} onConfirm={handleDispatchAdditional} initialSelection={EMPTY_DISPATCH_SELECTION} />
 
       {/* Call Detail Menu ActionSheet */}
       <CallDetailActionSheet />

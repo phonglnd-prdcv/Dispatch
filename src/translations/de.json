@@ -198,7 +198,12 @@
     "reschedule_error": "Failed to reschedule call",
     "reschedule_in_1_hour": "In 1 hour",
     "reschedule_in_1_day": "In 1 day",
-    "reschedule_tomorrow_morning": "Tomorrow 8 AM"
+    "reschedule_tomorrow_morning": "Tomorrow 8 AM",
+    "map_call": "Call",
+    "map_destination": "Destination",
+    "dispatch_more": "Dispatch additional resources",
+    "dispatch_more_success": "Resources dispatched and notified",
+    "dispatch_more_error": "Failed to dispatch resources"
   },
   "calls": {
     "address": "Adresse",
@@ -1009,7 +1014,12 @@
       "thunderstorm": "Gewitter",
       "thunderstorm_hail": "Gewitter mit Hagel",
       "unknown": "Unbekannt"
-    }
+    },
+    "available_only": "Available only",
+    "single_list": "Single list",
+    "resources": "Resources",
+    "search_resources_placeholder": "Search resources...",
+    "no_resources": "No resources"
   },
   "tabs": {
     "calls": "Einsätze",
