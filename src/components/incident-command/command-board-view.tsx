@@ -18,7 +18,7 @@ import { useToastStore } from '@/stores/toast/store';
 import { useUnitsStore } from '@/stores/units/store';
 
 import { CommandVoice } from './command-voice';
-import { accountabilityColorClass, logEntryTypeLabel, nodeTypeLabel, objectiveTypeLabel, resourceKindLabel, roleTypeLabel, timerStatusLabel, timerTypeLabel } from './ic-labels';
+import { accountabilityColorClass, isObjectiveComplete, logEntryTypeLabel, nodeTypeLabel, objectiveTypeLabel, resourceKindLabel, roleTypeLabel, timerStatusLabel, timerTypeLabel } from './ic-labels';
 import { ActionPlanSheet, AddLaneSheet, AddObjectiveSheet, AssignResourceSheet, AssignRoleSheet, MoveNodeSheet, MoveResourceSheet, TransferCommandSheet } from './incident-command-sheets';
 
 type SheetKey = 'actionPlan' | 'objective' | 'lane' | 'resource' | 'role' | 'transfer' | null;
@@ -39,15 +39,17 @@ const Section: React.FC<{ title: string; icon: React.ReactNode; action?: React.R
   </Box>
 );
 
-const confirmAction = (message: string, onConfirm: () => void) => {
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const confirmAction = (message: string, onConfirm: () => void, t: TranslateFn) => {
   if (Platform.OS === 'web') {
     // eslint-disable-next-line no-alert
     if (typeof window !== 'undefined' && window.confirm(message)) onConfirm();
     return;
   }
   Alert.alert('', message, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'OK', style: 'destructive', onPress: onConfirm },
+    { text: t('common.cancel'), style: 'cancel' },
+    { text: t('common.ok'), style: 'destructive', onPress: onConfirm },
   ]);
 };
 
@@ -118,9 +120,13 @@ export const CommandBoardView: React.FC = () => {
   };
 
   const handleCloseCommand = () => {
-    confirmAction(t('incident_command.confirm_close'), () => {
-      void runAction(() => useIncidentCommandStore.getState().closeCommand());
-    });
+    confirmAction(
+      t('incident_command.confirm_close'),
+      () => {
+        void runAction(() => useIncidentCommandStore.getState().closeCommand());
+      },
+      t
+    );
   };
 
   return (
@@ -300,7 +306,7 @@ export const CommandBoardView: React.FC = () => {
         ) : (
           <VStack className="space-y-2">
             {(board.Objectives ?? []).map((objective) => {
-              const complete = useIncidentCommandStore.getState().board?.Objectives.find((o) => o.TacticalObjectiveId === objective.TacticalObjectiveId)?.Status === 1;
+              const complete = isObjectiveComplete(objective.Status);
               return (
                 <HStack key={objective.TacticalObjectiveId} className="items-center justify-between border-b border-outline-100 pb-1">
                   <VStack className="flex-1">

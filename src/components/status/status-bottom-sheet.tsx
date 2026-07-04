@@ -271,12 +271,14 @@ export const StatusBottomSheet = () => {
     t,
   ]);
 
-  // Fetch destination data when status bottom sheet opens
+  // Fetch destination data when the status bottom sheet opens. This must run regardless of
+  // whether a status is pre-selected so the no-status flow can populate availableStatuses for
+  // the select-status picker (as well as the calls/stations/POIs for the destination step).
   React.useEffect(() => {
-    if (isOpen && activeUnit && selectedStatus) {
+    if (isOpen && activeUnit) {
       fetchDestinationData(activeUnit.UnitId);
     }
-  }, [isOpen, activeUnit, selectedStatus, fetchDestinationData]);
+  }, [isOpen, activeUnit, fetchDestinationData]);
 
   React.useEffect(() => {
     if (!selectedStatus) {

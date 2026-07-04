@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { isUnitAvailable } from '@/lib/resource-availability';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
+import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { useDashboardViewStore } from '@/stores/dispatch/dashboard-view-store';
 
@@ -30,6 +31,10 @@ interface UnitsPanelProps {
   selectedCallId?: string;
   callDispatches?: DispatchedEventResultData[];
   onSetUnitStatusForCall?: (unitId: string, unitName: string) => void;
+  // Personnel props — forwarded to the combined ResourcesPanel in single-list mode
+  selectedPersonnelId?: string;
+  onSelectPersonnel?: (personnelId: string, person: PersonnelInfoResultData) => void;
+  onSetPersonnelStatusForCall?: (personnelId: string, personnelName: string) => void;
 }
 
 const getStatusColor = (statusColor: string | undefined, statusId: string): string => {
@@ -132,7 +137,20 @@ const UnitItem: React.FC<{
   );
 };
 
-export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefresh, selectedUnitId, onSelectUnit, isCallFilterActive, selectedCallId, callDispatches, onSetUnitStatusForCall }) => {
+export const UnitsPanel: React.FC<UnitsPanelProps> = ({
+  units,
+  isLoading,
+  onRefresh,
+  selectedUnitId,
+  onSelectUnit,
+  isCallFilterActive,
+  selectedCallId,
+  callDispatches,
+  onSetUnitStatusForCall,
+  selectedPersonnelId,
+  onSelectPersonnel,
+  onSetPersonnelStatusForCall,
+}) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,7 +202,19 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
   // When "single list" is on, units + personnel are shown together in the combined ResourcesPanel
   // (rendered from the units slot); the Personnel panel hides itself.
   if (singleList) {
-    return <ResourcesPanel />;
+    return (
+      <ResourcesPanel
+        isCallFilterActive={isCallFilterActive}
+        selectedCallId={selectedCallId}
+        callDispatches={callDispatches}
+        selectedUnitId={selectedUnitId}
+        onSelectUnit={onSelectUnit}
+        onSetUnitStatusForCall={onSetUnitStatusForCall}
+        selectedPersonnelId={selectedPersonnelId}
+        onSelectPersonnel={onSelectPersonnel}
+        onSetPersonnelStatusForCall={onSetPersonnelStatusForCall}
+      />
+    );
   }
 
   return (

@@ -163,9 +163,9 @@ export default function WeatherAlertDetailScreen() {
           <View style={StyleSheet.flatten([styles.section, isDark ? styles.sectionDark : styles.sectionLight])}>
             <VStack space="xs">
               <DetailRow label={t('weatherAlerts.detail.effective')} value={formatTimestamp(alert.EffectiveUtc)} isDark={isDark} />
-              {alert.OnsetUtc && <DetailRow label={t('weatherAlerts.detail.onset')} value={formatTimestamp(alert.OnsetUtc)} isDark={isDark} />}
-              {alert.ExpiresUtc && <DetailRow label={t('weatherAlerts.detail.expires')} value={formatTimestamp(alert.ExpiresUtc)} isDark={isDark} />}
-              {alert.SentUtc && <DetailRow label={t('weatherAlerts.detail.sent')} value={formatTimestamp(alert.SentUtc)} isDark={isDark} />}
+              {alert.OnsetUtc ? <DetailRow label={t('weatherAlerts.detail.onset')} value={formatTimestamp(alert.OnsetUtc)} isDark={isDark} /> : null}
+              {alert.ExpiresUtc ? <DetailRow label={t('weatherAlerts.detail.expires')} value={formatTimestamp(alert.ExpiresUtc)} isDark={isDark} /> : null}
+              {alert.SentUtc ? <DetailRow label={t('weatherAlerts.detail.sent')} value={formatTimestamp(alert.SentUtc)} isDark={isDark} /> : null}
             </VStack>
           </View>
 

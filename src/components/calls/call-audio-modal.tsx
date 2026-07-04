@@ -34,6 +34,9 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+  // Monotonic id bumped on every play/stop tap so overlapping async loads can tell
+  // whether they are still the latest request before committing state.
+  const playRequestRef = useRef(0);
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['67%'], []);
@@ -93,6 +96,10 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
 
   const handlePlay = async (file: CallFileResultData) => {
     if (!file.Url) return;
+
+    // This tap is now the latest request; any in-flight load is superseded.
+    const requestId = ++playRequestRef.current;
+
     // Tapping the currently-playing clip stops it.
     if (playingId === file.Id) {
       await unloadSound();
@@ -107,12 +114,23 @@ export const CallAudioModal: React.FC<CallAudioModalProps> = ({ isOpen, onClose,
           void unloadSound();
         }
       });
+
+      // A newer tap arrived while this clip was loading — discard this sound so it
+      // can't overwrite soundRef.current or start overlapping playback.
+      if (requestId !== playRequestRef.current) {
+        await sound.unloadAsync().catch(() => {});
+        return;
+      }
+
       soundRef.current = sound;
       setPlayingId(file.Id);
     } catch (error) {
       logger.error({ message: 'Failed to play call audio', context: { error, callId } });
     } finally {
-      setLoadingId(null);
+      // Only the latest request should clear the shared loading indicator.
+      if (requestId === playRequestRef.current) {
+        setLoadingId(null);
+      }
     }
   };
 

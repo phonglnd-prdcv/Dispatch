@@ -41,6 +41,7 @@ import { buildAddResourcesUpdateRequest, EMPTY_DISPATCH_SELECTION } from '@/lib/
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { formatDateForDisplay, isCallActive, parseDateISOString } from '@/lib/utils';
+import { CheckInTimerStatus } from '@/models/v4/checkIn/checkInEnums';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
@@ -151,7 +152,7 @@ export default function CallDetailWeb() {
     if (!call) return;
 
     try {
-      await useCallDetailStore.getState().updateCall(buildAddResourcesUpdateRequest(call, callExtraData?.Dispatches, selection));
+      await useCallDetailStore.getState().updateCall(buildAddResourcesUpdateRequest(call, callExtraData?.Dispatches, selection, callExtraData?.CallFormData));
       showToast('success', t('call_detail.dispatch_more_success'));
     } catch (err) {
       logger.error({ message: 'Failed to dispatch additional resources', context: { error: err, callId: call.CallId } });
@@ -231,8 +232,8 @@ export default function CallDetailWeb() {
   };
 
   const checkInStatuses = useCheckInStore((s) => s.timerStatuses);
-  const overdueCount = checkInStatuses.filter((s) => s.Status === 'Overdue').length;
-  const warningCount = checkInStatuses.filter((s) => s.Status === 'Warning').length;
+  const overdueCount = checkInStatuses.filter((s) => s.Status === CheckInTimerStatus.Overdue).length;
+  const warningCount = checkInStatuses.filter((s) => s.Status === CheckInTimerStatus.Warning).length;
 
   const tabs = useMemo(() => {
     const baseTabs: { key: TabKey; title: string; icon: typeof InfoIcon; badge?: number }[] = [

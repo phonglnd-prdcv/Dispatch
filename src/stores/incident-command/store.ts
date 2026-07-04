@@ -33,7 +33,7 @@ import { type CommandLogEntry } from '@/models/v4/incidentCommand/commandLog';
 import { type CommandStructureNode } from '@/models/v4/incidentCommand/commandStructureNode';
 import { type IncidentAdHocPersonnel, type IncidentAdHocUnit } from '@/models/v4/incidentCommand/incidentAdHocResources';
 import { type IncidentCommandBoard } from '@/models/v4/incidentCommand/incidentCommandBoard';
-import { hasIncidentCapability, type IncidentCapabilities } from '@/models/v4/incidentCommand/incidentCommandEnums';
+import { hasIncidentCapability, type IncidentCapabilities, ParStatus } from '@/models/v4/incidentCommand/incidentCommandEnums';
 import { type IncidentMapAnnotation } from '@/models/v4/incidentCommand/incidentMapAnnotation';
 import { type IncidentReportSummary } from '@/models/v4/incidentCommand/incidentReport';
 import { type IncidentTimer } from '@/models/v4/incidentCommand/incidentTimer';
@@ -265,8 +265,26 @@ export const useIncidentCommandStore = create<IncidentCommandState>((set, get) =
 
     moveNode: async (nodeId: string, parentNodeId: string) => {
       const command = get().board?.Command;
-      const target = get().board?.Nodes.find((n) => n.CommandStructureNodeId === nodeId);
+      const nodes = get().board?.Nodes ?? [];
+      const target = nodes.find((n) => n.CommandStructureNodeId === nodeId);
       if (!command || !target) return;
+
+      // Reparenting a node under itself or one of its descendants would create a cycle.
+      // Collect the node's subtree and reject any such parent before persisting.
+      const descendantIds = new Set<string>([nodeId]);
+      const stack = [nodeId];
+      while (stack.length > 0) {
+        const currentId = stack.pop() as string;
+        for (const n of nodes) {
+          if (n.DeletedOn) continue;
+          if ((n.ParentNodeId || '') === currentId && !descendantIds.has(n.CommandStructureNodeId)) {
+            descendantIds.add(n.CommandStructureNodeId);
+            stack.push(n.CommandStructureNodeId);
+          }
+        }
+      }
+      if (descendantIds.has(parentNodeId)) return;
+
       await mutate('Failed to move lane', () => saveNode({ ...target, ParentNodeId: parentNodeId, IncidentCommandId: command.IncidentCommandId, CallId: command.CallId }));
     },
 
@@ -346,8 +364,8 @@ export const useIncidentCommandStore = create<IncidentCommandState>((set, get) =
 
     accountabilityCounts: () => {
       const accountability = get().board?.Accountability ?? [];
-      const count = (status: string) => accountability.filter((p: PersonnelCallCheckInStatus) => p.Status === status).length;
-      return { green: count('Green'), warning: count('Warning'), critical: count('Critical') };
+      const count = (status: ParStatus) => accountability.filter((p: PersonnelCallCheckInStatus) => p.Status === status).length;
+      return { green: count(ParStatus.Green), warning: count(ParStatus.Warning), critical: count(ParStatus.Critical) };
     },
 
     fetchTemplates: async () => {

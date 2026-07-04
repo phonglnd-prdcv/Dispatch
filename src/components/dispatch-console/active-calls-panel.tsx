@@ -18,6 +18,7 @@ import { getTimeAgoUtc, invertColor, isCallActive, stripHtmlTags } from '@/lib/u
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
+import { CheckInTimerStatus } from '@/models/v4/checkIn/checkInEnums';
 import { useCallsStore } from '@/stores/calls/store';
 import { useCheckInStore } from '@/stores/checkIn/store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
@@ -332,7 +333,7 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
   const overdueEntityIds = useMemo(() => {
     const ids = new Set<string>();
     allTimerStatuses.forEach((timer) => {
-      if (timer.Status === 'Overdue' || timer.Status === 'Red' || timer.Status === 'Critical') {
+      if (timer.Status === CheckInTimerStatus.Overdue || timer.Status === CheckInTimerStatus.Red || timer.Status === CheckInTimerStatus.Critical) {
         ids.add(timer.TargetEntityId);
       }
     });
@@ -476,7 +477,18 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
     if (!call) return;
 
     try {
-      await updateCall(buildAddResourcesUpdateRequest(call, callDispatchesMap[call.CallId], selection));
+      // Load the latest dispatch snapshot immediately before building the request so we
+      // union against current server state. A stale or not-yet-fetched cached list would
+      // drop existing dispatches and un-dispatch those resources on updateCall.
+      const latest = await getCallExtraData(call.CallId).catch(() => null);
+      if (!latest?.Data) {
+        // Couldn't confirm the current dispatch list — abort rather than risk overwriting
+        // server state with an incomplete DispatchList.
+        showToast('error', t('call_detail.dispatch_more_error'));
+        return;
+      }
+
+      await updateCall(buildAddResourcesUpdateRequest(call, latest.Data.Dispatches, selection, latest.Data.CallFormData));
 
       // Refresh this call's dispatches so the resource ticker reflects the new assignment.
       const res = await getCallExtraData(call.CallId).catch(() => null);

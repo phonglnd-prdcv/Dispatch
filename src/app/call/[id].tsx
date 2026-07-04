@@ -43,6 +43,7 @@ import { buildAddResourcesUpdateRequest, EMPTY_DISPATCH_SELECTION } from '@/lib/
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
 import { formatDateForDisplay, isCallActive, parseDateISOString } from '@/lib/utils';
+import { CheckInTimerStatus } from '@/models/v4/checkIn/checkInEnums';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
@@ -189,7 +190,7 @@ export default function CallDetail() {
     if (!call) return;
 
     try {
-      await useCallDetailStore.getState().updateCall(buildAddResourcesUpdateRequest(call, callExtraData?.Dispatches, selection));
+      await useCallDetailStore.getState().updateCall(buildAddResourcesUpdateRequest(call, callExtraData?.Dispatches, selection, callExtraData?.CallFormData));
       showToast('success', t('call_detail.dispatch_more_success'));
     } catch (error) {
       logger.error({ message: 'Failed to dispatch additional resources', context: { error, callId: call.CallId } });
@@ -597,9 +598,9 @@ export default function CallDetail() {
 
     if (call?.CheckInTimersEnabled) {
       // Align with the check-in tab's own summary, which treats Red==Overdue, Yellow==Warning, and counts Critical.
-      const overdueCount = timerStatuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Red').length;
-      const warningCount = timerStatuses.filter((s) => s.Status === 'Warning' || s.Status === 'Yellow').length;
-      const criticalCount = timerStatuses.filter((s) => s.Status === 'Critical').length;
+      const overdueCount = timerStatuses.filter((s) => s.Status === CheckInTimerStatus.Overdue || s.Status === CheckInTimerStatus.Red).length;
+      const warningCount = timerStatuses.filter((s) => s.Status === CheckInTimerStatus.Warning || s.Status === CheckInTimerStatus.Yellow).length;
+      const criticalCount = timerStatuses.filter((s) => s.Status === CheckInTimerStatus.Critical).length;
       const badgeCount = overdueCount + warningCount + criticalCount;
 
       tabs.push({

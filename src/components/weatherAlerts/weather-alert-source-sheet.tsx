@@ -21,14 +21,15 @@ interface WeatherAlertSourceSheetProps {
   source?: WeatherAlertSourceResultData | null;
 }
 
-const SOURCE_TYPE_OPTIONS = [
-  { value: WeatherAlertSourceType.NationalWeatherService, label: 'National Weather Service' },
-  { value: WeatherAlertSourceType.EnvironmentCanada, label: 'Environment Canada' },
-  { value: WeatherAlertSourceType.MeteoAlarm, label: 'MeteoAlarm' },
-];
-
 export const WeatherAlertSourceSheet: React.FC<WeatherAlertSourceSheetProps> = ({ isOpen, onClose, source }) => {
   const { t } = useTranslation();
+
+  // Organization names map to localized display strings (values are the same brand names across locales).
+  const sourceTypeOptions = [
+    { value: WeatherAlertSourceType.NationalWeatherService, label: t('weatherAlerts.settings.source_type_national_weather_service') },
+    { value: WeatherAlertSourceType.EnvironmentCanada, label: t('weatherAlerts.settings.source_type_environment_canada') },
+    { value: WeatherAlertSourceType.MeteoAlarm, label: t('weatherAlerts.settings.source_type_meteoalarm') },
+  ];
   const showToast = useToastStore((s) => s.showToast);
   const [name, setName] = useState('');
   const [sourceType, setSourceType] = useState(String(WeatherAlertSourceType.NationalWeatherService));
@@ -100,7 +101,7 @@ export const WeatherAlertSourceSheet: React.FC<WeatherAlertSourceSheetProps> = (
             <SelectPortal>
               <SelectBackdrop />
               <SelectContent>
-                {SOURCE_TYPE_OPTIONS.map((option) => (
+                {sourceTypeOptions.map((option) => (
                   <SelectItem key={option.value} label={option.label} value={String(option.value)} />
                 ))}
               </SelectContent>

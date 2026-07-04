@@ -485,6 +485,9 @@ export default function DispatchConsole() {
               selectedCallId={selectedCallId ?? undefined}
               callDispatches={selectedCallExtraData?.Dispatches}
               onSetUnitStatusForCall={handleSetUnitStatusForCall}
+              selectedPersonnelId={selectedPersonnelId ?? undefined}
+              onSelectPersonnel={handleSelectPersonnel}
+              onSetPersonnelStatusForCall={handleSetPersonnelStatusForCall}
             />
           </VStack>
 
@@ -559,6 +562,9 @@ export default function DispatchConsole() {
               selectedCallId={selectedCallId ?? undefined}
               callDispatches={selectedCallExtraData?.Dispatches}
               onSetUnitStatusForCall={handleSetUnitStatusForCall}
+              selectedPersonnelId={selectedPersonnelId ?? undefined}
+              onSelectPersonnel={handleSelectPersonnel}
+              onSetPersonnelStatusForCall={handleSetPersonnelStatusForCall}
             />
             <PersonnelPanel
               personnel={personnel}
@@ -635,6 +641,9 @@ export default function DispatchConsole() {
                   selectedCallId={selectedCallId ?? undefined}
                   callDispatches={selectedCallExtraData?.Dispatches}
                   onSetUnitStatusForCall={handleSetUnitStatusForCall}
+                  selectedPersonnelId={selectedPersonnelId ?? undefined}
+                  onSelectPersonnel={handleSelectPersonnel}
+                  onSetPersonnelStatusForCall={handleSetPersonnelStatusForCall}
                 />
               </Box>
               <Box className="flex-1">

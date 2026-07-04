@@ -1232,7 +1232,10 @@
       "api_key_set": "(set - leave blank to keep)",
       "custom_endpoint": "Custom endpoint",
       "poll_interval": "Poll interval (minutes)",
-      "delete_source_confirm": "Delete this source?"
+      "delete_source_confirm": "Delete this source?",
+      "source_type_national_weather_service": "National Weather Service",
+      "source_type_environment_canada": "Environment Canada",
+      "source_type_meteoalarm": "MeteoAlarm"
     }
   },
   "videoFeeds": {

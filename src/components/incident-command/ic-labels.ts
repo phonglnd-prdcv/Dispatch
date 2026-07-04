@@ -8,6 +8,7 @@ import {
   IncidentRoleType,
   IncidentTimerStatus,
   IncidentTimerType,
+  ParStatus,
   ResourceAssignmentKind,
   TacticalObjectiveStatus,
   TacticalObjectiveType,
@@ -116,9 +117,9 @@ export const resourceKindLabel = (value: number): string =>
 /** Tailwind text colour class for a PAR status string ("Green" | "Warning" | "Critical"). */
 export const accountabilityColorClass = (status: string): string => {
   switch (status) {
-    case 'Critical':
+    case ParStatus.Critical:
       return 'text-red-600 dark:text-red-400';
-    case 'Warning':
+    case ParStatus.Warning:
       return 'text-amber-600 dark:text-amber-400';
     default:
       return 'text-green-600 dark:text-green-400';

@@ -11,7 +11,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type IncidentCommandBoard } from '@/models/v4/incidentCommand/incidentCommandBoard';
-import { TacticalObjectiveStatus } from '@/models/v4/incidentCommand/incidentCommandEnums';
+import { ParStatus, TacticalObjectiveStatus } from '@/models/v4/incidentCommand/incidentCommandEnums';
 import { useCallsStore } from '@/stores/calls/store';
 import { useIncidentCommandStore } from '@/stores/incident-command/store';
 import { usePersonnelStore } from '@/stores/personnel/store';
@@ -44,7 +44,7 @@ export default function IncidentCommandList() {
   const renderItem = ({ item }: { item: IncidentCommandBoard }) => {
     const command = item.Command;
     const call = calls.find((c) => c.CallId === String(command.CallId));
-    const critical = (item.Accountability ?? []).filter((p) => p.Status === 'Critical').length;
+    const critical = (item.Accountability ?? []).filter((p) => p.Status === ParStatus.Critical).length;
     const activeLanes = (item.Nodes ?? []).filter((n) => !n.DeletedOn).length;
     const roles = (item.Roles ?? []).filter((r) => !r.RemovedOn).length;
     const openObjectives = (item.Objectives ?? []).filter((o) => o.Status !== TacticalObjectiveStatus.Complete).length;

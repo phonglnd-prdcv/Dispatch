@@ -8,6 +8,17 @@ export enum IncidentCommandStatus {
   Closed = 1,
 }
 
+/**
+ * Personnel Accountability Report (PAR) status values reported by personnel check-ins.
+ * Single source of truth for these literals, which the store, labels, and UI all compare against.
+ */
+export const ParStatus = {
+  Green: 'Green',
+  Warning: 'Warning',
+  Critical: 'Critical',
+} as const;
+export type ParStatus = (typeof ParStatus)[keyof typeof ParStatus];
+
 /** ICS structural node types (the "lanes" / span-of-control units on the command board). */
 export enum CommandNodeType {
   Division = 0,

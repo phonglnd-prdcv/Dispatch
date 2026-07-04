@@ -535,7 +535,23 @@ export const MoveNodeSheet: React.FC<{ nodeId: string | null; onClose: () => voi
     if (nodeId) setParentId('');
   }, [nodeId]);
 
-  const lanes = useMemo(() => (board?.Nodes ?? []).filter((n) => !n.DeletedOn && n.CommandStructureNodeId !== nodeId), [board?.Nodes, nodeId]);
+  const lanes = useMemo(() => {
+    const nodes = (board?.Nodes ?? []).filter((n) => !n.DeletedOn);
+    if (!nodeId) return nodes;
+    // Exclude the node itself and its descendants — moving under them would create a cycle.
+    const blocked = new Set<string>([nodeId]);
+    const stack = [nodeId];
+    while (stack.length > 0) {
+      const currentId = stack.pop() as string;
+      for (const n of nodes) {
+        if ((n.ParentNodeId || '') === currentId && !blocked.has(n.CommandStructureNodeId)) {
+          blocked.add(n.CommandStructureNodeId);
+          stack.push(n.CommandStructureNodeId);
+        }
+      }
+    }
+    return nodes.filter((n) => !blocked.has(n.CommandStructureNodeId));
+  }, [board?.Nodes, nodeId]);
 
   const handleSubmit = async () => {
     if (!nodeId) return;
