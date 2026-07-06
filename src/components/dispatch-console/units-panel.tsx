@@ -10,6 +10,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { isUnitDispatch } from '@/lib/dispatch-types';
 import { isUnitAvailable } from '@/lib/resource-availability';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
@@ -163,7 +164,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({
 
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
       // Get unit names from dispatches (dispatches contain unit info by name)
-      const dispatchedUnitNames = callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase());
+      const dispatchedUnitNames = callDispatches.filter(isUnitDispatch).map((d) => d.Name.toLowerCase());
 
       // Also check units whose CurrentDestinationId matches the call
       filtered = units.filter((u) => dispatchedUnitNames.includes(u.Name.toLowerCase()) || (selectedCallId && u.CurrentDestinationId === selectedCallId));
@@ -193,7 +194,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({
   // Get list of unit names that are dispatched to the call
   const dispatchedUnitNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    return new Set(callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase()));
+    return new Set(callDispatches.filter(isUnitDispatch).map((d) => d.Name.toLowerCase()));
   }, [callDispatches]);
 
   // Count available units

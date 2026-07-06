@@ -42,6 +42,10 @@ jest.mock('@/stores/app/server-url-store', () => ({
 
 jest.mock('@/lib/env', () => ({ Env: { API_VERSION: 'v4' } }));
 jest.mock('@/lib/logging', () => ({ logger: { info: jest.fn(), error: jest.fn() } }));
+jest.mock('@/api/config', () => ({
+  getSystemConfig: jest.fn().mockResolvedValue({ Data: { Locations: [] } }),
+}));
+jest.mock('lucide-react-native', () => ({ ChevronDownIcon: 'ChevronDownIcon' }));
 
 // Create mock UI component factory functions
 const createMockUIComponent = (displayName: string) => ({ children, testID, ...props }: any) => {
@@ -90,6 +94,19 @@ jest.mock('../../ui/input', () => ({
 }));
 jest.mock('../../ui/text', () => ({ Text: createMockTextComponent('Text') }));
 jest.mock('../../ui/vstack', () => ({ VStack: createMockUIComponent('VStack') }));
+jest.mock('../../ui/select', () => ({
+  Select: createMockUIComponent('Select'),
+  SelectBackdrop: createMockUIComponent('SelectBackdrop'),
+  SelectContent: createMockUIComponent('SelectContent'),
+  SelectDragIndicator: createMockUIComponent('SelectDragIndicator'),
+  SelectDragIndicatorWrapper: createMockUIComponent('SelectDragIndicatorWrapper'),
+  SelectIcon: createMockUIComponent('SelectIcon'),
+  SelectInput: createMockUIComponent('SelectInput'),
+  SelectItem: createMockUIComponent('SelectItem'),
+  SelectPortal: createMockUIComponent('SelectPortal'),
+  SelectTrigger: createMockUIComponent('SelectTrigger'),
+}));
+jest.mock('../../ui/spinner', () => ({ Spinner: createMockUIComponent('Spinner') }));
 
 describe('ServerUrlBottomSheet - Simple', () => {
   const defaultProps = {

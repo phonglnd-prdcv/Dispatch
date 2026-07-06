@@ -10,6 +10,7 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { isPersonnelDispatch, isUnitDispatch } from '@/lib/dispatch-types';
 import { isPersonnelAvailable, isUnitAvailable } from '@/lib/resource-availability';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
@@ -80,14 +81,13 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
   // Unit names dispatched to the call — used for on-call highlighting (mirrors UnitsPanel).
   const dispatchedUnitNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    return new Set(callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase()));
+    return new Set(callDispatches.filter(isUnitDispatch).map((d) => d.Name.toLowerCase()));
   }, [callDispatches]);
 
   // Personnel ids/names dispatched to the call, with the same strict-then-fallback matching PersonnelPanel uses.
   const dispatchedPersonnelIds = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
-    const byType = callDispatches.filter((d) => personnelTypes.has(d.Type));
+    const byType = callDispatches.filter(isPersonnelDispatch);
     const ids = new Set(byType.map((d) => d.Id).filter(Boolean));
     if (ids.size === 0) {
       return new Set(callDispatches.map((d) => d.Id).filter(Boolean));
@@ -97,8 +97,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
 
   const dispatchedPersonnelNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
-    const byType = new Set(callDispatches.filter((d) => personnelTypes.has(d.Type)).map((d) => d.Name.toLowerCase()));
+    const byType = new Set(callDispatches.filter(isPersonnelDispatch).map((d) => d.Name.toLowerCase()));
     if (byType.size === 0) {
       return new Set(callDispatches.map((d) => d.Name.toLowerCase()));
     }
@@ -109,15 +108,14 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
     // Call filter: narrow to units dispatched to (or destined for) the call, mirroring UnitsPanel.
     let unitSource = units;
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
-      const names = callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase());
+      const names = callDispatches.filter(isUnitDispatch).map((d) => d.Name.toLowerCase());
       unitSource = units.filter((u) => names.includes(u.Name.toLowerCase()) || Boolean(selectedCallId && u.CurrentDestinationId === selectedCallId));
     }
 
     // Call filter: narrow to personnel dispatched to (or destined for) the call, mirroring PersonnelPanel.
     let personnelSource = personnel;
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
-      const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
-      const personnelDispatches = callDispatches.filter((d) => personnelTypes.has(d.Type));
+      const personnelDispatches = callDispatches.filter(isPersonnelDispatch);
       const ids = new Set(personnelDispatches.map((d) => d.Id).filter(Boolean));
       const names = new Set(personnelDispatches.map((d) => d.Name.toLowerCase()));
       personnelSource = personnel.filter((p) => {
