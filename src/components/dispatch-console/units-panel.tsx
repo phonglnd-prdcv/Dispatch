@@ -10,11 +10,16 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { isUnitDispatch } from '@/lib/dispatch-types';
+import { isUnitAvailable } from '@/lib/resource-availability';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
+import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
+import { useDashboardViewStore } from '@/stores/dispatch/dashboard-view-store';
 
 import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
+import { ResourcesPanel } from './resources-panel';
 
 interface UnitsPanelProps {
   units: UnitInfoResultData[];
@@ -27,6 +32,10 @@ interface UnitsPanelProps {
   selectedCallId?: string;
   callDispatches?: DispatchedEventResultData[];
   onSetUnitStatusForCall?: (unitId: string, unitName: string) => void;
+  // Personnel props — forwarded to the combined ResourcesPanel in single-list mode
+  selectedPersonnelId?: string;
+  onSelectPersonnel?: (personnelId: string, person: PersonnelInfoResultData) => void;
+  onSetPersonnelStatusForCall?: (personnelId: string, personnelName: string) => void;
 }
 
 const getStatusColor = (statusColor: string | undefined, statusId: string): string => {
@@ -129,10 +138,25 @@ const UnitItem: React.FC<{
   );
 };
 
-export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefresh, selectedUnitId, onSelectUnit, isCallFilterActive, selectedCallId, callDispatches, onSetUnitStatusForCall }) => {
+export const UnitsPanel: React.FC<UnitsPanelProps> = ({
+  units,
+  isLoading,
+  onRefresh,
+  selectedUnitId,
+  onSelectUnit,
+  isCallFilterActive,
+  selectedCallId,
+  callDispatches,
+  onSetUnitStatusForCall,
+  selectedPersonnelId,
+  onSelectPersonnel,
+  onSetPersonnelStatusForCall,
+}) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const availableOnly = useDashboardViewStore((s) => s.availableOnly);
+  const singleList = useDashboardViewStore((s) => s.singleList);
 
   // Filter units based on call dispatches when filter is active and search query
   const displayedUnits = useMemo(() => {
@@ -140,7 +164,7 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
 
     if (isCallFilterActive && callDispatches && callDispatches.length > 0) {
       // Get unit names from dispatches (dispatches contain unit info by name)
-      const dispatchedUnitNames = callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase());
+      const dispatchedUnitNames = callDispatches.filter(isUnitDispatch).map((d) => d.Name.toLowerCase());
 
       // Also check units whose CurrentDestinationId matches the call
       filtered = units.filter((u) => dispatchedUnitNames.includes(u.Name.toLowerCase()) || (selectedCallId && u.CurrentDestinationId === selectedCallId));
@@ -159,17 +183,40 @@ export const UnitsPanel: React.FC<UnitsPanelProps> = ({ units, isLoading, onRefr
       });
     }
 
+    // Show only currently-available units when the dashboard toggle is on
+    if (availableOnly) {
+      filtered = filtered.filter(isUnitAvailable);
+    }
+
     return filtered;
-  }, [units, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
+  }, [units, isCallFilterActive, callDispatches, selectedCallId, searchQuery, availableOnly]);
 
   // Get list of unit names that are dispatched to the call
   const dispatchedUnitNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    return new Set(callDispatches.filter((d) => d.Type === 'Unit' || d.Type === 'u').map((d) => d.Name.toLowerCase()));
+    return new Set(callDispatches.filter(isUnitDispatch).map((d) => d.Name.toLowerCase()));
   }, [callDispatches]);
 
   // Count available units
   const availableUnits = displayedUnits.filter((u) => !u.CurrentStatusId || u.CurrentStatusId === 'available').length;
+
+  // When "single list" is on, units + personnel are shown together in the combined ResourcesPanel
+  // (rendered from the units slot); the Personnel panel hides itself.
+  if (singleList) {
+    return (
+      <ResourcesPanel
+        isCallFilterActive={isCallFilterActive}
+        selectedCallId={selectedCallId}
+        callDispatches={callDispatches}
+        selectedUnitId={selectedUnitId}
+        onSelectUnit={onSelectUnit}
+        onSetUnitStatusForCall={onSetUnitStatusForCall}
+        selectedPersonnelId={selectedPersonnelId}
+        onSelectPersonnel={onSelectPersonnel}
+        onSetPersonnelStatusForCall={onSetPersonnelStatusForCall}
+      />
+    );
+  }
 
   return (
     <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>

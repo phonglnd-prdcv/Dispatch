@@ -11,8 +11,11 @@ import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { isPersonnelDispatch } from '@/lib/dispatch-types';
+import { isPersonnelAvailable } from '@/lib/resource-availability';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
+import { useDashboardViewStore } from '@/stores/dispatch/dashboard-view-store';
 
 import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
@@ -132,6 +135,8 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const availableOnly = useDashboardViewStore((s) => s.availableOnly);
+  const singleList = useDashboardViewStore((s) => s.singleList);
 
   // Handle personnel selection - notifies parent to handle actions
   const handleSelectPersonnel = useCallback(
@@ -158,8 +163,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
       }
 
       // Match personnel to dispatches — prefer stable ID matching, fall back to name
-      const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
-      const personnelDispatches = callDispatches.filter((d) => personnelTypes.has(d.Type));
+      const personnelDispatches = callDispatches.filter(isPersonnelDispatch);
       const dispatchedIds = new Set(personnelDispatches.map((d) => d.Id).filter(Boolean));
       const dispatchedNames = new Set(personnelDispatches.map((d) => d.Name.toLowerCase()));
 
@@ -196,14 +200,18 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
       });
     }
 
+    // Show only currently-available personnel when the dashboard toggle is on
+    if (availableOnly) {
+      filtered = filtered.filter(isPersonnelAvailable);
+    }
+
     return filtered;
-  }, [personnel, isCallFilterActive, callDispatches, selectedCallId, searchQuery]);
+  }, [personnel, isCallFilterActive, callDispatches, selectedCallId, searchQuery, availableOnly]);
 
   // Get dispatched personnel IDs and names for highlight matching
   const dispatchedPersonnelIds = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
-    const byType = callDispatches.filter((d) => personnelTypes.has(d.Type));
+    const byType = callDispatches.filter(isPersonnelDispatch);
     const ids = new Set(byType.map((d) => d.Id).filter(Boolean));
     if (ids.size === 0) {
       return new Set(callDispatches.map((d) => d.Id).filter(Boolean));
@@ -213,8 +221,7 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
 
   const dispatchedPersonnelNames = useMemo(() => {
     if (!callDispatches) return new Set<string>();
-    const personnelTypes = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
-    const byType = new Set(callDispatches.filter((d) => personnelTypes.has(d.Type)).map((d) => d.Name.toLowerCase()));
+    const byType = new Set(callDispatches.filter(isPersonnelDispatch).map((d) => d.Name.toLowerCase()));
     if (byType.size === 0) {
       return new Set(callDispatches.map((d) => d.Name.toLowerCase()));
     }
@@ -223,6 +230,12 @@ export const PersonnelPanel: React.FC<PersonnelPanelProps> = ({
 
   // Count on-duty personnel
   const onDutyCount = displayedPersonnel.filter((p) => p.Staffing && p.Staffing.toLowerCase() !== 'off duty').length;
+
+  // When "single list" is on, the combined ResourcesPanel (rendered from the units slot) already
+  // includes personnel, so this panel hides itself to avoid duplication.
+  if (singleList) {
+    return null;
+  }
 
   return (
     <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>

@@ -1,24 +1,30 @@
 import { type Href, router } from 'expo-router';
-import { AlertTriangle, Clock, ExternalLink, MapPin, Plus, Radio, Search, X } from 'lucide-react-native';
+import { AlertTriangle, Clock, ExternalLink, MapPin, Navigation, Plus, Radio, Search, UserPlus, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
+import { Animated, Easing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
 
-import { getCallExtraData } from '@/api/calls/calls';
+import { getCallExtraData, updateCall } from '@/api/calls/calls';
+import { DispatchSelectionModal } from '@/components/calls/dispatch-selection-modal';
 import { Badge } from '@/components/ui/badge';
 import { Box } from '@/components/ui/box';
 import { HStack } from '@/components/ui/hstack';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { buildAddResourcesUpdateRequest, EMPTY_DISPATCH_SELECTION } from '@/lib/dispatch-helpers';
+import { logger } from '@/lib/logging';
 import { getTimeAgoUtc, invertColor, isCallActive, stripHtmlTags } from '@/lib/utils';
 import { type CallPriorityResultData } from '@/models/v4/callPriorities/callPriorityResultData';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
+import { CheckInTimerStatus } from '@/models/v4/checkIn/checkInEnums';
 import { useCallsStore } from '@/stores/calls/store';
 import { useCheckInStore } from '@/stores/checkIn/store';
 import { useDispatchConsoleStore } from '@/stores/dispatch/dispatch-console-store';
+import { type DispatchSelection } from '@/stores/dispatch/store';
 import { useSecurityStore } from '@/stores/security/store';
+import { useToastStore } from '@/stores/toast/store';
 
 import { AnimatedRefreshIcon } from './animated-refresh-icon';
 import { PanelHeader } from './panel-header';
@@ -178,6 +184,11 @@ const DashboardCallCard: React.FC<{
     return stripHtmlTags(call.Nature).trim();
   }, [call.Nature]);
 
+  const destinationText = useMemo(() => {
+    if (!call.DestinationName) return '';
+    return call.DestinationTypeName ? `${call.DestinationTypeName}: ${call.DestinationName}` : call.DestinationName;
+  }, [call.DestinationName, call.DestinationTypeName]);
+
   return (
     <View style={StyleSheet.flatten([styles.dashboardCard, { backgroundColor: bgColor }])}>
       {/* Top Row: Priority indicator, Call Number & Time */}
@@ -206,6 +217,16 @@ const DashboardCallCard: React.FC<{
             </View>
             <RNText style={StyleSheet.flatten([styles.cardDetailText, { color: textColor }])} numberOfLines={1} ellipsizeMode="tail">
               {call.Address}
+            </RNText>
+          </View>
+        ) : null}
+        {destinationText ? (
+          <View style={styles.cardDetailRow}>
+            <View style={styles.cardDetailIcon}>
+              <Navigation size={10} color={textColor} />
+            </View>
+            <RNText style={StyleSheet.flatten([styles.cardDetailText, styles.cardDestinationText, { color: textColor }])} numberOfLines={1} ellipsizeMode="tail">
+              {destinationText}
             </RNText>
           </View>
         ) : null}
@@ -247,7 +268,8 @@ const CallItemWrapper: React.FC<{
   overdueEntityIds?: Set<string>;
   onPress: () => void;
   onOpenDetails: () => void;
-}> = ({ call, priority, isSelected, isFilterActive, dispatches, isLoadingDispatches, overdueEntityIds, onPress, onOpenDetails }) => {
+  onDispatchMore?: () => void;
+}> = ({ call, priority, isSelected, isFilterActive, dispatches, isLoadingDispatches, overdueEntityIds, onPress, onOpenDetails, onDispatchMore }) => {
   void isFilterActive; // kept in props for selection badge only
   const { t } = useTranslation();
   const bgColor = priority?.Color || '#6b7280';
@@ -281,6 +303,19 @@ const CallItemWrapper: React.FC<{
           >
             <ExternalLink size={12} color={textColor} />
           </Pressable>
+          {onDispatchMore ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation();
+                onDispatchMore();
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={StyleSheet.flatten([styles.dispatchMoreButton, { backgroundColor: `${bgColor}dd` }])}
+              testID={`dispatch-more-${call.CallId}`}
+            >
+              <UserPlus size={12} color={textColor} />
+            </Pressable>
+          ) : null}
         </View>
       </Box>
     </Pressable>
@@ -290,13 +325,15 @@ const CallItemWrapper: React.FC<{
 export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCallId, onSelectCall, isFilterActive = false }) => {
   const { t } = useTranslation();
   const { canUserCreateCalls } = useSecurityStore();
+  const showToast = useToastStore((state) => state.showToast);
+  const [dispatchTargetCall, setDispatchTargetCall] = useState<CallResultData | null>(null);
 
   // Check-in timer statuses for overdue detection
   const allTimerStatuses = useCheckInStore((s) => s.timerStatuses);
   const overdueEntityIds = useMemo(() => {
     const ids = new Set<string>();
     allTimerStatuses.forEach((timer) => {
-      if (timer.Status === 'Overdue' || timer.Status === 'Red' || timer.Status === 'Critical') {
+      if (timer.Status === CheckInTimerStatus.Overdue || timer.Status === CheckInTimerStatus.Red || timer.Status === CheckInTimerStatus.Critical) {
         ids.add(timer.TargetEntityId);
       }
     });
@@ -433,6 +470,39 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
     router.push(`/call/${callId}` as Href);
   }, []);
 
+  // Dispatch additional resources to the targeted call. Picked resources are unioned with the call's
+  // existing dispatches so nothing is un-dispatched; the server notifies only the newly-added resources.
+  const handleDispatchAdditional = async (selection: DispatchSelection) => {
+    const call = dispatchTargetCall;
+    if (!call) return;
+
+    try {
+      // Load the latest dispatch snapshot immediately before building the request so we
+      // union against current server state. A stale or not-yet-fetched cached list would
+      // drop existing dispatches and un-dispatch those resources on updateCall.
+      const latest = await getCallExtraData(call.CallId).catch(() => null);
+      if (!latest?.Data) {
+        // Couldn't confirm the current dispatch list — abort rather than risk overwriting
+        // server state with an incomplete DispatchList.
+        showToast('error', t('call_detail.dispatch_more_error'));
+        return;
+      }
+
+      await updateCall(buildAddResourcesUpdateRequest(call, latest.Data.Dispatches, selection, latest.Data.CallFormData));
+
+      // Refresh this call's dispatches so the resource ticker reflects the new assignment.
+      const res = await getCallExtraData(call.CallId).catch(() => null);
+      if (res?.Data?.Dispatches) {
+        setCallDispatchesMap((prev) => ({ ...prev, [call.CallId]: res.Data.Dispatches }));
+      }
+
+      showToast('success', t('call_detail.dispatch_more_success'));
+    } catch (error) {
+      logger.error({ message: 'Failed to dispatch additional resources', context: { error, callId: call.CallId } });
+      showToast('error', t('call_detail.dispatch_more_error'));
+    }
+  };
+
   // Handle refresh
   const handleRefresh = useCallback(() => {
     // Invalidate all in-flight per-call requests by wiping the epoch map;
@@ -519,12 +589,18 @@ export const ActiveCallsPanel: React.FC<ActiveCallsPanelProps> = ({ selectedCall
                     onSelectCall?.(call.CallId);
                   }}
                   onOpenDetails={() => handleOpenCallDetails(call.CallId)}
+                  onDispatchMore={canUserCreateCalls ? () => setDispatchTargetCall(call) : undefined}
                 />
               ))
             )}
           </ScrollView>
         </View>
       ) : null}
+
+      {/* Dispatch additional resources — RN Modal portals above the panel's overflow-hidden container. */}
+      <Modal visible={!!dispatchTargetCall} transparent animationType="slide" onRequestClose={() => setDispatchTargetCall(null)}>
+        <DispatchSelectionModal isVisible={!!dispatchTargetCall} onClose={() => setDispatchTargetCall(null)} onConfirm={handleDispatchAdditional} initialSelection={EMPTY_DISPATCH_SELECTION} />
+      </Modal>
     </Box>
   );
 };
@@ -577,6 +653,13 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRadius: 4,
   },
+  dispatchMoreButton: {
+    position: 'absolute',
+    top: 6,
+    right: 34,
+    padding: 4,
+    borderRadius: 4,
+  },
   // Dashboard Card Styles
   dashboardCard: {
     borderRadius: 8,
@@ -606,7 +689,7 @@ const styles = StyleSheet.create({
   cardTimeGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 24, // Space for the details button
+    marginRight: 52, // Space for the details + dispatch-more buttons
   },
   cardTimeText: {
     fontSize: 10,
@@ -630,6 +713,9 @@ const styles = StyleSheet.create({
   cardDetailText: {
     fontSize: 10,
     flex: 1,
+  },
+  cardDestinationText: {
+    fontWeight: '600' as const,
   },
   cardNatureText: {
     fontSize: 10,

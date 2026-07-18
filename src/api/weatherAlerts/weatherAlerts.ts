@@ -1,6 +1,9 @@
+import { type BaseV4Request } from '@/models/v4/baseV4Request';
 import { type ActiveWeatherAlertsResult } from '@/models/v4/weatherAlerts/activeWeatherAlertsResult';
 import { type WeatherAlertResult } from '@/models/v4/weatherAlerts/weatherAlertResult';
+import { type WeatherAlertSettingsData } from '@/models/v4/weatherAlerts/weatherAlertSettingsData';
 import { type WeatherAlertSettingsResult } from '@/models/v4/weatherAlerts/weatherAlertSettingsResult';
+import { type WeatherAlertSourcesResult } from '@/models/v4/weatherAlerts/weatherAlertSourcesResult';
 import { type WeatherAlertZonesResult } from '@/models/v4/weatherAlerts/weatherAlertZonesResult';
 
 import { createApiEndpoint } from '../common/client';
@@ -40,5 +43,63 @@ export const getWeatherAlertSettings = async (signal?: AbortSignal) => {
 
 export const getWeatherAlertZones = async (signal?: AbortSignal) => {
   const response = await zonesApi.get<WeatherAlertZonesResult>(undefined, signal);
+  return response.data;
+};
+
+// --- Configuration / management --------------------------------------------
+
+const saveSettingsApi = createApiEndpoint('/WeatherAlerts/SaveSettings');
+const sourcesApi = createApiEndpoint('/WeatherAlerts/GetSources');
+const saveSourceApi = createApiEndpoint('/WeatherAlerts/SaveSource');
+const saveZoneApi = createApiEndpoint('/WeatherAlerts/SaveZone');
+
+export interface SaveWeatherAlertSourceInput {
+  WeatherAlertSourceId?: string;
+  Name: string;
+  SourceType: number;
+  AreaFilter: string;
+  ApiKey: string;
+  CustomEndpoint: string;
+  PollIntervalMinutes: number;
+  Active: boolean;
+}
+
+export interface SaveWeatherAlertZoneInput {
+  WeatherAlertZoneId?: string;
+  Name: string;
+  ZoneCode: string;
+  CenterGeoLocation: string;
+  RadiusMiles: number;
+  IsActive: boolean;
+  IsPrimary: boolean;
+}
+
+export const saveWeatherAlertSettings = async (input: WeatherAlertSettingsData) => {
+  const response = await saveSettingsApi.post<WeatherAlertSettingsResult>({ ...input });
+  return response.data;
+};
+
+export const getWeatherAlertSources = async (signal?: AbortSignal) => {
+  const response = await sourcesApi.get<WeatherAlertSourcesResult>(undefined, signal);
+  return response.data;
+};
+
+export const saveWeatherAlertSource = async (input: SaveWeatherAlertSourceInput) => {
+  const response = await saveSourceApi.post<WeatherAlertSourcesResult>({ ...input });
+  return response.data;
+};
+
+export const deleteWeatherAlertSource = async (sourceId: string) => {
+  const response = await createApiEndpoint(`/WeatherAlerts/DeleteSource/${encodeURIComponent(sourceId)}`).delete<BaseV4Request>();
+  return response.data;
+};
+
+export const saveWeatherAlertZone = async (input: SaveWeatherAlertZoneInput) => {
+  const response = await saveZoneApi.post<WeatherAlertZonesResult>({ ...input });
+  return response.data;
+};
+
+export const deleteWeatherAlertZone = async (zoneId: string) => {
+  const response = await createApiEndpoint(`/WeatherAlerts/DeleteZone/${encodeURIComponent(zoneId)}`).delete<BaseV4Request>();
   return response.data;
 };

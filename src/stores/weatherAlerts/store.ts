@@ -1,10 +1,27 @@
 import { create } from 'zustand';
 
-import { getActiveAlerts, getAlertsNearLocation, getWeatherAlert, getWeatherAlertSettings } from '@/api/weatherAlerts/weatherAlerts';
+import {
+  deleteWeatherAlertSource,
+  deleteWeatherAlertZone,
+  getActiveAlerts,
+  getAlertHistory,
+  getAlertsNearLocation,
+  getWeatherAlert,
+  getWeatherAlertSettings,
+  getWeatherAlertSources,
+  getWeatherAlertZones,
+  saveWeatherAlertSettings,
+  saveWeatherAlertSource,
+  type SaveWeatherAlertSourceInput,
+  saveWeatherAlertZone,
+  type SaveWeatherAlertZoneInput,
+} from '@/api/weatherAlerts/weatherAlerts';
 import { logger } from '@/lib/logging';
 import { WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
 import { type WeatherAlertResultData } from '@/models/v4/weatherAlerts/weatherAlertResultData';
 import { type WeatherAlertSettingsData } from '@/models/v4/weatherAlerts/weatherAlertSettingsData';
+import { type WeatherAlertSourceResultData } from '@/models/v4/weatherAlerts/weatherAlertSourceResultData';
+import { type WeatherAlertZoneResultData } from '@/models/v4/weatherAlerts/weatherAlertZoneResultData';
 
 function sortAlerts(a: WeatherAlertResultData, b: WeatherAlertResultData): number {
   if (a.Severity !== b.Severity) return a.Severity - b.Severity;
@@ -24,12 +41,29 @@ interface WeatherAlertsState {
   nearbyAlerts: WeatherAlertResultData[];
   isLoadingNearby: boolean;
 
+  history: WeatherAlertResultData[];
+  isLoadingHistory: boolean;
+
+  sources: WeatherAlertSourceResultData[];
+  isLoadingSources: boolean;
+  zones: WeatherAlertZoneResultData[];
+  isLoadingZones: boolean;
+  isSavingSettings: boolean;
+
   lastWeatherAlertTimestamp: number;
 
   fetchActiveAlerts: () => Promise<void>;
   fetchAlertDetail: (alertId: string) => Promise<void>;
   fetchNearbyAlerts: (lat: number, lng: number, radiusMiles?: number) => Promise<void>;
+  fetchHistory: (startDate: string, endDate: string) => Promise<void>;
   fetchSettings: () => Promise<void>;
+  saveSettings: (settings: WeatherAlertSettingsData) => Promise<void>;
+  fetchSources: () => Promise<void>;
+  saveSource: (input: SaveWeatherAlertSourceInput) => Promise<void>;
+  deleteSource: (sourceId: string) => Promise<void>;
+  fetchZones: () => Promise<void>;
+  saveZone: (input: SaveWeatherAlertZoneInput) => Promise<void>;
+  deleteZone: (zoneId: string) => Promise<void>;
   handleAlertReceived: (alertId: string) => Promise<void>;
   handleAlertExpired: (alertId: string) => void;
   handleAlertUpdated: (alertId: string) => Promise<void>;
@@ -45,6 +79,13 @@ export const useWeatherAlertsStore = create<WeatherAlertsState>((set, get) => ({
   settings: null,
   nearbyAlerts: [],
   isLoadingNearby: false,
+  history: [],
+  isLoadingHistory: false,
+  sources: [],
+  isLoadingSources: false,
+  zones: [],
+  isLoadingZones: false,
+  isSavingSettings: false,
   lastWeatherAlertTimestamp: 0,
 
   fetchActiveAlerts: async () => {
@@ -85,12 +126,97 @@ export const useWeatherAlertsStore = create<WeatherAlertsState>((set, get) => ({
     }
   },
 
+  fetchHistory: async (startDate: string, endDate: string) => {
+    set({ isLoadingHistory: true });
+    try {
+      const result = await getAlertHistory(startDate, endDate);
+      set({ history: (result.Data || []).sort(sortAlerts), isLoadingHistory: false });
+    } catch (error) {
+      logger.error({ message: 'Failed to fetch weather alert history', context: { error } });
+      set({ isLoadingHistory: false });
+    }
+  },
+
   fetchSettings: async () => {
     try {
       const result = await getWeatherAlertSettings();
       set({ settings: result.Data });
     } catch (error) {
       logger.error({ message: 'Failed to fetch weather alert settings', context: { error } });
+    }
+  },
+
+  saveSettings: async (settings: WeatherAlertSettingsData) => {
+    set({ isSavingSettings: true });
+    try {
+      const result = await saveWeatherAlertSettings(settings);
+      set({ settings: result?.Data ?? settings, isSavingSettings: false });
+    } catch (error) {
+      logger.error({ message: 'Failed to save weather alert settings', context: { error } });
+      set({ isSavingSettings: false });
+      throw error;
+    }
+  },
+
+  fetchSources: async () => {
+    set({ isLoadingSources: true });
+    try {
+      const result = await getWeatherAlertSources();
+      set({ sources: result.Data || [], isLoadingSources: false });
+    } catch (error) {
+      logger.error({ message: 'Failed to fetch weather alert sources', context: { error } });
+      set({ isLoadingSources: false });
+    }
+  },
+
+  saveSource: async (input: SaveWeatherAlertSourceInput) => {
+    try {
+      await saveWeatherAlertSource(input);
+      await get().fetchSources();
+    } catch (error) {
+      logger.error({ message: 'Failed to save weather alert source', context: { error } });
+      throw error;
+    }
+  },
+
+  deleteSource: async (sourceId: string) => {
+    try {
+      await deleteWeatherAlertSource(sourceId);
+      await get().fetchSources();
+    } catch (error) {
+      logger.error({ message: 'Failed to delete weather alert source', context: { error } });
+      throw error;
+    }
+  },
+
+  fetchZones: async () => {
+    set({ isLoadingZones: true });
+    try {
+      const result = await getWeatherAlertZones();
+      set({ zones: result.Data || [], isLoadingZones: false });
+    } catch (error) {
+      logger.error({ message: 'Failed to fetch weather alert zones', context: { error } });
+      set({ isLoadingZones: false });
+    }
+  },
+
+  saveZone: async (input: SaveWeatherAlertZoneInput) => {
+    try {
+      await saveWeatherAlertZone(input);
+      await get().fetchZones();
+    } catch (error) {
+      logger.error({ message: 'Failed to save weather alert zone', context: { error } });
+      throw error;
+    }
+  },
+
+  deleteZone: async (zoneId: string) => {
+    try {
+      await deleteWeatherAlertZone(zoneId);
+      await get().fetchZones();
+    } catch (error) {
+      logger.error({ message: 'Failed to delete weather alert zone', context: { error } });
+      throw error;
     }
   },
 
@@ -152,6 +278,13 @@ export const useWeatherAlertsStore = create<WeatherAlertsState>((set, get) => ({
       isLoadingDetail: false,
       nearbyAlerts: [],
       isLoadingNearby: false,
+      history: [],
+      isLoadingHistory: false,
+      sources: [],
+      isLoadingSources: false,
+      zones: [],
+      isLoadingZones: false,
+      isSavingSettings: false,
       lastWeatherAlertTimestamp: 0,
     });
   },

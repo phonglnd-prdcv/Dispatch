@@ -12,6 +12,7 @@ import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import MapPins from '@/components/maps/map-pins';
 import PinDetailModal from '@/components/maps/pin-detail-modal';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
+import { useActiveMapLayers } from '@/hooks/use-active-map-layers';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAppLifecycle } from '@/hooks/use-app-lifecycle';
 import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
@@ -54,6 +55,9 @@ export default function Map() {
 
   // Map layers hook
   const { layers, visibleLayers, isLoading: isLayersLoading, fetchLayers, toggleLayer, showAllLayers, hideAllLayers, getVisibleLayerData } = useMapLayers({ initialLayerType: MapLayerType.ALL, autoFetch: true });
+
+  // Custom-map region layers (RE1-T105) rendered on top of the legacy vector layers.
+  const { activeLayers } = useActiveMapLayers();
 
   const _mapOptions = Object.keys(Mapbox.StyleURL)
     .map((key) => {
@@ -477,6 +481,21 @@ export default function Map() {
     });
   };
 
+  // Render on-by-default custom-map region layers (GeoJSON) fetched via GetAllActiveLayers.
+  const renderActiveCustomLayers = () => {
+    return activeLayers.map((layer) => {
+      if (!layer.data?.features || layer.data.features.length === 0) {
+        return null;
+      }
+      return (
+        <Mapbox.ShapeSource key={`active-source-${layer.id}`} id={`active-source-${layer.id}`} shape={layer.data as FeatureCollection}>
+          <Mapbox.FillLayer id={`active-fill-${layer.id}`} style={{ fillColor: layer.color, fillOpacity: 0.25, fillOutlineColor: layer.color } as FillLayerStyle} />
+          <Mapbox.LineLayer id={`active-line-${layer.id}`} style={{ lineColor: layer.color, lineWidth: 2, lineOpacity: 0.8 } as LineLayerStyle} />
+        </Mapbox.ShapeSource>
+      );
+    });
+  };
+
   // Render layers panel modal
   const renderLayersPanel = () => {
     const isDark = colorScheme === 'dark';
@@ -563,6 +582,7 @@ export default function Map() {
 
           {/* Render custom layers */}
           {renderMapLayers()}
+          {renderActiveCustomLayers()}
 
           {location.latitude && location.longitude ? (
             <Mapbox.PointAnnotation id="userLocation" coordinate={[location.longitude, location.latitude]} anchor={{ x: 0.5, y: 0.5 }}>

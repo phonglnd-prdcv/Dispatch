@@ -8,6 +8,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TouchableOpacit
 
 import { getMapDataAndMarkers } from '@/api/mapping/mapping';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
+import { useActiveMapLayers } from '@/hooks/use-active-map-layers';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { MapLayerType, useMapLayers } from '@/hooks/use-map-layers';
 import { Env } from '@/lib/env';
@@ -32,6 +33,8 @@ export default function MapWeb() {
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const layerIdsRef = useRef<string[]>([]);
   const sourceIdsRef = useRef<string[]>([]);
+  const activeSourceIdsRef = useRef<string[]>([]);
+  const activeLayerIdsRef = useRef<string[]>([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [mapPins, setMapPins] = useState<MapMakerInfoData[]>([]);
   const [poiLayers, setPoiLayers] = useState<PoiLayerData[]>([]);
@@ -45,6 +48,9 @@ export default function MapWeb() {
 
   // Map layers hook
   const { layers, visibleLayers, isLoading: isLayersLoading, fetchLayers, toggleLayer, showAllLayers, hideAllLayers, getVisibleLayerData } = useMapLayers({ initialLayerType: MapLayerType.ALL, autoFetch: true });
+
+  // Custom-map region layers (RE1-T105) rendered on top of the legacy vector layers.
+  const { activeLayers } = useActiveMapLayers();
 
   const syncPoiLayers = useCallback((nextPoiLayers: PoiLayerData[]) => {
     setPoiLayers(nextPoiLayers);
@@ -147,9 +153,23 @@ export default function MapWeb() {
 
   // Update map style when theme changes
   useEffect(() => {
-    if (map.current && isMapReady) {
-      map.current.setStyle(getMapStyle());
-    }
+    const instance = map.current;
+    if (!instance || !isMapReady) return;
+
+    instance.setStyle(getMapStyle());
+
+    // setStyle replaces the whole style and drops every runtime-added source/layer.
+    // Re-add the runtime layers once the new style has finished loading. Custom
+    // (base) layers go first so the active region layers stay rendered on top.
+    const handleStyleLoad = () => {
+      addCustomMapLayersRef.current(instance);
+      addActiveMapLayersRef.current(instance);
+    };
+    instance.once('style.load', handleStyleLoad);
+
+    return () => {
+      instance.off('style.load', handleStyleLoad);
+    };
   }, [colorScheme, getMapStyle, isMapReady]);
 
   // Handle navigation focus - refresh data when navigating back to map
@@ -241,100 +261,162 @@ export default function MapWeb() {
     });
   }, [visibleMapPins, isMapReady, colorScheme]);
 
-  // Update layers when visibility changes
-  useEffect(() => {
-    if (!map.current || !isMapReady) return;
+  // Update layers when visibility changes.
+  // Extracted so it can also be re-run after a style reload (mapbox setStyle wipes
+  // every runtime-added source/layer, so theme changes would otherwise drop these).
+  const addCustomMapLayers = useCallback(
+    (instance: mapboxgl.Map) => {
+      // Remove existing custom layers
+      layerIdsRef.current.forEach((layerId) => {
+        if (instance.getLayer(layerId)) {
+          instance.removeLayer(layerId);
+        }
+      });
+      sourceIdsRef.current.forEach((sourceId) => {
+        if (instance.getSource(sourceId)) {
+          instance.removeSource(sourceId);
+        }
+      });
+      layerIdsRef.current = [];
+      sourceIdsRef.current = [];
 
-    // Remove existing custom layers
-    layerIdsRef.current.forEach((layerId) => {
-      if (map.current?.getLayer(layerId)) {
-        map.current.removeLayer(layerId);
-      }
-    });
-    sourceIdsRef.current.forEach((sourceId) => {
-      if (map.current?.getSource(sourceId)) {
-        map.current.removeSource(sourceId);
-      }
-    });
-    layerIdsRef.current = [];
-    sourceIdsRef.current = [];
+      // Add visible layers
+      const visibleLayerData = getVisibleLayerData();
 
-    // Add visible layers
-    const visibleLayerData = getVisibleLayerData();
+      visibleLayerData.forEach((layer) => {
+        if (!layer.Data?.Features || !Array.isArray(layer.Data.Features) || layer.Data.Features.length === 0) return;
 
-    visibleLayerData.forEach((layer) => {
-      if (!layer.Data?.Features || !Array.isArray(layer.Data.Features) || layer.Data.Features.length === 0) return;
+        const sourceId = `custom-layer-source-${layer.Id}`;
+        const layerId = `custom-layer-${layer.Id}`;
 
-      const sourceId = `custom-layer-source-${layer.Id}`;
-      const layerId = `custom-layer-${layer.Id}`;
+        // Build a proper GeoJSON FeatureCollection from the layer data
+        const featureCollection: FeatureCollection = {
+          type: 'FeatureCollection',
+          features: layer.Data.Features.flatMap((fc) => fc.features || []) as Feature<Geometry, GeoJsonProperties>[],
+        };
 
-      // Build a proper GeoJSON FeatureCollection from the layer data
-      const featureCollection: FeatureCollection = {
-        type: 'FeatureCollection',
-        features: layer.Data.Features.flatMap((fc) => fc.features || []) as Feature<Geometry, GeoJsonProperties>[],
-      };
+        if (featureCollection.features.length === 0) return;
 
-      if (featureCollection.features.length === 0) return;
-
-      try {
-        // Add source
-        map.current!.addSource(sourceId, {
-          type: 'geojson',
-          data: featureCollection,
-        });
-        sourceIdsRef.current.push(sourceId);
-
-        // Determine layer type and add appropriate layer
-        const type = layer.Data.Type?.toLowerCase() || 'polygon';
-        const color = layer.Color || '#3b82f6';
-
-        if (type === 'linestring' || type === 'multilinestring') {
-          map.current!.addLayer({
-            id: layerId,
-            type: 'line',
-            source: sourceId,
-            paint: {
-              'line-color': color,
-              'line-width': 3,
-              'line-opacity': 0.8,
-            },
+        try {
+          // Add source
+          instance.addSource(sourceId, {
+            type: 'geojson',
+            data: featureCollection,
           });
-        } else if (type === 'point' || type === 'multipoint') {
-          map.current!.addLayer({
-            id: layerId,
-            type: 'circle',
-            source: sourceId,
-            paint: {
-              'circle-color': color,
-              'circle-radius': 8,
-              'circle-opacity': 0.8,
-              'circle-stroke-color': '#ffffff',
-              'circle-stroke-width': 2,
-            },
-          });
-        } else {
-          // Default to fill layer for polygons
-          map.current!.addLayer({
-            id: layerId,
-            type: 'fill',
-            source: sourceId,
-            paint: {
-              'fill-color': color,
-              'fill-opacity': 0.3,
-              'fill-outline-color': color,
-            },
+          sourceIdsRef.current.push(sourceId);
+
+          // Determine layer type and add appropriate layer
+          const type = layer.Data.Type?.toLowerCase() || 'polygon';
+          const color = layer.Color || '#3b82f6';
+
+          if (type === 'linestring' || type === 'multilinestring') {
+            instance.addLayer({
+              id: layerId,
+              type: 'line',
+              source: sourceId,
+              paint: {
+                'line-color': color,
+                'line-width': 3,
+                'line-opacity': 0.8,
+              },
+            });
+          } else if (type === 'point' || type === 'multipoint') {
+            instance.addLayer({
+              id: layerId,
+              type: 'circle',
+              source: sourceId,
+              paint: {
+                'circle-color': color,
+                'circle-radius': 8,
+                'circle-opacity': 0.8,
+                'circle-stroke-color': '#ffffff',
+                'circle-stroke-width': 2,
+              },
+            });
+          } else {
+            // Default to fill layer for polygons
+            instance.addLayer({
+              id: layerId,
+              type: 'fill',
+              source: sourceId,
+              paint: {
+                'fill-color': color,
+                'fill-opacity': 0.3,
+                'fill-outline-color': color,
+              },
+            });
+          }
+
+          layerIdsRef.current.push(layerId);
+        } catch (error) {
+          logger.error({
+            message: 'Failed to add map layer',
+            context: { error, layerId: layer.Id },
           });
         }
+      });
+    },
+    [getVisibleLayerData]
+  );
 
-        layerIdsRef.current.push(layerId);
-      } catch (error) {
-        logger.error({
-          message: 'Failed to add map layer',
-          context: { error, layerId: layer.Id },
-        });
-      }
-    });
-  }, [visibleLayers, layers, isMapReady, getVisibleLayerData]);
+  // Keep a ref to the latest builder so the theme-change effect can re-add layers
+  // after a style reload without re-running setStyle on every data change.
+  const addCustomMapLayersRef = useRef(addCustomMapLayers);
+  useEffect(() => {
+    addCustomMapLayersRef.current = addCustomMapLayers;
+  }, [addCustomMapLayers]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !isMapReady) return;
+    addCustomMapLayers(instance);
+  }, [addCustomMapLayers, isMapReady]);
+
+  // Render on-by-default custom-map region layers (GeoJSON) from GetAllActiveLayers.
+  // Extracted so it can also be re-run after a style reload (mapbox setStyle wipes
+  // every runtime-added source/layer, so theme changes would otherwise drop these).
+  const addActiveMapLayers = useCallback(
+    (instance: mapboxgl.Map) => {
+      activeLayerIdsRef.current.forEach((id) => {
+        if (instance.getLayer(id)) instance.removeLayer(id);
+      });
+      activeSourceIdsRef.current.forEach((id) => {
+        if (instance.getSource(id)) instance.removeSource(id);
+      });
+      activeLayerIdsRef.current = [];
+      activeSourceIdsRef.current = [];
+
+      activeLayers.forEach((layer) => {
+        if (!layer.data?.features || layer.data.features.length === 0) return;
+        const sourceId = `active-layer-source-${layer.id}`;
+        const fillId = `active-layer-fill-${layer.id}`;
+        const lineId = `active-layer-line-${layer.id}`;
+        try {
+          instance.addSource(sourceId, { type: 'geojson', data: layer.data });
+          instance.addLayer({ id: fillId, type: 'fill', source: sourceId, paint: { 'fill-color': layer.color, 'fill-opacity': 0.25, 'fill-outline-color': layer.color } });
+          instance.addLayer({ id: lineId, type: 'line', source: sourceId, paint: { 'line-color': layer.color, 'line-width': 2, 'line-opacity': 0.8 } });
+          activeSourceIdsRef.current.push(sourceId);
+          activeLayerIdsRef.current.push(fillId, lineId);
+        } catch (error) {
+          logger.error({ message: 'Failed to add active map layer', context: { error, layerId: layer.id } });
+        }
+      });
+    },
+    [activeLayers]
+  );
+
+  // Keep a ref to the latest builder so the theme-change effect can re-add layers
+  // after a style reload without re-running setStyle on every activeLayers change.
+  const addActiveMapLayersRef = useRef(addActiveMapLayers);
+  useEffect(() => {
+    addActiveMapLayersRef.current = addActiveMapLayers;
+  }, [addActiveMapLayers]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!instance || !isMapReady) return;
+    addActiveMapLayers(instance);
+  }, [addActiveMapLayers, isMapReady]);
 
   // Track when map view is rendered
   useEffect(() => {

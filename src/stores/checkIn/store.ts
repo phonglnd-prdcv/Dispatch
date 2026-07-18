@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
-import { getCheckInHistory, getTimersForCall, getTimerStatuses, getTimerStatusesForCalls, performCheckIn, type PerformCheckInInput, toggleCallTimers } from '@/api/checkIn/checkInTimers';
+import { getCallPersonnelCheckInStatuses, getCheckInHistory, getTimersForCall, getTimerStatuses, getTimerStatusesForCalls, performCheckIn, type PerformCheckInInput, toggleCallTimers } from '@/api/checkIn/checkInTimers';
+import { type CallPersonnelCheckInStatusResultData } from '@/models/v4/checkIn/callPersonnelCheckInStatusResultData';
 import { type CheckInRecordResultData } from '@/models/v4/checkIn/checkInRecordResultData';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
 import { type ResolvedCheckInTimerResultData } from '@/models/v4/checkIn/resolvedCheckInTimerResultData';
@@ -110,10 +111,12 @@ interface CheckInState {
   timerStatuses: CheckInTimerStatusResultData[];
   resolvedTimers: ResolvedCheckInTimerResultData[];
   checkInHistory: CheckInRecordResultData[];
+  callPersonnelStatuses: CallPersonnelCheckInStatusResultData[];
 
   isLoadingStatuses: boolean;
   statusError: string | null;
   isLoadingHistory: boolean;
+  isLoadingPersonnelStatuses: boolean;
   isCheckingIn: boolean;
   checkInError: string | null;
 
@@ -124,6 +127,7 @@ interface CheckInState {
   fetchTimerStatusesForCalls: (callIds: number[]) => Promise<void>;
   fetchResolvedTimers: (callId: number) => Promise<void>;
   fetchCheckInHistory: (callId: number) => Promise<void>;
+  fetchCallPersonnelStatuses: (callId: number) => Promise<void>;
   performCheckIn: (input: PerformCheckInInput) => Promise<boolean>;
   toggleTimers: (callId: number, enabled: boolean) => Promise<boolean>;
   startPolling: (callId: number, intervalMs?: number) => void;
@@ -136,9 +140,11 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
   timerStatuses: [],
   resolvedTimers: [],
   checkInHistory: [],
+  callPersonnelStatuses: [],
   isLoadingStatuses: false,
   statusError: null,
   isLoadingHistory: false,
+  isLoadingPersonnelStatuses: false,
   isCheckingIn: false,
   checkInError: null,
   _pollingInterval: null,
@@ -195,6 +201,19 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
       set({ checkInHistory: result.Data || [], isLoadingHistory: false });
     } catch {
       set({ checkInHistory: [], isLoadingHistory: false });
+    }
+  },
+
+  fetchCallPersonnelStatuses: async (callId: number) => {
+    set({ isLoadingPersonnelStatuses: true });
+    try {
+      const result = await getCallPersonnelCheckInStatuses(callId);
+      const data = result.Data || [];
+      // Show the most urgent members first (Critical, then Warning, then Green).
+      const sorted = [...data].sort((a, b) => (STATUS_SEVERITY[a.Status] ?? 3) - (STATUS_SEVERITY[b.Status] ?? 3));
+      set({ callPersonnelStatuses: sorted, isLoadingPersonnelStatuses: false });
+    } catch {
+      set({ callPersonnelStatuses: [], isLoadingPersonnelStatuses: false });
     }
   },
 
@@ -275,9 +294,11 @@ export const useCheckInStore = create<CheckInState>((set, get) => ({
       timerStatuses: [],
       resolvedTimers: [],
       checkInHistory: [],
+      callPersonnelStatuses: [],
       isLoadingStatuses: false,
       statusError: null,
       isLoadingHistory: false,
+      isLoadingPersonnelStatuses: false,
       isCheckingIn: false,
       checkInError: null,
       _pollingInterval: null,

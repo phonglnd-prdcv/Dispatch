@@ -8,7 +8,9 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { HStack } from '@/components/ui/hstack';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
+import { CheckInTimerStatus } from '@/models/v4/checkIn/checkInEnums';
 import { type CheckInTimerStatusResultData } from '@/models/v4/checkIn/checkInTimerStatusResultData';
+import { ParStatus } from '@/models/v4/incidentCommand/incidentCommandEnums';
 import { useCheckInStore } from '@/stores/checkIn/store';
 import { useSignalRStore } from '@/stores/signalr/signalr-store';
 
@@ -27,8 +29,22 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [selectedTimer, setSelectedTimer] = useState<CheckInTimerStatusResultData | null>(null);
 
-  const { timerStatuses, checkInHistory, isLoadingStatuses, isLoadingHistory, statusError, fetchTimerStatuses, fetchCheckInHistory, fetchResolvedTimers, toggleTimers, startPolling, stopPolling, reset } =
-    useCheckInStore();
+  const {
+    timerStatuses,
+    checkInHistory,
+    callPersonnelStatuses,
+    isLoadingStatuses,
+    isLoadingHistory,
+    statusError,
+    fetchTimerStatuses,
+    fetchCheckInHistory,
+    fetchResolvedTimers,
+    fetchCallPersonnelStatuses,
+    toggleTimers,
+    startPolling,
+    stopPolling,
+    reset,
+  } = useCheckInStore();
 
   const lastCheckInUpdateTimestamp = useSignalRStore((s) => s.lastCheckInUpdateTimestamp);
 
@@ -38,21 +54,26 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
       fetchTimerStatuses(callId);
       fetchResolvedTimers(callId);
       fetchCheckInHistory(callId);
+      fetchCallPersonnelStatuses(callId);
       startPolling(callId);
     }
     return () => {
       stopPolling();
       reset();
     };
-  }, [callId, checkInTimersEnabled, fetchTimerStatuses, fetchResolvedTimers, fetchCheckInHistory, startPolling, stopPolling, reset]);
+  }, [callId, checkInTimersEnabled, fetchTimerStatuses, fetchResolvedTimers, fetchCheckInHistory, fetchCallPersonnelStatuses, startPolling, stopPolling, reset]);
 
   // React to SignalR check-in updates
   useEffect(() => {
     if (lastCheckInUpdateTimestamp > 0 && callId) {
       fetchTimerStatuses(callId);
       fetchCheckInHistory(callId);
+      fetchCallPersonnelStatuses(callId);
     }
-  }, [lastCheckInUpdateTimestamp, callId, fetchTimerStatuses, fetchCheckInHistory]);
+  }, [lastCheckInUpdateTimestamp, callId, fetchTimerStatuses, fetchCheckInHistory, fetchCallPersonnelStatuses]);
+
+  const parColorClass = (status: string): string =>
+    status === ParStatus.Critical ? 'text-red-600 dark:text-red-400' : status === ParStatus.Warning ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400';
 
   const handleCheckIn = useCallback((timer: CheckInTimerStatusResultData) => {
     setSelectedTimer(timer);
@@ -64,10 +85,10 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
     setSelectedTimer(null);
   }, []);
 
-  const criticalCount = timerStatuses.filter((s) => s.Status === 'Critical').length;
-  const overdueCount = timerStatuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Red').length;
-  const warningCount = timerStatuses.filter((s) => s.Status === 'Warning' || s.Status === 'Yellow').length;
-  const okCount = timerStatuses.filter((s) => s.Status === 'Ok' || s.Status === 'Green').length;
+  const criticalCount = timerStatuses.filter((s) => s.Status === CheckInTimerStatus.Critical).length;
+  const overdueCount = timerStatuses.filter((s) => s.Status === CheckInTimerStatus.Overdue || s.Status === CheckInTimerStatus.Red).length;
+  const warningCount = timerStatuses.filter((s) => s.Status === CheckInTimerStatus.Warning || s.Status === CheckInTimerStatus.Yellow).length;
+  const okCount = timerStatuses.filter((s) => s.Status === CheckInTimerStatus.Ok || s.Status === CheckInTimerStatus.Green).length;
 
   const renderTimer = ({ item }: { item: CheckInTimerStatusResultData }) => <CheckInTimerCard timer={item} onCheckIn={handleCheckIn} />;
 
@@ -130,6 +151,24 @@ export const CheckInTab: React.FC<CheckInTabProps> = ({ callId, checkInTimersEna
           <ButtonText className="text-xs">{checkInTimersEnabled ? t('check_in.disable_timers') : t('check_in.enable_timers')}</ButtonText>
         </Button>
       </Box>
+
+      {/* Personnel accountability (PAR) roster */}
+      {checkInTimersEnabled && callPersonnelStatuses.length > 0 && (
+        <Box className={`mb-3 mt-3 rounded-lg p-3 ${colorScheme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-100'}`}>
+          <Text className="mb-2 text-sm font-semibold">{t('check_in.par_title')}</Text>
+          <VStack className="space-y-1">
+            {callPersonnelStatuses.map((person) => (
+              <HStack key={person.UserId} className="items-center justify-between border-b border-outline-100 pb-1">
+                <Text className="text-sm">{person.FullName}</Text>
+                <HStack className="items-center gap-2">
+                  <Text className="text-xs text-gray-500">{Math.round(person.MinutesRemaining)}m</Text>
+                  <Text className={`text-xs font-medium ${parColorClass(person.Status)}`}>{person.Status}</Text>
+                </HStack>
+              </HStack>
+            ))}
+          </VStack>
+        </Box>
+      )}
 
       {/* History */}
       <CheckInHistoryList history={checkInHistory} isLoading={isLoadingHistory} />

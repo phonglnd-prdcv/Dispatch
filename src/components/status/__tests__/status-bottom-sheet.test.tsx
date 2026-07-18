@@ -299,11 +299,18 @@ describe('StatusBottomSheet', () => {
     note: '',
     availableCalls: [],
     availableStations: [],
+    availablePois: [],
+    availableStatuses: [
+      { Id: 1, Type: 1, StateId: 1, Text: 'Available', BColor: '#28a745', Color: '#fff', Gps: false, Note: 0, Detail: 1 },
+      { Id: 2, Type: 2, StateId: 2, Text: 'Responding', BColor: '#ffc107', Color: '#000', Gps: true, Note: 1, Detail: 2 },
+      { Id: 3, Type: 3, StateId: 3, Text: 'On Scene', BColor: '#dc3545', Color: '#fff', Gps: true, Note: 2, Detail: 3 },
+    ],
     isLoading: false,
     setIsOpen: jest.fn(),
     setCurrentStep: mockSetCurrentStep,
     setSelectedCall: mockSetSelectedCall,
     setSelectedStation: mockSetSelectedStation,
+    setSelectedPoi: jest.fn(),
     setSelectedDestinationType: mockSetSelectedDestinationType,
     setSelectedStatus: jest.fn(),
     setNote: mockSetNote,
@@ -2294,6 +2301,10 @@ describe('StatusBottomSheet', () => {
     // Status selection step
     mockUseStatusBottomSheetStore.mockReturnValue({
       ...defaultBottomSheetStore,
+      availableStatuses: [
+        { Id: 1, Type: 1, StateId: 1, Text: 'Available', BColor: '#28a745', Color: '#fff', Gps: false, Note: 1, Detail: 0 },
+        { Id: 4, Type: 4, StateId: 4, Text: 'Busy', BColor: '#dc3545', Color: '#fff', Gps: false, Note: 0, Detail: 0 },
+      ],
       isOpen: true,
       currentStep: 'select-status',
       selectedStatus: null,
@@ -2336,6 +2347,7 @@ describe('StatusBottomSheet', () => {
 
     mockUseStatusBottomSheetStore.mockReturnValue({
       ...defaultBottomSheetStore,
+      availableStatuses: [],
       isOpen: true,
       currentStep: 'select-status',
       selectedStatus: null,
@@ -2363,6 +2375,7 @@ describe('StatusBottomSheet', () => {
 
     mockUseStatusBottomSheetStore.mockReturnValue({
       ...defaultBottomSheetStore,
+      availableStatuses: [],
       isOpen: true,
       currentStep: 'select-status',
       selectedStatus: null,
@@ -2514,6 +2527,7 @@ describe('StatusBottomSheet', () => {
 
     mockUseStatusBottomSheetStore.mockReturnValue({
       ...defaultBottomSheetStore,
+      availableStatuses: manyStatuses,
       isOpen: true,
       currentStep: 'select-status',
       selectedStatus: null,
@@ -3059,6 +3073,7 @@ describe('StatusBottomSheet', () => {
 
     mockUseStatusBottomSheetStore.mockReturnValue({
       ...defaultBottomSheetStore,
+      availableStatuses: [statusWithoutBColor],
       isOpen: true,
       currentStep: 'select-status',
       selectedStatus: null,

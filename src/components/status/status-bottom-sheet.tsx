@@ -45,6 +45,7 @@ export const StatusBottomSheet = () => {
     availableCalls,
     availableStations,
     availablePois,
+    availableStatuses,
     isLoading,
     setIsOpen,
     setCurrentStep,
@@ -58,7 +59,7 @@ export const StatusBottomSheet = () => {
     reset,
   } = useStatusBottomSheetStore();
 
-  const { activeUnit, activeCallId, setActiveCall, activeStatuses } = useCoreStore();
+  const { activeUnit, activeCallId, setActiveCall } = useCoreStore();
   const { unitRoleAssignments } = useRolesStore();
   const { saveUnitStatus } = useStatusesStore();
   const { latitude, longitude, heading, accuracy, speed, altitude, timestamp } = useLocationStore();
@@ -166,11 +167,9 @@ export const StatusBottomSheet = () => {
   };
 
   const handleStatusSelect = (statusId: string) => {
-    if (activeStatuses?.Data) {
-      const status = activeStatuses.Data.find((s: CustomStatusResultData) => s.Id.toString() === statusId);
-      if (status) {
-        setSelectedStatus(status);
-      }
+    const status = availableStatuses.find((s) => s.Id.toString() === statusId);
+    if (status) {
+      setSelectedStatus(status);
     }
   };
 
@@ -272,12 +271,14 @@ export const StatusBottomSheet = () => {
     t,
   ]);
 
-  // Fetch destination data when status bottom sheet opens
+  // Fetch destination data when the status bottom sheet opens. This must run regardless of
+  // whether a status is pre-selected so the no-status flow can populate availableStatuses for
+  // the select-status picker (as well as the calls/stations/POIs for the destination step).
   React.useEffect(() => {
-    if (isOpen && activeUnit && selectedStatus) {
+    if (isOpen && activeUnit) {
       fetchDestinationData(activeUnit.UnitId);
     }
-  }, [isOpen, activeUnit, selectedStatus, fetchDestinationData]);
+  }, [isOpen, activeUnit, fetchDestinationData]);
 
   React.useEffect(() => {
     if (!selectedStatus) {
@@ -425,9 +426,9 @@ export const StatusBottomSheet = () => {
       } else {
         // Conservative estimate when no status is selected yet
         // Look at available statuses to determine potential steps
-        if (activeStatuses?.Data && activeStatuses.Data.length > 0) {
-          const hasAnyDestination = activeStatuses.Data.some((s: CustomStatusResultData) => s.Detail > 0);
-          const hasAnyNote = activeStatuses.Data.some((s: CustomStatusResultData) => s.Note > 0);
+        if (availableStatuses.length > 0) {
+          const hasAnyDestination = availableStatuses.some((s) => s.Detail > 0);
+          const hasAnyNote = availableStatuses.some((s) => s.Note > 0);
 
           if (hasAnyDestination) totalSteps++;
           if (hasAnyNote) totalSteps++;
@@ -525,8 +526,8 @@ export const StatusBottomSheet = () => {
 
               <ScrollView className="max-h-[400px]">
                 <VStack space="sm">
-                  {activeStatuses?.Data && activeStatuses.Data.length > 0 ? (
-                    activeStatuses.Data.map((status: CustomStatusResultData) => (
+                  {availableStatuses.length > 0 ? (
+                    availableStatuses.map((status) => (
                       <TouchableOpacity
                         key={status.Id}
                         onPress={() => handleStatusSelect(status.Id.toString())}

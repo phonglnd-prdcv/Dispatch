@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { type Href, router } from 'expo-router';
+import { SettingsIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -106,7 +107,12 @@ export default function WeatherAlertsListScreen() {
   return (
     <View style={[styles.container, isDark ? styles.containerDark : styles.containerLight]}>
       {/* Header */}
-      <RNText style={[styles.title, isDark ? styles.titleDark : styles.titleLight]}>{t('weatherAlerts.title')}</RNText>
+      <View style={styles.headerRow}>
+        <RNText style={[styles.title, isDark ? styles.titleDark : styles.titleLight]}>{t('weatherAlerts.title')}</RNText>
+        <Pressable onPress={() => router.push('/weather-alerts/settings' as Href)} style={styles.settingsButton} testID="weather-alert-settings-button">
+          <SettingsIcon size={22} color={isDark ? '#9ca3af' : '#4b5563'} />
+        </Pressable>
+      </View>
 
       {/* Filter pills */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
@@ -145,6 +151,16 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   containerLight: { backgroundColor: '#f3f4f6' },
   containerDark: { backgroundColor: '#030712' },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 16,
+  },
+  settingsButton: {
+    padding: 8,
+  },
 
   title: {
     fontSize: 18,

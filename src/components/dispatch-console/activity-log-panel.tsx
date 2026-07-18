@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEventResultData';
+import { CheckInTimerStatus } from '@/models/v4/checkIn/checkInEnums';
 import { type PersonnelInfoResultData } from '@/models/v4/personnel/personnelInfoResultData';
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { SEVERITY_COLORS, WeatherAlertSeverity } from '@/models/v4/weatherAlerts/weatherAlertEnums';
@@ -420,8 +421,8 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
     return allTimerStatuses.filter((s) => s.CallId === callIdNum);
   }, [allTimerStatuses, isCallFilterActive, selectedCallId]);
 
-  const criticalCheckInCount = filteredTimerStatuses.filter((s) => s.Status === 'Critical').length;
-  const overdueCheckInCount = filteredTimerStatuses.filter((s) => s.Status === 'Overdue' || s.Status === 'Red').length;
+  const criticalCheckInCount = filteredTimerStatuses.filter((s) => s.Status === CheckInTimerStatus.Critical).length;
+  const overdueCheckInCount = filteredTimerStatuses.filter((s) => s.Status === CheckInTimerStatus.Overdue || s.Status === CheckInTimerStatus.Red).length;
   const urgentCheckInCount = criticalCheckInCount + overdueCheckInCount;
 
   // Weather alerts

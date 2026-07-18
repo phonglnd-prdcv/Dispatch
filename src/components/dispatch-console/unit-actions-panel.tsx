@@ -15,6 +15,7 @@ import { Text } from '@/components/ui/text';
 import { VStack } from '@/components/ui/vstack';
 import { type DestinationTab, getDefaultDestinationTab, getDestinationCapabilities } from '@/lib/destination-helpers';
 import { getPoiSelectionLabel } from '@/lib/poi-display';
+import { resolveUnitStatusOptions } from '@/lib/unit-status-helpers';
 import { invertColor, isCallActive } from '@/lib/utils';
 import { type CallResultData } from '@/models/v4/calls/callResultData';
 import { type GroupResultData } from '@/models/v4/groups/groupsResultData';
@@ -23,6 +24,7 @@ import { type StatusesResultData } from '@/models/v4/statuses/statusesResultData
 import { type UnitInfoResultData } from '@/models/v4/units/unitInfoResultData';
 import { useCallsStore } from '@/stores/calls/store';
 import { useUnitActionsStore } from '@/stores/dispatch/unit-actions-store';
+import { useUnitsStore } from '@/stores/units/store';
 
 interface UnitActionsPanelProps {
   unit?: UnitInfoResultData | null;
@@ -180,7 +182,14 @@ export const UnitActionsPanel: React.FC<UnitActionsPanelProps> = ({ unit: unitPr
       setIsLoadingOptions(true);
       try {
         const unitStatusData = await getSetUnitStatusData(selectedUnit.UnitId);
-        setAvailableStatuses((unitStatusData?.Data?.Statuses as unknown as StatusesResultData[]) || []);
+        // Ensure the grouped per-unit-type statuses are loaded so we can scope to the unit's custom set.
+        let groups = useUnitsStore.getState().unitStatuses;
+        if (!groups || groups.length === 0) {
+          await useUnitsStore.getState().fetchUnits();
+          groups = useUnitsStore.getState().unitStatuses;
+        }
+        const serverStatuses = (unitStatusData?.Data?.Statuses as unknown as StatusesResultData[]) || [];
+        setAvailableStatuses(resolveUnitStatusOptions(selectedUnit, groups, serverStatuses));
         setAvailableCalls(unitStatusData?.Data?.Calls || []);
         setAvailableStations(unitStatusData?.Data?.Stations || []);
         setAvailablePois(unitStatusData?.Data?.DestinationPois || []);

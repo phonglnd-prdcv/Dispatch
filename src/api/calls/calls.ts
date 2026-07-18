@@ -13,6 +13,8 @@ const getCallExtraDataApi = createApiEndpoint('/Calls/GetCallExtraData');
 const createCallApi = createApiEndpoint('/Calls/SaveCall');
 const updateCallApi = createApiEndpoint('/Calls/EditCall');
 const closeCallApi = createApiEndpoint('/Calls/CloseCall');
+const deleteCallApi = createApiEndpoint('/Calls/DeleteCall');
+const updateScheduledDispatchTimeApi = createApiEndpoint('/Calls/UpdateScheduledDispatchTime');
 
 export const getCalls = async () => {
   // Add timestamp to prevent any caching
@@ -89,6 +91,10 @@ export interface UpdateCallRequest {
   externalId?: string;
   referenceId?: string;
   destinationPoiId?: number | null;
+  /** When true, re-sends the dispatch to all currently dispatched entities. */
+  rebroadcastCall?: boolean;
+  /** When true, notifies entities that were removed from the dispatch list on this edit. */
+  notifyCancelledEntities?: boolean;
 }
 
 export interface CloseCallRequest {
@@ -189,6 +195,8 @@ export const updateCall = async (callData: UpdateCallRequest) => {
     IncidentId: callData.linkedCallId || '',
     ExternalId: callData.externalId || '',
     ReferenceId: callData.referenceId || '',
+    RebroadcastCall: callData.rebroadcastCall ?? false,
+    NotifyCancelledEntities: callData.notifyCancelledEntities ?? false,
   };
 
   const response = await updateCallApi.put<SaveCallResult>(data);
@@ -203,5 +211,30 @@ export const closeCall = async (callData: CloseCallRequest) => {
   };
 
   const response = await closeCallApi.put<SaveCallResult>(data);
+  return response.data;
+};
+
+/** Soft-deletes a call. The server only allows deleting a call that has not yet been dispatched. */
+export const deleteCall = async (callId: string) => {
+  const response = await deleteCallApi.delete<SaveCallResult>({
+    callId: encodeURIComponent(callId),
+  });
+  return response.data;
+};
+
+export interface UpdateScheduledDispatchTimeRequest {
+  callId: string;
+  /** Department-local dispatch date/time (ISO string). */
+  date: string;
+}
+
+/** Reschedules the dispatch time of a not-yet-dispatched scheduled call. */
+export const updateScheduledDispatchTime = async (request: UpdateScheduledDispatchTimeRequest) => {
+  const data = {
+    Id: request.callId,
+    Date: request.date,
+  };
+
+  const response = await updateScheduledDispatchTimeApi.put<SaveCallResult>(data);
   return response.data;
 };

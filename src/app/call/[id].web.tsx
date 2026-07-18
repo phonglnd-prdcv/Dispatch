@@ -1,6 +1,25 @@
 import DOMPurify from 'dompurify';
 import { type Href, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ClockIcon, EditIcon, FileTextIcon, ImageIcon, InfoIcon, LoaderIcon, MapPinIcon, PaperclipIcon, RouteIcon, ShieldCheckIcon, UserIcon, UsersIcon, VideoIcon, XCircleIcon } from 'lucide-react-native';
+import {
+  ClockIcon,
+  EditIcon,
+  FileTextIcon,
+  ImageIcon,
+  InfoIcon,
+  LoaderIcon,
+  MapPinIcon,
+  NavigationIcon,
+  NetworkIcon,
+  PaperclipIcon,
+  RouteIcon,
+  ShieldCheckIcon,
+  UserIcon,
+  UserPlusIcon,
+  UsersIcon,
+  VideoIcon,
+  Volume2Icon,
+  XCircleIcon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +29,7 @@ import { VideoFeedsTab } from '@/components/callVideoFeeds/video-feeds-tab';
 import { CheckInTab } from '@/components/checkIn/check-in-tab';
 import { Loading } from '@/components/common/loading';
 import ZeroState from '@/components/common/zero-state';
+import { IncidentCommandTab } from '@/components/incident-command/incident-command-tab';
 import StaticMap from '@/components/maps/static-map';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonIcon, ButtonText } from '@/components/ui/button';
@@ -17,25 +37,32 @@ import { Card } from '@/components/ui/card';
 import { FocusAwareStatusBar } from '@/components/ui/focus-aware-status-bar';
 import { Text } from '@/components/ui/text';
 import { useAnalytics } from '@/hooks/use-analytics';
+import { buildAddResourcesUpdateRequest, EMPTY_DISPATCH_SELECTION } from '@/lib/dispatch-helpers';
 import { logger } from '@/lib/logging';
 import { openMapsWithDirections } from '@/lib/navigation';
-import { formatDateForDisplay, parseDateISOString } from '@/lib/utils';
+import { formatDateForDisplay, isCallActive, parseDateISOString } from '@/lib/utils';
+import { CheckInTimerStatus } from '@/models/v4/checkIn/checkInEnums';
 import { useCoreStore } from '@/stores/app/core-store';
 import { useLocationStore } from '@/stores/app/location-store';
 import { useCallDetailStore } from '@/stores/calls/detail-store';
+import { useCallsStore } from '@/stores/calls/store';
 import { useCheckInStore } from '@/stores/checkIn/store';
+import { type DispatchSelection } from '@/stores/dispatch/store';
 import { useSecurityStore } from '@/stores/security/store';
 import { useStatusBottomSheetStore } from '@/stores/status/store';
 import { useToastStore } from '@/stores/toast/store';
 
+import CallAudioModal from '../../components/calls/call-audio-modal';
 import { useCallDetailMenu } from '../../components/calls/call-detail-menu';
 import CallFilesModal from '../../components/calls/call-files-modal';
 import CallImagesModal from '../../components/calls/call-images-modal';
 import CallNotesModal from '../../components/calls/call-notes-modal';
 import { CloseCallBottomSheet } from '../../components/calls/close-call-bottom-sheet';
+import { DispatchSelectionModal } from '../../components/calls/dispatch-selection-modal';
+import { RescheduleCallSheet } from '../../components/calls/reschedule-call-sheet';
 import { StatusBottomSheet } from '../../components/status/status-bottom-sheet';
 
-type TabKey = 'info' | 'contact' | 'protocols' | 'dispatched' | 'timeline' | 'video' | 'checkin';
+type TabKey = 'info' | 'contact' | 'protocols' | 'dispatched' | 'timeline' | 'video' | 'checkin' | 'command';
 
 export default function CallDetailWeb() {
   const { id } = useLocalSearchParams();
@@ -57,8 +84,12 @@ export default function CallDetailWeb() {
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [isImagesModalOpen, setIsImagesModalOpen] = useState(false);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false);
+  const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [isCloseCallModalOpen, setIsCloseCallModalOpen] = useState(false);
   const [isSettingActive, setIsSettingActive] = useState(false);
+  const [mapView, setMapView] = useState<'call' | 'destination'>('call');
+  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
 
   const { call, callExtraData, callPriority, isLoading, error, fetchCallDetail, reset } = useCallDetailStore();
   const { canUserCreateCalls } = useSecurityStore();
@@ -80,6 +111,24 @@ export default function CallDetailWeb() {
 
   const handleEditCall = useCallback(() => router.push(`/call/${callId}/edit` as Href), [router, callId]);
   const handleCloseCall = () => setIsCloseCallModalOpen(true);
+  const openAudioModal = () => setIsAudioModalOpen(true);
+  const handleRescheduleCall = () => setIsRescheduleModalOpen(true);
+
+  const handleDeleteCall = () => {
+    if (typeof window !== 'undefined' && !window.confirm(t('call_detail.delete_call_confirm'))) return;
+    void (async () => {
+      try {
+        await useCallDetailStore.getState().deleteCall(callId);
+        showToast('success', t('call_detail.delete_call_success'));
+        await useCallsStore.getState().fetchCalls();
+        router.back();
+      } catch {
+        showToast('error', t('call_detail.delete_call_error'));
+      }
+    })();
+  };
+
+  const isScheduledPending = !!(call?.ScheduledOn || call?.ScheduledOnUtc) && !call?.DispatchedOn;
 
   const handleSetActive = async () => {
     if (!call) return;
@@ -97,9 +146,26 @@ export default function CallDetailWeb() {
     }
   };
 
+  // Dispatch additional resources to this (active) call. Picked resources are unioned with the call's
+  // existing dispatches so nothing is un-dispatched; the server then notifies only the newly-added ones.
+  const handleDispatchAdditional = async (selection: DispatchSelection) => {
+    if (!call) return;
+
+    try {
+      await useCallDetailStore.getState().updateCall(buildAddResourcesUpdateRequest(call, callExtraData?.Dispatches, selection, callExtraData?.CallFormData));
+      showToast('success', t('call_detail.dispatch_more_success'));
+    } catch (err) {
+      logger.error({ message: 'Failed to dispatch additional resources', context: { error: err, callId: call.CallId } });
+      showToast('error', t('call_detail.dispatch_more_error'));
+    }
+  };
+
   const { HeaderRightMenu, CallDetailActionSheet } = useCallDetailMenu({
     onEditCall: handleEditCall,
     onCloseCall: handleCloseCall,
+    onDeleteCall: handleDeleteCall,
+    onRescheduleCall: isScheduledPending ? handleRescheduleCall : undefined,
+    onDispatchMore: call && isCallActive(call.State) ? () => setIsDispatchModalOpen(true) : undefined,
     canUserCreateCalls,
   });
 
@@ -166,8 +232,8 @@ export default function CallDetailWeb() {
   };
 
   const checkInStatuses = useCheckInStore((s) => s.timerStatuses);
-  const overdueCount = checkInStatuses.filter((s) => s.Status === 'Overdue').length;
-  const warningCount = checkInStatuses.filter((s) => s.Status === 'Warning').length;
+  const overdueCount = checkInStatuses.filter((s) => s.Status === CheckInTimerStatus.Overdue).length;
+  const warningCount = checkInStatuses.filter((s) => s.Status === CheckInTimerStatus.Warning).length;
 
   const tabs = useMemo(() => {
     const baseTabs: { key: TabKey; title: string; icon: typeof InfoIcon; badge?: number }[] = [
@@ -177,6 +243,7 @@ export default function CallDetailWeb() {
       { key: 'dispatched', title: t('call_detail.tabs.dispatched'), icon: UsersIcon },
       { key: 'timeline', title: t('call_detail.tabs.timeline'), icon: ClockIcon, badge: callExtraData?.Activity?.length || 0 },
       { key: 'video', title: t('call_detail.tabs.video'), icon: VideoIcon },
+      { key: 'command', title: t('incident_command.tab_title'), icon: NetworkIcon },
     ];
     if (call?.CheckInTimersEnabled) {
       baseTabs.push({
@@ -282,6 +349,12 @@ export default function CallDetailWeb() {
       case 'dispatched':
         return (
           <View style={styles.tabContent}>
+            {canUserCreateCalls && call && isCallActive(call.State) ? (
+              <Button variant="solid" action="primary" size="sm" onPress={() => setIsDispatchModalOpen(true)} className="mb-4">
+                <ButtonIcon as={UserPlusIcon} className="mr-2" />
+                <ButtonText>{t('call_detail.dispatch_more')}</ButtonText>
+              </Button>
+            ) : null}
             {callExtraData?.Dispatches && callExtraData.Dispatches.length > 0 ? (
               callExtraData.Dispatches.map((dispatched, index) => (
                 <Card key={index} style={StyleSheet.flatten([styles.dispatchCard, isDark ? styles.dispatchCardDark : styles.dispatchCardLight])}>
@@ -337,8 +410,21 @@ export default function CallDetailWeb() {
             )}
           </View>
         );
+      case 'command':
+        return (
+          <View style={styles.tabContent}>
+            <IncidentCommandTab callId={call.CallId} showOpenFull />
+          </View>
+        );
     }
   };
+
+  // Map can toggle between the call (dispatch) location and the call's destination POI location.
+  const hasDestinationLocation = call?.DestinationLatitude != null && call?.DestinationLongitude != null;
+  const showDestinationMap = mapView === 'destination' && hasDestinationLocation;
+  const mapLatitude = showDestinationMap ? (call?.DestinationLatitude ?? null) : coordinates.latitude;
+  const mapLongitude = showDestinationMap ? (call?.DestinationLongitude ?? null) : coordinates.longitude;
+  const mapAddress = showDestinationMap ? call?.DestinationAddress || call?.DestinationName : call?.Address;
 
   return (
     <>
@@ -386,10 +472,32 @@ export default function CallDetailWeb() {
           <View style={isWideScreen ? styles.twoColumnLayout : styles.singleColumnLayout}>
             {/* Left Column - Map & Actions */}
             <View style={isWideScreen ? styles.leftColumn : styles.fullWidth}>
-              {/* Map */}
-              {coordinates.latitude && coordinates.longitude ? (
+              {/* Map (toggles between the call address and the destination POI when one exists) */}
+              {mapLatitude && mapLongitude ? (
                 <Card style={StyleSheet.flatten([styles.mapCard, isDark ? styles.mapCardDark : styles.mapCardLight])}>
-                  <StaticMap latitude={coordinates.latitude} longitude={coordinates.longitude} address={call.Address} zoom={15} height={isWideScreen ? 300 : 200} showUserLocation={true} />
+                  {hasDestinationLocation ? (
+                    <View style={styles.mapToggleRow}>
+                      <Pressable
+                        style={StyleSheet.flatten([styles.mapToggleButton, mapView === 'call' ? styles.mapToggleButtonActive : isDark ? styles.mapToggleButtonDark : styles.mapToggleButtonLight])}
+                        onPress={() => setMapView('call')}
+                      >
+                        <MapPinIcon size={14} color={mapView === 'call' ? '#fff' : isDark ? '#9ca3af' : '#4b5563'} />
+                        <Text style={StyleSheet.flatten([styles.mapToggleText, mapView === 'call' ? styles.mapToggleTextActive : isDark ? styles.mapToggleTextDark : styles.mapToggleTextLight])}>
+                          {t('call_detail.map_call')}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        style={StyleSheet.flatten([styles.mapToggleButton, mapView === 'destination' ? styles.mapToggleButtonActive : isDark ? styles.mapToggleButtonDark : styles.mapToggleButtonLight])}
+                        onPress={() => setMapView('destination')}
+                      >
+                        <NavigationIcon size={14} color={mapView === 'destination' ? '#fff' : isDark ? '#9ca3af' : '#4b5563'} />
+                        <Text style={StyleSheet.flatten([styles.mapToggleText, mapView === 'destination' ? styles.mapToggleTextActive : isDark ? styles.mapToggleTextDark : styles.mapToggleTextLight])}>
+                          {t('call_detail.map_destination')}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                  <StaticMap latitude={mapLatitude} longitude={mapLongitude} address={mapAddress} zoom={15} height={isWideScreen ? 300 : 200} showUserLocation={true} />
                   <Pressable style={styles.routeOverlay} onPress={handleRoute}>
                     <RouteIcon size={20} color="#fff" />
                     <Text style={styles.routeOverlayText}>{t('common.route')}</Text>
@@ -402,6 +510,7 @@ export default function CallDetailWeb() {
                 <ActionButton icon={FileTextIcon} label={t('call_detail.notes')} badge={call.NotesCount} onPress={openNotesModal} isDark={isDark} />
                 <ActionButton icon={ImageIcon} label={t('call_detail.images')} badge={call.ImgagesCount} onPress={() => setIsImagesModalOpen(true)} isDark={isDark} />
                 <ActionButton icon={PaperclipIcon} label={t('call_detail.files.button')} badge={call.FileCount} onPress={() => setIsFilesModalOpen(true)} isDark={isDark} />
+                <ActionButton icon={Volume2Icon} label={t('call_detail.audio')} badge={call.AudioCount} onPress={openAudioModal} isDark={isDark} />
                 <ActionButton icon={XCircleIcon} label={t('call_detail.close_call')} onPress={handleCloseCall} isDark={isDark} variant="danger" />
               </View>
             </View>
@@ -446,8 +555,11 @@ export default function CallDetailWeb() {
       <CallNotesModal isOpen={isNotesModalOpen} onClose={() => setIsNotesModalOpen(false)} callId={callId} />
       <CallImagesModal isOpen={isImagesModalOpen} onClose={() => setIsImagesModalOpen(false)} callId={callId} />
       <CallFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} callId={callId} />
+      <CallAudioModal isOpen={isAudioModalOpen} onClose={() => setIsAudioModalOpen(false)} callId={callId} />
       <CloseCallBottomSheet isOpen={isCloseCallModalOpen} onClose={() => setIsCloseCallModalOpen(false)} callId={callId} />
+      <RescheduleCallSheet isOpen={isRescheduleModalOpen} onClose={() => setIsRescheduleModalOpen(false)} callId={callId} />
       <StatusBottomSheet />
+      <DispatchSelectionModal isVisible={isDispatchModalOpen} onClose={() => setIsDispatchModalOpen(false)} onConfirm={handleDispatchAdditional} initialSelection={EMPTY_DISPATCH_SELECTION} />
       <CallDetailActionSheet />
     </>
   );
@@ -652,6 +764,42 @@ const styles = StyleSheet.create({
   },
   mapCardLight: {
     backgroundColor: '#ffffff',
+  },
+  mapToggleRow: {
+    flexDirection: 'row',
+    gap: 6,
+    padding: 8,
+  },
+  mapToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  mapToggleButtonActive: {
+    backgroundColor: '#2563eb',
+  },
+  mapToggleButtonLight: {
+    backgroundColor: '#e5e7eb',
+  },
+  mapToggleButtonDark: {
+    backgroundColor: '#374151',
+  },
+  mapToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mapToggleTextActive: {
+    color: '#ffffff',
+  },
+  mapToggleTextLight: {
+    color: '#4b5563',
+  },
+  mapToggleTextDark: {
+    color: '#9ca3af',
   },
   routeOverlay: {
     position: 'absolute',

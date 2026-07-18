@@ -9,11 +9,13 @@ import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInRight, FadeInUp, FadeOut, FadeOutLeft } from 'react-native-reanimated';
 import * as z from 'zod';
 
+import { getSystemConfig } from '@/api/config';
 import { Text } from '@/components/ui/text';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth } from '@/lib/auth';
-import { Env } from '@/lib/env';
 import { logger } from '@/lib/logging';
+import { buildApiUrl, CUSTOM_SERVER_VALUE, toBaseUrl } from '@/lib/server-url';
+import { type ResgridSystemLocation } from '@/models/v4/configs/getSystemConfigResultData';
 import { useServerUrlStore } from '@/stores/app/server-url-store';
 
 // Form validation schema
@@ -135,6 +137,9 @@ export default function LoginWeb() {
   const [showServerUrlModal, setShowServerUrlModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [isServerUrlLoading, setIsServerUrlLoading] = useState(false);
+  const [serverLocations, setServerLocations] = useState<ResgridSystemLocation[]>([]);
+  const [selectedServer, setSelectedServer] = useState<string>(CUSTOM_SERVER_VALUE);
+  const [isLoadingServers, setIsLoadingServers] = useState(false);
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
   const featureRotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -188,13 +193,60 @@ export default function LoginWeb() {
     }
   }, [status, error]);
 
-  // Load server URL when modal opens
+  // Load the persisted server URL and the list of hosted sites when the modal opens.
   useEffect(() => {
-    if (showServerUrlModal) {
-      getUrl().then((url) => {
-        setServerUrlValue('url', url.replace(`/api/${Env.API_VERSION}`, ''));
-      });
+    if (!showServerUrlModal) {
+      return;
     }
+
+    let isCancelled = false;
+
+    const loadServers = async () => {
+      setIsLoadingServers(true);
+
+      try {
+        // The persisted value includes the /api/vX suffix; reduce it to a bare base so we
+        // can match it against a hosted site or show it for editing in the custom field.
+        const currentUrl = await getUrl();
+        const currentBaseUrl = toBaseUrl(currentUrl);
+
+        let fetchedLocations: ResgridSystemLocation[] = [];
+        try {
+          const result = await getSystemConfig();
+          fetchedLocations = result?.Data?.Locations ?? [];
+        } catch (err) {
+          // Best-effort: on failure the user can still enter a custom URL manually.
+          logger.error({ message: 'Failed to load Resgrid hosted sites', context: { error: err } });
+        }
+
+        if (isCancelled) {
+          return;
+        }
+
+        setServerLocations(fetchedLocations);
+
+        // Preselect the hosted site whose API URL matches the persisted URL; otherwise fall
+        // back to the Custom option and show the persisted URL so the user can edit it.
+        const matchedLocation = fetchedLocations.find((location) => toBaseUrl(location.ApiUrl) === currentBaseUrl);
+        if (matchedLocation) {
+          setSelectedServer(matchedLocation.Name);
+          setServerUrlValue('url', toBaseUrl(matchedLocation.ApiUrl));
+        } else {
+          setSelectedServer(CUSTOM_SERVER_VALUE);
+          setServerUrlValue('url', currentBaseUrl);
+        }
+      } catch (err) {
+        logger.error({ message: 'Failed to initialize server selection', context: { error: err } });
+      } finally {
+        setIsLoadingServers(false);
+      }
+    };
+
+    loadServers();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [showServerUrlModal, getUrl, setServerUrlValue]);
 
   const onLoginSubmit = useCallback(
@@ -209,12 +261,32 @@ export default function LoginWeb() {
     [login]
   );
 
+  const handleServerSelectChange = useCallback(
+    (nextServer: string) => {
+      setSelectedServer(nextServer);
+      if (nextServer === CUSTOM_SERVER_VALUE) {
+        return;
+      }
+      const location = serverLocations.find((item) => item.Name === nextServer);
+      if (location) {
+        // Mirror the selected site's URL into the (read-only) field for visibility.
+        setServerUrlValue('url', toBaseUrl(location.ApiUrl));
+      }
+    },
+    [serverLocations, setServerUrlValue]
+  );
+
   const onServerUrlSubmit = useCallback(
     async (data: ServerUrlFormType) => {
       try {
         setIsServerUrlLoading(true);
-        await setUrl(`${data.url}/api/${Env.API_VERSION}`);
-        logger.info({ message: 'Server URL updated', context: { url: data.url } });
+        const location = serverLocations.find((item) => item.Name === selectedServer);
+        // Use the custom-entered URL, or the selected hosted site's URL, and always persist
+        // the full API URL (with the /api/vX suffix) that the API client expects.
+        const resolvedBaseUrl = selectedServer === CUSTOM_SERVER_VALUE ? data.url : (location?.ApiUrl ?? data.url);
+        const apiUrl = buildApiUrl(resolvedBaseUrl);
+        await setUrl(apiUrl);
+        logger.info({ message: 'Server URL updated', context: { url: apiUrl, server: selectedServer } });
         setShowServerUrlModal(false);
       } catch (err) {
         logger.error({ message: 'Failed to update server URL', context: { error: err } });
@@ -222,7 +294,7 @@ export default function LoginWeb() {
         setIsServerUrlLoading(false);
       }
     },
-    [setUrl]
+    [setUrl, serverLocations, selectedServer]
   );
 
   const handleKeyDown = useCallback(
@@ -451,6 +523,37 @@ export default function LoginWeb() {
           <Animated.View entering={FadeInUp.duration(300)} style={StyleSheet.flatten([styles.modalContent, styles.serverUrlModalContent, isDark ? styles.modalContentDark : styles.modalContentLight])}>
             <Text style={StyleSheet.flatten([styles.modalTitle, isDark ? styles.modalTitleDark : styles.modalTitleLight])}>{t('settings.server_url')}</Text>
 
+            {/* Hosted site selector */}
+            <View style={styles.serverUrlInputContainer}>
+              {isLoadingServers ? (
+                <Text style={StyleSheet.flatten([styles.serverUrlNote, isDark ? styles.serverUrlNoteDark : styles.serverUrlNoteLight])}>{t('settings.loading_servers')}</Text>
+              ) : (
+                <select
+                  className="web-input-accessible"
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    fontSize: 14,
+                    borderRadius: 8,
+                    border: `1px solid ${isDark ? '#404040' : '#d1d5db'}`,
+                    backgroundColor: isDark ? '#262626' : '#ffffff',
+                    color: isDark ? '#ffffff' : '#111827',
+                    outline: 'none',
+                  }}
+                  value={selectedServer}
+                  onChange={(e) => handleServerSelectChange(e.target.value)}
+                  aria-label={t('settings.select_server')}
+                >
+                  {serverLocations.map((location) => (
+                    <option key={location.Name} value={location.Name}>
+                      {location.DisplayName || location.Name}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_SERVER_VALUE}>{t('settings.custom')}</option>
+                </select>
+              )}
+            </View>
+
             <Controller
               control={serverUrlControl}
               name="url"
@@ -468,10 +571,12 @@ export default function LoginWeb() {
                       backgroundColor: isDark ? '#262626' : '#ffffff',
                       color: isDark ? '#ffffff' : '#111827',
                       outline: 'none',
+                      opacity: selectedServer === CUSTOM_SERVER_VALUE ? 1 : 0.6,
                     }}
                     placeholder={t('settings.enter_server_url')}
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
+                    readOnly={selectedServer !== CUSTOM_SERVER_VALUE}
                   />
                   {serverUrlErrors.url ? <Text style={styles.errorText}>{serverUrlErrors.url.message}</Text> : null}
                 </View>
@@ -484,7 +589,11 @@ export default function LoginWeb() {
               <Pressable style={StyleSheet.flatten([styles.modalCancelButton, isDark ? styles.modalCancelButtonDark : styles.modalCancelButtonLight])} onPress={() => setShowServerUrlModal(false)}>
                 <Text style={StyleSheet.flatten([styles.modalCancelButtonText, isDark ? styles.modalCancelButtonTextDark : styles.modalCancelButtonTextLight])}>{t('common.cancel')}</Text>
               </Pressable>
-              <Pressable style={StyleSheet.flatten([styles.modalButton, isServerUrlLoading ? styles.modalButtonLoading : {}])} onPress={handleServerUrlSubmit(onServerUrlSubmit)} disabled={isServerUrlLoading}>
+              <Pressable
+                style={StyleSheet.flatten([styles.modalButton, isServerUrlLoading ? styles.modalButtonLoading : {}])}
+                onPress={handleServerUrlSubmit(onServerUrlSubmit)}
+                disabled={isServerUrlLoading || isLoadingServers}
+              >
                 <Text style={styles.modalButtonText}>{isServerUrlLoading ? '...' : t('common.save')}</Text>
               </Pressable>
             </View>

@@ -19,6 +19,7 @@ export type SignalREventType =
   | 'weatherAlertReceived'
   | 'weatherAlertUpdated'
   | 'weatherAlertExpired'
+  | 'incidentCommandUpdated'
   | null;
 
 interface SignalRState {
@@ -31,6 +32,7 @@ interface SignalRState {
   lastCallsUpdateTimestamp: number;
   lastCheckInUpdateTimestamp: number;
   lastWeatherAlertTimestamp: number;
+  lastIncidentCommandUpdateTimestamp: number;
   isGeolocationHubConnected: boolean;
   lastGeolocationMessage: unknown;
   lastGeolocationTimestamp: number;
@@ -59,6 +61,7 @@ interface EventHandlers {
   weatherAlertReceived: ((data: unknown) => void) | null;
   weatherAlertUpdated: ((data: unknown) => void) | null;
   weatherAlertExpired: ((data: unknown) => void) | null;
+  incidentCommandUpdated: ((data: unknown) => void) | null;
   onConnected: ((data: unknown) => void) | null;
 }
 
@@ -74,6 +77,7 @@ let updateHubHandlers: EventHandlers = {
   weatherAlertReceived: null,
   weatherAlertUpdated: null,
   weatherAlertExpired: null,
+  incidentCommandUpdated: null,
   onConnected: null,
 };
 
@@ -92,6 +96,7 @@ function unregisterUpdateHubHandlers(): void {
     'weatherAlertReceived',
     'weatherAlertUpdated',
     'weatherAlertExpired',
+    'incidentCommandUpdated',
     'onConnected',
   ];
 
@@ -117,6 +122,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
   lastCallsUpdateTimestamp: 0,
   lastCheckInUpdateTimestamp: 0,
   lastWeatherAlertTimestamp: 0,
+  lastIncidentCommandUpdateTimestamp: 0,
   isGeolocationHubConnected: false,
   lastGeolocationMessage: null,
   lastGeolocationTimestamp: 0,
@@ -212,6 +218,7 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
           'weatherAlertReceived',
           'weatherAlertUpdated',
           'weatherAlertExpired',
+          'incidentCommandUpdated',
           'onConnected',
         ],
       });
@@ -345,6 +352,24 @@ export const useSignalRStore = create<SignalRState>((set, get) => ({
         set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: Date.now(), lastEventType: 'weatherAlertExpired', lastWeatherAlertTimestamp: Date.now() });
       };
       signalRService.on('weatherAlertExpired', updateHubHandlers.weatherAlertExpired);
+
+      updateHubHandlers.incidentCommandUpdated = (message: unknown) => {
+        logger.info({
+          message: 'incidentCommandUpdated',
+          context: { message },
+        });
+        // Payload is the affected call id (string). It is a lightweight "something changed for this
+        // call" notification — the client refetches the affected command board.
+        const callId = extractAlertId(message);
+        const now = Date.now();
+        set({ lastUpdateMessage: JSON.stringify(message), lastUpdateTimestamp: now, lastEventType: 'incidentCommandUpdated', lastIncidentCommandUpdateTimestamp: now });
+        if (callId) {
+          // Lazy import to avoid circular dependency
+          const { useIncidentCommandStore } = require('../incident-command/store');
+          useIncidentCommandStore.getState().handleIncidentCommandUpdated(callId);
+        }
+      };
+      signalRService.on('incidentCommandUpdated', updateHubHandlers.incidentCommandUpdated);
 
       updateHubHandlers.onConnected = () => {
         logger.info({
