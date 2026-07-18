@@ -11,7 +11,9 @@ import { type DispatchedEventResultData } from '@/models/v4/calls/dispatchedEven
 export const PERSONNEL_DISPATCH_TYPES = new Set(['Personnel', 'personnel', 'p', 'P', 'User', 'user']);
 
 // True when the dispatch entry targets a unit.
-export const isUnitDispatch = (d: DispatchedEventResultData) => d.Type === 'Unit' || d.Type === 'u';
+const UNIT_DISPATCH_TYPES = new Set(['Unit', 'unit', 'U', 'u']);
+
+export const isUnitDispatch = (d: DispatchedEventResultData) => UNIT_DISPATCH_TYPES.has(d.Type);
 
 // True when the dispatch entry targets a person/user.
 export const isPersonnelDispatch = (d: DispatchedEventResultData) => PERSONNEL_DISPATCH_TYPES.has(d.Type);

@@ -50,6 +50,8 @@ type ResourceRow = {
   person?: PersonnelInfoResultData;
 };
 
+type ResourcePressEvent = Parameters<NonNullable<React.ComponentProps<typeof Pressable>['onPress']>>[0];
+
 /**
  * A single combined list of units + personnel for the dispatch dashboard, used when the "single list"
  * toggle is on. Reads units and personnel from their stores and mirrors the call-aware behaviour of
@@ -183,27 +185,63 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
     fetchPersonnel();
   };
 
-  const handleSelect = (r: ResourceRow) => {
-    if (r.kind === 'unit') {
-      if (onSelectUnit) {
-        onSelectUnit(r.entityId);
+  const handleSelect = React.useCallback(
+    (r: ResourceRow) => {
+      if (r.kind === 'unit') {
+        if (onSelectUnit) {
+          onSelectUnit(r.entityId);
+          return;
+        }
+      } else if (onSelectPersonnel && r.person) {
+        onSelectPersonnel(r.entityId, r.person);
         return;
       }
-    } else if (onSelectPersonnel && r.person) {
-      onSelectPersonnel(r.entityId, r.person);
-      return;
-    }
-    // Fall back to opening the detail screen when no selection handler is wired.
-    router.push(r.href as Href);
-  };
+      // Fall back to opening the detail screen when no selection handler is wired.
+      router.push(r.href as Href);
+    },
+    [onSelectPersonnel, onSelectUnit]
+  );
 
-  const getSetStatusHandler = (r: ResourceRow): (() => void) | undefined => {
-    if (!isCallFilterActive) return undefined;
-    if (r.kind === 'unit') {
-      return onSetUnitStatusForCall ? () => onSetUnitStatusForCall(r.entityId, r.name) : undefined;
-    }
-    return onSetPersonnelStatusForCall ? () => onSetPersonnelStatusForCall(r.entityId, r.name) : undefined;
-  };
+  const getSetStatusHandler = React.useCallback(
+    (r: ResourceRow): (() => void) | undefined => {
+      if (!isCallFilterActive) return undefined;
+      if (r.kind === 'unit') {
+        return onSetUnitStatusForCall ? () => onSetUnitStatusForCall(r.entityId, r.name) : undefined;
+      }
+      return onSetPersonnelStatusForCall ? () => onSetPersonnelStatusForCall(r.entityId, r.name) : undefined;
+    },
+    [isCallFilterActive, onSetPersonnelStatusForCall, onSetUnitStatusForCall]
+  );
+
+  const rowPressHandlers = useMemo(() => new Map(rows.map((r) => [r.id, () => handleSelect(r)])), [handleSelect, rows]);
+
+  const detailPressHandlers = useMemo(
+    () =>
+      new Map(
+        rows.map((r) => [
+          r.id,
+          (event: ResourcePressEvent) => {
+            event.stopPropagation();
+            router.push(r.href as Href);
+          },
+        ])
+      ),
+    [rows]
+  );
+
+  const statusPressHandlers = useMemo(() => {
+    const handlers = new Map<string, (event: ResourcePressEvent) => void>();
+    rows.forEach((r) => {
+      const onSetStatus = getSetStatusHandler(r);
+      if (onSetStatus) {
+        handlers.set(r.id, (event) => {
+          event.stopPropagation();
+          onSetStatus();
+        });
+      }
+    });
+    return handlers;
+  }, [getSetStatusHandler, rows]);
 
   return (
     <Box className={`overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${isCollapsed ? '' : 'flex-1'}`}>
@@ -260,10 +298,10 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
               </View>
             ) : (
               rows.map((r) => {
-                const onSetStatus = getSetStatusHandler(r);
+                const onSetStatus = statusPressHandlers.get(r.id);
                 const isSelected = (r.kind === 'unit' && selectedUnitId === r.entityId) || (r.kind === 'personnel' && selectedPersonnelId === r.entityId);
                 return (
-                  <Pressable key={r.id} onPress={() => handleSelect(r)}>
+                  <Pressable key={r.id} onPress={rowPressHandlers.get(r.id)}>
                     <Box className={`mb-2 rounded-lg border bg-white p-2 dark:bg-gray-800 ${isSelected ? 'border-indigo-500' : 'border-gray-200 dark:border-gray-700'}`}>
                       <HStack className="items-center justify-between">
                         <HStack className="flex-1 items-center" space="sm">
@@ -287,14 +325,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
                           </VStack>
                         </HStack>
                         <HStack className="items-center" space="xs">
-                          <Pressable
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              router.push(r.href as Href);
-                            }}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            style={styles.detailsButton}
-                          >
+                          <Pressable onPress={detailPressHandlers.get(r.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.detailsButton}>
                             <ExternalLink size={12} color="#6b7280" />
                           </Pressable>
                           <Circle size={8} fill={r.statusColor} color={r.statusColor} />
@@ -302,13 +333,7 @@ export const ResourcesPanel: React.FC<ResourcesPanelProps> = ({
                             {r.status}
                           </Text>
                           {onSetStatus ? (
-                            <Pressable
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                onSetStatus();
-                              }}
-                              style={styles.statusButton}
-                            >
+                            <Pressable onPress={onSetStatus} style={styles.statusButton}>
                               <Icon as={Plus} size="xs" className="text-indigo-500" />
                             </Pressable>
                           ) : null}

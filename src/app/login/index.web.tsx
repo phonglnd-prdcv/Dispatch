@@ -204,38 +204,42 @@ export default function LoginWeb() {
     const loadServers = async () => {
       setIsLoadingServers(true);
 
-      // The persisted value includes the /api/vX suffix; reduce it to a bare base so we
-      // can match it against a hosted site or show it for editing in the custom field.
-      const currentUrl = await getUrl();
-      const currentBaseUrl = toBaseUrl(currentUrl);
-
-      let fetchedLocations: ResgridSystemLocation[] = [];
       try {
-        const result = await getSystemConfig();
-        fetchedLocations = result?.Data?.Locations ?? [];
+        // The persisted value includes the /api/vX suffix; reduce it to a bare base so we
+        // can match it against a hosted site or show it for editing in the custom field.
+        const currentUrl = await getUrl();
+        const currentBaseUrl = toBaseUrl(currentUrl);
+
+        let fetchedLocations: ResgridSystemLocation[] = [];
+        try {
+          const result = await getSystemConfig();
+          fetchedLocations = result?.Data?.Locations ?? [];
+        } catch (err) {
+          // Best-effort: on failure the user can still enter a custom URL manually.
+          logger.error({ message: 'Failed to load Resgrid hosted sites', context: { error: err } });
+        }
+
+        if (isCancelled) {
+          return;
+        }
+
+        setServerLocations(fetchedLocations);
+
+        // Preselect the hosted site whose API URL matches the persisted URL; otherwise fall
+        // back to the Custom option and show the persisted URL so the user can edit it.
+        const matchedLocation = fetchedLocations.find((location) => toBaseUrl(location.ApiUrl) === currentBaseUrl);
+        if (matchedLocation) {
+          setSelectedServer(matchedLocation.Name);
+          setServerUrlValue('url', toBaseUrl(matchedLocation.ApiUrl));
+        } else {
+          setSelectedServer(CUSTOM_SERVER_VALUE);
+          setServerUrlValue('url', currentBaseUrl);
+        }
       } catch (err) {
-        // Best-effort: on failure the user can still enter a custom URL manually.
-        logger.error({ message: 'Failed to load Resgrid hosted sites', context: { error: err } });
+        logger.error({ message: 'Failed to initialize server selection', context: { error: err } });
+      } finally {
+        setIsLoadingServers(false);
       }
-
-      if (isCancelled) {
-        return;
-      }
-
-      setServerLocations(fetchedLocations);
-
-      // Preselect the hosted site whose API URL matches the persisted URL; otherwise fall
-      // back to the Custom option and show the persisted URL so the user can edit it.
-      const matchedLocation = fetchedLocations.find((location) => toBaseUrl(location.ApiUrl) === currentBaseUrl);
-      if (matchedLocation) {
-        setSelectedServer(matchedLocation.Name);
-        setServerUrlValue('url', toBaseUrl(matchedLocation.ApiUrl));
-      } else {
-        setSelectedServer(CUSTOM_SERVER_VALUE);
-        setServerUrlValue('url', currentBaseUrl);
-      }
-
-      setIsLoadingServers(false);
     };
 
     loadServers();
@@ -585,7 +589,11 @@ export default function LoginWeb() {
               <Pressable style={StyleSheet.flatten([styles.modalCancelButton, isDark ? styles.modalCancelButtonDark : styles.modalCancelButtonLight])} onPress={() => setShowServerUrlModal(false)}>
                 <Text style={StyleSheet.flatten([styles.modalCancelButtonText, isDark ? styles.modalCancelButtonTextDark : styles.modalCancelButtonTextLight])}>{t('common.cancel')}</Text>
               </Pressable>
-              <Pressable style={StyleSheet.flatten([styles.modalButton, isServerUrlLoading ? styles.modalButtonLoading : {}])} onPress={handleServerUrlSubmit(onServerUrlSubmit)} disabled={isServerUrlLoading}>
+              <Pressable
+                style={StyleSheet.flatten([styles.modalButton, isServerUrlLoading ? styles.modalButtonLoading : {}])}
+                onPress={handleServerUrlSubmit(onServerUrlSubmit)}
+                disabled={isServerUrlLoading || isLoadingServers}
+              >
                 <Text style={styles.modalButtonText}>{isServerUrlLoading ? '...' : t('common.save')}</Text>
               </Pressable>
             </View>
