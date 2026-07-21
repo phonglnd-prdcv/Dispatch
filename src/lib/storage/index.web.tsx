@@ -32,6 +32,28 @@ export const storage: any = {
       console.warn('localStorage.removeItem failed', e);
     }
   },
+  getBoolean: (key: string): boolean | undefined => {
+    if (!isLocalStorageAvailable) return undefined;
+    try {
+      const value = localStorage.getItem(key);
+      return value !== null ? value === 'true' : undefined;
+    } catch (e) {
+      console.warn('localStorage.getItem failed', e);
+      return undefined;
+    }
+  },
+  getNumber: (key: string): number | undefined => {
+    if (!isLocalStorageAvailable) return undefined;
+    try {
+      const value = localStorage.getItem(key);
+      if (value === null) return undefined;
+      const num = Number(value);
+      return isNaN(num) ? undefined : num;
+    } catch (e) {
+      console.warn('localStorage.getItem failed', e);
+      return undefined;
+    }
+  },
   getAllKeys: (): string[] => {
     if (!isLocalStorageAvailable) return [];
     try {
